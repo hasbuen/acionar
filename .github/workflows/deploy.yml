@@ -18,8 +18,8 @@ jobs:
 
       - name: Inject Supabase Environment Variables
         run: |
-          sed -i 's|__SUPABASE_URL__|${{ secrets.SUPABASE_URL }}|g' index.html
-          sed -i 's|__SUPABASE_ANON_KEY__|${{ secrets.SUPABASE_ANON_KEY }}|g' index.html
+          find . -type f \( -name "*.html" -o -name "*.js" \) -exec sed -i "s|__SUPABASE_URL__|${{ secrets.SUPABASE_URL }}|g" {} +
+          find . -type f \( -name "*.html" -o -name "*.js" \) -exec sed -i "s|__SUPABASE_ANON_KEY__|${{ secrets.SUPABASE_ANON_KEY }}|g" {} +
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

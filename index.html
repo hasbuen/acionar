@@ -106,12 +106,8 @@
     </footer>
 
     <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+        import { supabase } from './js/supabase.js';
         import { initTheme } from './js/app.js';
-
-        const SUPABASE_URL = '__SUPABASE_URL__';
-        const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         initTheme();
 
@@ -154,17 +150,24 @@
             const email = emailInput.value.trim();
             const password = passwordInput.value;
 
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            
-            if (error) {
-                showError('Falha na autenticação: ' + error.message);
+            try {
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                
+                if (error) {
+                    showError('Falha na autenticação: ' + error.message);
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `<span>Entrar</span><i data-lucide="arrow-right" class="h-4 w-4"></i>`;
+                    if (window.lucide) window.lucide.createIcons();
+                    return;
+                }
+
+                window.location.href = './dashboard.html';
+            } catch (err) {
+                showError('Erro ao conectar com o Supabase: ' + err.message);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = `<span>Entrar</span><i data-lucide="arrow-right" class="h-4 w-4"></i>`;
                 if (window.lucide) window.lucide.createIcons();
-                return;
             }
-
-            window.location.href = './dashboard.html';
         });
 
         await checkSession();
