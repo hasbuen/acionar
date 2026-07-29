@@ -208,7 +208,7 @@
                     </div>
                 </div>
 
-                <!-- DATA E SELEÇÃO DE HORÁRIO COM COMBOBOX E CHIPS RÁPIDOS -->
+                <!-- DATA E SELEÇÃO DE HORÁRIO COM CHIPS RÁPIDOS -->
                 <div class="space-y-3">
                     <div>
                         <label for="inputData" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Data do Atendimento</label>
@@ -216,14 +216,12 @@
                             class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
                     </div>
 
-                    <!-- COMBOBOX E GRADE RÁPIDA DE HORÁRIOS -->
                     <div class="space-y-2">
                         <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Horários Disponíveis</label>
-
                         <input type="hidden" id="selectHora" required>
 
                         <div id="timeChipsContainer" class="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl bg-slate-50/50 dark:bg-slate-950/40">
-                            <!-- Preenchido via JS com botões no formato de chips -->
+                            <!-- Preenchido via JS -->
                         </div>
                     </div>
                 </div>
@@ -359,6 +357,10 @@
         document.addEventListener('click', (e) => {
             if (!listComboboxServico.contains(e.target) && e.target !== btnComboboxServico) {
                 listComboboxServico.classList.add('hidden');
+            }
+            // Fechar menus de status ao clicar fora
+            if (!e.target.closest('.status-dropdown-wrapper')) {
+                document.querySelectorAll('.status-menu').forEach(menu => menu.classList.add('hidden'));
             }
         });
 
@@ -497,22 +499,41 @@
             }
         });
 
+        // Eventos da Lista de Agendamentos (Status, Editar, Excluir)
         const container = document.getElementById('agendamentosContainer');
-        container?.addEventListener('change', async (e) => {
-            if (e.target.classList.contains('status-select')) {
-                const id = e.target.dataset.id;
-                const newStatus = e.target.value;
+
+        container?.addEventListener('click', async (e) => {
+            // Abrir menu popover de status
+            const btnStatusTrigger = e.target.closest('.btn-status-trigger');
+            if (btnStatusTrigger) {
+                e.stopPropagation();
+                const wrapper = btnStatusTrigger.closest('.status-dropdown-wrapper');
+                const menu = wrapper.querySelector('.status-menu');
+                
+                document.querySelectorAll('.status-menu').forEach(m => {
+                    if (m !== menu) m.classList.add('hidden');
+                });
+
+                menu.classList.toggle('hidden');
+                return;
+            }
+
+            // Seleção de novo status
+            const btnChangeStatus = e.target.closest('.btn-change-status');
+            if (btnChangeStatus) {
+                const id = btnChangeStatus.dataset.id;
+                const newStatus = btnChangeStatus.dataset.status;
                 try {
                     await updateAgendamentoStatus(id, newStatus);
-                    showToast('Status atualizado!', 'success');
+                    showToast('Status atualizado com sucesso!', 'success');
                     await fetchAndRenderAgendamentos('agendamentosContainer');
                 } catch (err) {
                     showToast('Erro ao atualizar status: ' + err.message, 'error');
                 }
+                return;
             }
-        });
 
-        container?.addEventListener('click', (e) => {
+            // Excluir Agendamento
             const btnDelete = e.target.closest('.btn-delete-agendamento');
             if (btnDelete) {
                 const id = btnDelete.dataset.id;
@@ -534,6 +555,7 @@
                 return;
             }
 
+            // Editar Agendamento
             const btnEdit = e.target.closest('.btn-edit-agendamento');
             if (btnEdit) {
                 const ag = JSON.parse(btnEdit.dataset.agendamento);

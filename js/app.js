@@ -444,7 +444,7 @@ export async function deleteAgendamento(id) {
     return true;
 }
 
-// --- RENDERIZAÇÃO DE AGENDAMENTOS COM BOTÕES HORIZONTAIS ---
+// --- RENDERIZAÇÃO DE AGENDAMENTOS COM COMBOBOX CUSTOMIZADO DE STATUS ---
 export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -549,8 +549,8 @@ function renderAgendamentosList(container, agendamentos) {
 
         const statusLabel = statusLower === 'em_atendimento' 
             ? 'EM ATENDIMENTO' 
-            : statusLower === 'concluido' 
-            ? 'ATENDIDO / CONCLUÍDO' 
+            : statusLower === 'concluido' || statusLower === 'atendido'
+            ? 'JÁ ATENDIDO' 
             : statusLower.toUpperCase();
 
         const item = document.createElement('div');
@@ -565,9 +565,6 @@ function renderAgendamentosList(container, agendamentos) {
                 <div class="space-y-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
                         <h4 class="font-semibold text-slate-900 dark:text-white text-base truncate">${escapeHtml(clienteNome)}</h4>
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${statusClass}">
-                            ${statusLabel}
-                        </span>
                     </div>
                     <p class="text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
                         <i data-lucide="scissors" class="h-3.5 w-3.5 text-blue-500 shrink-0"></i>
@@ -587,18 +584,37 @@ function renderAgendamentosList(container, agendamentos) {
                 </div>
             </div>
 
-            <!-- AÇÕES NA HORIZONTAL -->
+            <!-- SELETOR DE STATUS PERSONALIZADO + BOTÕES HORIZONTAIS -->
             <div class="flex flex-row items-center gap-2 shrink-0 self-end lg:self-center pt-2 lg:pt-0">
-                <select class="status-select rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 font-medium focus:outline-none max-w-[140px] truncate" data-id="${ag.id}">
-                    <option value="pendente" ${statusLower === 'pendente' ? 'selected' : ''}>Pendente</option>
-                    <option value="em_atendimento" ${statusLower === 'em_atendimento' ? 'selected' : ''}>Em Atendimento</option>
-                    <option value="concluido" ${statusLower === 'concluido' || statusLower === 'atendido' ? 'selected' : ''}>Já Atendido</option>
-                    <option value="cancelado" ${statusLower === 'cancelado' ? 'selected' : ''}>Cancelado</option>
-                </select>
+                <div class="relative status-dropdown-wrapper">
+                    <button type="button" class="btn-status-trigger inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black border transition-all ${statusClass}" data-id="${ag.id}">
+                        <span>${statusLabel}</span>
+                        <i data-lucide="chevron-down" class="h-3.5 w-3.5 opacity-60"></i>
+                    </button>
+
+                    <div class="status-menu absolute right-0 top-full mt-1.5 z-30 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 hidden w-44 space-y-1">
+                        <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors" data-id="${ag.id}" data-status="pendente">
+                            <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+                            <span>Pendente</span>
+                        </button>
+                        <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors" data-id="${ag.id}" data-status="em_atendimento">
+                            <span class="h-2 w-2 rounded-full bg-sky-500"></span>
+                            <span>Em Atendimento</span>
+                        </button>
+                        <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors" data-id="${ag.id}" data-status="concluido">
+                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                            <span>Já Atendido</span>
+                        </button>
+                        <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors" data-id="${ag.id}" data-status="cancelado">
+                            <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+                            <span>Cancelado</span>
+                        </button>
+                    </div>
+                </div>
 
                 ${clienteWhatsapp ? `
                     <a href="https://wa.me/55${cleanPhone(clienteWhatsapp)}" target="_blank" rel="noopener noreferrer" 
-                        class="flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shrink-0">
+                        class="flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shrink-0" title="Conversar no WhatsApp">
                         <i data-lucide="message-circle" class="h-4 w-4"></i>
                     </a>
                 ` : ''}
