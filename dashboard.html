@@ -3,115 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel - eStocking</title>
-    <!-- Tailwind CSS -->
+    <title>eStocking - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Ícones Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root { color-scheme: dark; }
+        body { background-color: #020617; }
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 flex flex-col md:flex-row h-screen overflow-hidden">
+<body class="min-h-screen text-slate-100 bg-slate-950">
+    <div class="min-h-screen md:flex">
+        <aside class="hidden md:flex md:w-72 flex-col border-r border-slate-800 bg-slate-950/95 px-6 py-8">
+            <div class="mb-10 flex items-center gap-3">
+                <div class="flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/20">
+                    <i data-lucide="shield-check" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-400">eStocking</p>
+                    <h1 class="text-xl font-semibold text-white">Painel Admin</h1>
+                </div>
+            </div>
 
-    <!-- 1. MENU LATERAL (Responsivo: Esconde no mobile e vira barra inferior fixa ou drawer) -->
-    <aside class="w-full md:w-64 bg-slate-900 border-t md:border-t-0 md:border-r border-slate-800 flex md:flex-col justify-between order-last md:order-first z-20">
-        <div class="hidden md:flex h-16 items-center px-6 border-b border-slate-800">
-            <span class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">eStocking</span>
-        </div>
-        
-        <!-- Navegação (No mobile fica em linha horizontal na parte inferior da tela) -->
-        <nav class="flex md:flex-col justify-around md:justify-start p-2 md:p-4 w-full md:space-y-1">
-            <a href="#" class="flex flex-col md:flex-row items-center gap-1 md:gap-3 px-3 md:px-4 py-2.5 rounded-lg bg-indigo-600/10 text-indigo-400 font-medium text-xs md:text-sm transition">
-                <i data-lucide="calendar" class="w-5 h-5"></i> <span>Agenda</span>
-            </a>
-            <a href="#" class="flex flex-col md:flex-row items-center gap-1 md:gap-3 px-3 md:px-4 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 text-xs md:text-sm transition">
-                <i data-lucide="users" class="w-5 h-5"></i> <span>Cadastros</span>
-            </a>
-            <a href="#" class="flex flex-col md:flex-row items-center gap-1 md:gap-3 px-3 md:px-4 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 text-xs md:text-sm transition">
-                <i data-lucide="sliders" class="w-5 h-5"></i> <span>Parâmetros</span>
-            </a>
-            <a href="#" class="flex flex-col md:flex-row items-center gap-1 md:gap-3 px-3 md:px-4 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 text-xs md:text-sm transition">
-                <i data-lucide="settings" class="w-5 h-5"></i> <span>Ajustes</span>
-            </a>
-        </nav>
+            <nav class="flex flex-col gap-2">
+                <a href="#" class="flex items-center gap-3 rounded-3xl border border-slate-800/80 bg-slate-900/80 px-4 py-3 text-sm font-medium text-indigo-300 shadow-inner shadow-slate-950/20 transition hover:bg-slate-800">
+                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                    Agendamentos
+                </a>
+                <a href="#" class="flex items-center gap-3 rounded-3xl border border-slate-800/80 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-900/80 hover:text-slate-100">
+                    <i data-lucide="users" class="w-5 h-5"></i>
+                    Cadastros
+                </a>
+                <a href="#" class="flex items-center gap-3 rounded-3xl border border-slate-800/80 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-900/80 hover:text-slate-100">
+                    <i data-lucide="sliders" class="w-5 h-5"></i>
+                    Parâmetros
+                </a>
+                <a href="#" class="flex items-center gap-3 rounded-3xl border border-slate-800/80 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-900/80 hover:text-slate-100">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                    Ajustes
+                </a>
+            </nav>
 
-        <!-- Botão Sair (Oculto no rodapé mobile para economizar espaço, mas acessível) -->
-        <div class="hidden md:block p-4 border-t border-slate-800">
-            <button id="btnLogout" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-rose-400 hover:bg-rose-500/10 transition font-medium text-sm">
-                <i data-lucide="log-out" class="w-5 h-5"></i> Sair
-            </button>
-        </div>
-    </aside>
-
-    <!-- 2. CONTEÚDO PRINCIPAL -->
-    <main class="flex-1 flex flex-col overflow-y-auto">
-        <!-- Topbar Mobile-Friendly -->
-        <header class="h-16 bg-slate-900/50 backdrop-blur border-b border-slate-800 flex items-center justify-between px-4 md:px-8 sticky top-0 z-10">
-            <h1 class="text-base md:text-lg font-semibold text-slate-200 truncate">Agendamentos</h1>
-            <div class="flex items-center gap-3">
-                <button class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition flex items-center gap-2 shadow-lg shadow-indigo-600/20">
-                    <i data-lucide="plus" class="w-4 h-4"></i> <span class="hidden sm:inline">Novo Agendamento</span><span class="sm:hidden">Novo</span>
-                </button>
-                <button id="btnLogoutMobile" class="md:hidden text-rose-400 p-2 hover:bg-rose-500/10 rounded-lg">
+            <div class="mt-auto pt-6">
+                <button id="btnLogout" class="w-full flex items-center justify-center gap-2 rounded-3xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-300 transition hover:bg-rose-500/20">
                     <i data-lucide="log-out" class="w-5 h-5"></i>
+                    Sair
                 </button>
             </div>
-        </header>
+        </aside>
 
-        <!-- Corpo da Página -->
-        <div class="p-4 md:p-8 space-y-6 pb-20 md:pb-8">
-            
-            <!-- Cards de Métricas (Empilhados no mobile, lado a lado no PC) -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
-                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-sm">
-                    <div class="flex items-center justify-between text-slate-400 mb-2">
-                        <span class="text-xs md:text-sm font-medium">Hoje</span>
-                        <i data-lucide="calendar-check" class="w-5 h-5 text-indigo-400"></i>
+        <main class="flex-1 pb-28 md:pb-8">
+            <header class="sticky top-0 z-20 border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-md px-4 py-4 shadow-sm md:px-8">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-sm uppercase tracking-[0.3em] text-slate-500">Bem-vindo ao painel</p>
+                        <h2 class="mt-2 text-2xl font-semibold text-white">Visão geral dos agendamentos</h2>
                     </div>
-                    <div class="text-2xl md:text-3xl font-bold text-slate-100" id="statToday">0</div>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-sm">
-                    <div class="flex items-center justify-between text-slate-400 mb-2">
-                        <span class="text-xs md:text-sm font-medium">Pendentes</span>
-                        <i data-lucide="clock" class="w-5 h-5 text-amber-400"></i>
+                    <div class="flex items-center gap-3">
+                        <div class="rounded-3xl border border-slate-800/80 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">
+                            <p class="text-[0.75rem] uppercase tracking-[0.25em] text-slate-500">Usuário</p>
+                            <p id="userLabel" class="mt-1 font-medium text-white">Carregando...</p>
+                        </div>
+                        <button id="btnLogoutMobile" class="inline-flex items-center gap-2 rounded-3xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-300 transition hover:bg-rose-500/20 md:hidden">
+                            <i data-lucide="log-out" class="w-5 h-5"></i>
+                            Sair
+                        </button>
                     </div>
-                    <div class="text-2xl md:text-3xl font-bold text-slate-100" id="statPending">0</div>
                 </div>
-                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-sm">
-                    <div class="flex items-center justify-between text-slate-400 mb-2">
-                        <span class="text-xs md:text-sm font-medium">Total Mês</span>
-                        <i data-lucide="trending-up" class="w-5 h-5 text-emerald-400"></i>
+            </header>
+
+            <section class="px-4 pt-6 md:px-8 md:pt-8">
+                <div class="grid gap-4 sm:grid-cols-3">
+                    <article class="rounded-3xl border border-slate-800/80 bg-slate-900/80 p-5 shadow-sm">
+                        <div class="flex items-center justify-between text-slate-400 mb-3">
+                            <span class="text-xs uppercase tracking-[0.2em]">Hoje</span>
+                            <i data-lucide="calendar-check" class="w-5 h-5 text-indigo-400"></i>
+                        </div>
+                        <p id="statToday" class="text-3xl font-semibold text-white">0</p>
+                    </article>
+                    <article class="rounded-3xl border border-slate-800/80 bg-slate-900/80 p-5 shadow-sm">
+                        <div class="flex items-center justify-between text-slate-400 mb-3">
+                            <span class="text-xs uppercase tracking-[0.2em]">Pendentes</span>
+                            <i data-lucide="clock" class="w-5 h-5 text-amber-400"></i>
+                        </div>
+                        <p id="statPending" class="text-3xl font-semibold text-white">0</p>
+                    </article>
+                    <article class="rounded-3xl border border-slate-800/80 bg-slate-900/80 p-5 shadow-sm">
+                        <div class="flex items-center justify-between text-slate-400 mb-3">
+                            <span class="text-xs uppercase tracking-[0.2em]">Total mês</span>
+                            <i data-lucide="trending-up" class="w-5 h-5 text-emerald-400"></i>
+                        </div>
+                        <p id="statTotal" class="text-3xl font-semibold text-white">0</p>
+                    </article>
+                </div>
+
+                <div class="mt-6 rounded-[32px] border border-slate-800/80 bg-slate-900/80 shadow-sm overflow-hidden">
+                    <div class="flex flex-col gap-3 border-b border-slate-800/80 p-5 md:flex-row md:items-center md:justify-between md:p-6">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-200">Próximos registros</p>
+                            <p class="text-sm text-slate-400">Visão rápida dos agendamentos futuros</p>
+                        </div>
+                        <button class="inline-flex items-center gap-2 rounded-3xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            Novo agendamento
+                        </button>
                     </div>
-                    <div class="text-2xl md:text-3xl font-bold text-slate-100" id="statTotal">0</div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300 border-collapse">
+                            <thead class="bg-slate-950/90 text-slate-500">
+                                <tr>
+                                    <th class="px-4 py-4 font-medium">Cliente / Item</th>
+                                    <th class="px-4 py-4 font-medium">Data e Hora</th>
+                                    <th class="px-4 py-4 font-medium">Status</th>
+                                    <th class="px-4 py-4 text-right font-medium">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agendamentosTableBody" class="divide-y divide-slate-800/70">
+                                <tr>
+                                    <td class="whitespace-nowrap px-4 py-5 text-slate-500" colspan="4">Nenhum agendamento encontrado.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            </section>
+        </main>
+    </div>
 
-            <!-- Tabela Responsiva com Scroll Horizontal Suave -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-                <div class="p-4 md:p-6 border-b border-slate-800 flex items-center justify-between">
-                    <h2 class="font-semibold text-slate-200 text-sm md:text-base">Próximos Registros</h2>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-xs md:text-sm">
-                        <thead>
-                            <tr class="bg-slate-900/80 text-slate-400 border-b border-slate-800">
-                                <th class="p-3 md:p-4 font-medium">Cliente / Item</th>
-                                <th class="p-3 md:p-4 font-medium">Data e Hora</th>
-                                <th class="p-3 md:p-4 font-medium">Status</th>
-                                <th class="p-3 md:p-4 text-right font-medium">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="agendamentosTableBody" class="divide-y divide-slate-800/50 text-slate-300">
-                            <tr>
-                                <td colspan="4" class="p-6 text-center text-slate-500">Nenhum agendamento encontrado.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    <nav class="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-between gap-2 border-t border-slate-800/70 bg-slate-950/95 px-4 py-3 shadow-[0_-20px_50px_-30px_rgba(15,23,42,0.85)] md:hidden">
+        <button class="flex flex-1 flex-col items-center rounded-3xl bg-slate-900/90 px-3 py-2 text-slate-200 transition hover:bg-slate-900">
+            <i data-lucide="calendar" class="w-5 h-5"></i>
+            <span class="text-[11px]">Agenda</span>
+        </button>
+        <button class="flex flex-1 flex-col items-center rounded-3xl bg-slate-900/90 px-3 py-2 text-slate-200 transition hover:bg-slate-900">
+            <i data-lucide="users" class="w-5 h-5"></i>
+            <span class="text-[11px]">Cadastros</span>
+        </button>
+        <button id="bottomLogout" class="flex flex-1 flex-col items-center rounded-3xl bg-rose-500/10 px-3 py-2 text-rose-300 transition hover:bg-rose-500/20">
+            <i data-lucide="log-out" class="w-5 h-5"></i>
+            <span class="text-[11px]">Sair</span>
+        </button>
+    </nav>
 
-        </div>
-    </main>
-
-    <!-- Script de Integração e Controle -->
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
@@ -119,22 +151,22 @@
         const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Validar Sessão
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
             window.location.href = './index.html';
         }
 
-        // Ação de Logout (Desktop e Mobile)
+        document.getElementById('userLabel').textContent = session.user.email || 'Usuário';
+
         const handleLogout = async () => {
             await supabase.auth.signOut();
             window.location.href = './index.html';
         };
-        
+
         document.getElementById('btnLogout')?.addEventListener('click', handleLogout);
         document.getElementById('btnLogoutMobile')?.addEventListener('click', handleLogout);
+        document.getElementById('bottomLogout')?.addEventListener('click', handleLogout);
 
-        // Inicializa os ícones
         lucide.createIcons();
     </script>
 </body>
