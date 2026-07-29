@@ -207,7 +207,7 @@
 
     <!-- Scripts -->
     <script type="module">
-        import { initTheme, showToast, fetchServicosAtivos, updateServico, deleteServico } from './js/app.js';
+        import { initTheme, showToast, showConfirmModal, fetchServicosAtivos, updateServico, deleteServico } from './js/app.js';
         import { supabase } from './js/supabase.js';
 
         initTheme();
@@ -252,28 +252,34 @@
                         : 'A consultar';
 
                     const card = document.createElement('div');
-                    card.className = 'p-4 sm:p-5 flex items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors';
+                    card.className = 'p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors rounded-2xl';
+                    
                     card.innerHTML = `
-                        <div class="flex items-start gap-3">
-                            <div class="h-10 w-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold flex items-center justify-center text-sm shrink-0">
+                        <div class="flex items-start gap-3 min-w-0 flex-1">
+                            <div class="h-10 w-10 shrink-0 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold flex items-center justify-center text-sm">
                                 <i data-lucide="scissors" class="h-5 w-5"></i>
                             </div>
-                            <div>
-                                <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base">${servico.nome}</h4>
-                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${servico.descricao || 'Sem descrição'}</p>
-                                <span class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">
+                            <div class="min-w-0 space-y-0.5">
+                                <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">${servico.nome}</h4>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">${servico.descricao || 'Sem descrição'}</p>
+                                <span class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 pt-1">
                                     <i data-lucide="clock" class="h-3 w-3"></i> ${servico.duracao_minutos} minutos
                                 </span>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3 shrink-0">
-                            <span class="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400">${valorFormatado}</span>
-                            <button class="btn-edit-servico p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-colors" data-servico='${JSON.stringify({...servico, rawValor})}' title="Editar Serviço">
-                                <i data-lucide="edit-3" class="h-4 w-4"></i>
-                            </button>
-                            <button class="btn-delete-servico p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors" data-id="${servico.id}" title="Excluir Serviço">
-                                <i data-lucide="trash-2" class="h-4 w-4"></i>
-                            </button>
+
+                        <!-- PREÇO E BOTÕES HORIZONTAIS -->
+                        <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/40">
+                            <span class="text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400">${valorFormatado}</span>
+                            
+                            <div class="flex flex-row items-center gap-1.5 shrink-0">
+                                <button class="btn-edit-servico flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors" data-servico='${JSON.stringify({...servico, rawValor})}' title="Editar Serviço">
+                                    <i data-lucide="edit-3" class="h-4 w-4"></i>
+                                </button>
+                                <button class="btn-delete-servico flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors" data-id="${servico.id}" title="Excluir Serviço">
+                                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                </button>
+                            </div>
                         </div>
                     `;
                     container.appendChild(card);
@@ -314,20 +320,26 @@
             }
         });
 
-        // Eventos Editar / Excluir Serviço
-        container?.addEventListener('click', async (e) => {
+        // Eventos Editar / Excluir Serviço com Modal Bonito
+        container?.addEventListener('click', (e) => {
             const btnDelete = e.target.closest('.btn-delete-servico');
             if (btnDelete) {
                 const id = btnDelete.dataset.id;
-                if (confirm('Deseja realmente apagar este serviço?')) {
-                    try {
-                        await deleteServico(id);
-                        showToast('Serviço excluído!', 'success');
-                        await renderServicos();
-                    } catch (err) {
-                        showToast('Erro ao excluir serviço: ' + err.message, 'error');
+                showConfirmModal({
+                    title: 'Excluir Serviço',
+                    message: 'Deseja realmente apagar este serviço do seu catálogo?',
+                    confirmText: 'Apagar Serviço',
+                    type: 'danger',
+                    onConfirm: async () => {
+                        try {
+                            await deleteServico(id);
+                            showToast('Serviço excluído com sucesso!', 'success');
+                            await renderServicos();
+                        } catch (err) {
+                            showToast('Erro ao excluir serviço: ' + err.message, 'error');
+                        }
                     }
-                }
+                });
                 return;
             }
 

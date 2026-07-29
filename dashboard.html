@@ -39,6 +39,18 @@
             min-height: 48px;
             -webkit-appearance: none;
         }
+        select, select option {
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+        }
+        select option {
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 10px;
+        }
     </style>
 </head>
 <body class="min-h-[100dvh] bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
@@ -159,7 +171,7 @@
                     </div>
                     <div>
                         <h3 class="text-lg font-bold text-slate-900 dark:text-white">Novo Agendamento</h3>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">Horários validados automaticamente pelo expediente</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Horários validados pelo expediente</p>
                     </div>
                 </div>
                 <button id="btnCloseModal" class="h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
@@ -180,26 +192,39 @@
                         class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
                 </div>
 
-                <div>
-                    <label for="selectServico" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Serviço Desejado</label>
-                    <select id="selectServico" required 
-                        class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
-                        <option value="">Carregando serviços...</option>
-                    </select>
+                <!-- COMBOBOX PERSONALIZADO DE SERVIÇOS -->
+                <div class="space-y-1.5 relative" id="comboboxServicoWrapper">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Serviço Desejado</label>
+                    
+                    <button type="button" id="btnComboboxServico" class="w-full max-w-full flex items-center justify-between rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 box-border text-left transition-all">
+                        <span id="labelComboboxServico" class="truncate font-medium text-slate-400">Selecione um serviço...</span>
+                        <i data-lucide="chevron-down" class="h-4 w-4 shrink-0 text-slate-400 ml-2"></i>
+                    </button>
+
+                    <input type="hidden" id="selectServico" required>
+
+                    <div id="listComboboxServico" class="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-h-52 overflow-y-auto hidden box-border">
+                        <!-- Preenchido via JS -->
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <!-- DATA E SELEÇÃO DE HORÁRIO COM COMBOBOX E CHIPS RÁPIDOS -->
+                <div class="space-y-3">
                     <div>
                         <label for="inputData" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Data do Atendimento</label>
                         <input type="date" id="inputData" required 
                             class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
                     </div>
-                    <div>
-                        <label for="selectHora" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Horário Disponível</label>
-                        <select id="selectHora" required 
-                            class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
-                            <option value="">Selecione a data...</option>
-                        </select>
+
+                    <!-- COMBOBOX E GRADE RÁPIDA DE HORÁRIOS -->
+                    <div class="space-y-2">
+                        <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Horários Disponíveis</label>
+
+                        <input type="hidden" id="selectHora" required>
+
+                        <div id="timeChipsContainer" class="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl bg-slate-50/50 dark:bg-slate-950/40">
+                            <!-- Preenchido via JS com botões no formato de chips -->
+                        </div>
                     </div>
                 </div>
 
@@ -240,7 +265,7 @@
                 <input type="hidden" id="editAgendamentoId">
                 <div>
                     <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Serviço</label>
-                    <select id="editSelectServico" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+                    <select id="editSelectServico" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 truncate"></select>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -256,7 +281,7 @@
 
                 <div>
                     <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Status</label>
-                    <select id="editSelectStatus" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="editSelectStatus" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 truncate">
                         <option value="pendente">Pendente</option>
                         <option value="em_atendimento">Em Atendimento</option>
                         <option value="concluido">Atendido / Concluído</option>
@@ -282,9 +307,9 @@
         import { 
             initTheme, 
             showToast, 
+            showConfirmModal,
             applyPhoneMask, 
             populateServicosDropdown, 
-            criarAgendamentoCliente, 
             fetchAndRenderAgendamentos,
             updateAgendamentoStatus,
             updateAgendamento,
@@ -295,7 +320,6 @@
 
         initTheme();
 
-        // Elementos DOM
         const modal = document.getElementById('modalAgendamento');
         const openModalBtn = document.getElementById('btnOpenModalAgendamento');
         const closeModalBtn = document.getElementById('btnCloseModal');
@@ -303,10 +327,17 @@
         const formAgendamento = document.getElementById('formAgendamento');
         const whatsappInput = document.getElementById('inputWhatsapp');
         const inputData = document.getElementById('inputData');
-        const selectHora = document.getElementById('selectHora');
-        const selectServico = document.getElementById('selectServico');
+        const hiddenSelectHora = document.getElementById('selectHora');
+        const hiddenSelectServico = document.getElementById('selectServico');
 
-        // Modal Edição
+        // Combobox Serviço
+        const btnComboboxServico = document.getElementById('btnComboboxServico');
+        const labelComboboxServico = document.getElementById('labelComboboxServico');
+        const listComboboxServico = document.getElementById('listComboboxServico');
+
+        // Container de Chips de Horários
+        const timeChipsContainer = document.getElementById('timeChipsContainer');
+
         const modalEdit = document.getElementById('modalEditAgendamento');
         const closeEditBtn = document.getElementById('btnCloseEditModal');
         const cancelEditBtn = document.getElementById('btnCancelEditModal');
@@ -314,47 +345,104 @@
 
         applyPhoneMask(whatsappInput);
 
-        // Define data atual padrão
         const todayISO = new Date().toISOString().split('T')[0];
         if (inputData) inputData.value = todayISO;
 
-        // Atualizar lista de horários livres quando altera a Data ou Serviço
+        let currentServicoDuracao = 30;
+
+        // Combobox Serviços
+        btnComboboxServico?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            listComboboxServico.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!listComboboxServico.contains(e.target) && e.target !== btnComboboxServico) {
+                listComboboxServico.classList.add('hidden');
+            }
+        });
+
+        listComboboxServico?.addEventListener('click', (e) => {
+            const item = e.target.closest('.combobox-option');
+            if (item) {
+                const id = item.dataset.value;
+                const nome = item.dataset.nome;
+                const preco = item.dataset.preco;
+                const duracao = parseInt(item.dataset.duracao || 30);
+
+                hiddenSelectServico.value = id;
+                currentServicoDuracao = duracao;
+                labelComboboxServico.textContent = `${nome} (${duracao} min) - ${preco}`;
+                labelComboboxServico.className = 'truncate font-extrabold text-slate-900 dark:text-white';
+                listComboboxServico.classList.add('hidden');
+
+                updateAvailableSlots();
+            }
+        });
+
+        // Atualizar Chips de Horários
         async function updateAvailableSlots() {
             const dateVal = inputData.value;
             if (!dateVal) return;
 
-            selectHora.innerHTML = '<option value="">Carregando horários...</option>';
-            const servicoOption = selectServico.options[selectServico.selectedIndex];
-            const duracao = servicoOption?.dataset?.duracao ? parseInt(servicoOption.dataset.duracao) : 30;
-
-            const { closed, slots } = await getAvailableTimeSlots(dateVal, duracao);
+            hiddenSelectHora.value = '';
+            timeChipsContainer.innerHTML = '<div class="col-span-full py-4 text-xs text-slate-400 text-center font-medium">Carregando horários...</div>';
+            
+            const { closed, slots } = await getAvailableTimeSlots(dateVal, currentServicoDuracao);
 
             if (closed) {
-                selectHora.innerHTML = '<option value="" disabled selected>Estabelecimento fechado nesta data</option>';
+                timeChipsContainer.innerHTML = `
+                    <div class="col-span-full py-4 px-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 text-xs text-center font-bold">
+                        Fechado nesta data
+                    </div>
+                `;
                 return;
             }
 
             if (!slots || slots.length === 0) {
-                selectHora.innerHTML = '<option value="" disabled selected>Nenhum horário disponível</option>';
+                timeChipsContainer.innerHTML = `
+                    <div class="col-span-full py-4 px-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 text-xs text-center font-medium">
+                        Nenhum horário disponível
+                    </div>
+                `;
                 return;
             }
 
-            selectHora.innerHTML = '<option value="" disabled selected>Selecione um horário...</option>';
+            timeChipsContainer.innerHTML = '';
             slots.forEach(slot => {
-                const opt = document.createElement('option');
-                opt.value = slot.time;
-                opt.textContent = slot.available ? `${slot.time} - Disponível` : `${slot.time} - Ocupado`;
-                if (!slot.available) opt.disabled = true;
-                selectHora.appendChild(opt);
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.dataset.time = slot.time;
+
+                if (slot.available) {
+                    btn.className = 'time-chip px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-extrabold text-xs text-center shadow-sm hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all';
+                    btn.textContent = slot.time;
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.time-chip').forEach(b => {
+                            b.className = 'time-chip px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-extrabold text-xs text-center shadow-sm hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all';
+                        });
+                        btn.className = 'time-chip px-3 py-2.5 rounded-xl border border-blue-600 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-xs text-center shadow-lg shadow-blue-500/25 scale-105 transition-all';
+                        hiddenSelectHora.value = slot.time;
+                    });
+                } else {
+                    btn.className = 'px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800/40 bg-slate-100/50 dark:bg-slate-900/30 text-slate-300 dark:text-slate-600 font-semibold text-xs text-center line-through cursor-not-allowed';
+                    btn.textContent = slot.time;
+                    btn.disabled = true;
+                }
+
+                timeChipsContainer.appendChild(btn);
             });
         }
 
         inputData?.addEventListener('change', updateAvailableSlots);
-        selectServico?.addEventListener('change', updateAvailableSlots);
 
         async function openModal() {
             modal.classList.remove('hidden');
-            await populateServicosDropdown('selectServico');
+            labelComboboxServico.textContent = 'Selecione um serviço...';
+            labelComboboxServico.className = 'truncate font-medium text-slate-400';
+            hiddenSelectServico.value = '';
+            hiddenSelectHora.value = '';
+            await populateServicosDropdown(null, 'listComboboxServico');
             await updateAvailableSlots();
         }
         function closeModal() { modal.classList.add('hidden'); }
@@ -363,15 +451,14 @@
         closeModalBtn?.addEventListener('click', closeModal);
         cancelModalBtn?.addEventListener('click', closeModal);
 
-        // Submissão de Novo Agendamento
         formAgendamento?.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const nomeCliente = document.getElementById('inputCliente').value.trim();
             const whatsappCliente = document.getElementById('inputWhatsapp').value.trim();
-            const servicoIdSelecionado = selectServico.value;
+            const servicoIdSelecionado = hiddenSelectServico.value;
             const dataVal = inputData.value;
-            const horaVal = selectHora.value;
+            const horaVal = hiddenSelectHora.value;
             const observacoesCliente = document.getElementById('inputObservacoes').value.trim();
 
             if (!servicoIdSelecionado) {
@@ -379,7 +466,7 @@
                 return;
             }
             if (!horaVal) {
-                showToast('Por favor, selecione um horário válido.', 'error');
+                showToast('Por favor, toque em um horário para selecionar.', 'error');
                 return;
             }
 
@@ -410,7 +497,6 @@
             }
         });
 
-        // Eventos Globais na Lista de Agendamentos (Status, Editar, Excluir)
         const container = document.getElementById('agendamentosContainer');
         container?.addEventListener('change', async (e) => {
             if (e.target.classList.contains('status-select')) {
@@ -418,7 +504,7 @@
                 const newStatus = e.target.value;
                 try {
                     await updateAgendamentoStatus(id, newStatus);
-                    showToast('Status atualizado com sucesso!', 'success');
+                    showToast('Status atualizado!', 'success');
                     await fetchAndRenderAgendamentos('agendamentosContainer');
                 } catch (err) {
                     showToast('Erro ao atualizar status: ' + err.message, 'error');
@@ -426,19 +512,25 @@
             }
         });
 
-        container?.addEventListener('click', async (e) => {
+        container?.addEventListener('click', (e) => {
             const btnDelete = e.target.closest('.btn-delete-agendamento');
             if (btnDelete) {
                 const id = btnDelete.dataset.id;
-                if (confirm('Tem certeza que deseja apagar este agendamento?')) {
-                    try {
-                        await deleteAgendamento(id);
-                        showToast('Agendamento excluído!', 'success');
-                        await fetchAndRenderAgendamentos('agendamentosContainer');
-                    } catch (err) {
-                        showToast('Erro ao excluir: ' + err.message, 'error');
+                showConfirmModal({
+                    title: 'Excluir Agendamento',
+                    message: 'Deseja realmente apagar este agendamento?',
+                    confirmText: 'Apagar Agendamento',
+                    type: 'danger',
+                    onConfirm: async () => {
+                        try {
+                            await deleteAgendamento(id);
+                            showToast('Agendamento excluído!', 'success');
+                            await fetchAndRenderAgendamentos('agendamentosContainer');
+                        } catch (err) {
+                            showToast('Erro ao excluir: ' + err.message, 'error');
+                        }
                     }
-                }
+                });
                 return;
             }
 
@@ -447,8 +539,9 @@
                 const ag = JSON.parse(btnEdit.dataset.agendamento);
                 document.getElementById('editAgendamentoId').value = ag.id;
                 
-                await populateServicosDropdown('editSelectServico');
-                document.getElementById('editSelectServico').value = ag.servico_id || ag.servicos?.id || '';
+                populateServicosDropdown('editSelectServico').then(() => {
+                    document.getElementById('editSelectServico').value = ag.servico_id || ag.servicos?.id || '';
+                });
 
                 const d = new Date(ag.data_hora_inicio);
                 document.getElementById('editInputData').value = d.toISOString().split('T')[0];

@@ -185,7 +185,7 @@
 
     <!-- Scripts -->
     <script type="module">
-        import { initTheme, showToast, applyPhoneMask, cleanPhone, fetchAndRenderClientes, updateCliente, deleteCliente } from './js/app.js';
+        import { initTheme, showToast, showConfirmModal, applyPhoneMask, cleanPhone, fetchAndRenderClientes, updateCliente, deleteCliente } from './js/app.js';
         import { supabase } from './js/supabase.js';
 
         initTheme();
@@ -226,21 +226,27 @@
             }
         });
 
-        // Eventos Editar / Excluir Cliente
+        // Eventos Editar / Excluir Cliente com Modal Bonito
         const container = document.getElementById('clientesContainer');
-        container?.addEventListener('click', async (e) => {
+        container?.addEventListener('click', (e) => {
             const btnDelete = e.target.closest('.btn-delete-cliente');
             if (btnDelete) {
                 const id = btnDelete.dataset.id;
-                if (confirm('Deseja realmente apagar este cliente?')) {
-                    try {
-                        await deleteCliente(id);
-                        showToast('Cliente removido!', 'success');
-                        await fetchAndRenderClientes('clientesContainer');
-                    } catch (err) {
-                        showToast('Erro ao apagar cliente: ' + err.message, 'error');
+                showConfirmModal({
+                    title: 'Excluir Cliente',
+                    message: 'Deseja realmente apagar este cliente do cadastro?',
+                    confirmText: 'Apagar Cliente',
+                    type: 'danger',
+                    onConfirm: async () => {
+                        try {
+                            await deleteCliente(id);
+                            showToast('Cliente removido!', 'success');
+                            await fetchAndRenderClientes('clientesContainer');
+                        } catch (err) {
+                            showToast('Erro ao apagar cliente: ' + err.message, 'error');
+                        }
                     }
-                }
+                });
                 return;
             }
 

@@ -44,6 +44,91 @@ function updateThemeIcons() {
     }
 }
 
+// --- MODAL DE CONFIRMAÇÃO E ALERTA ELEGANTE E CURTO ---
+export function showConfirmModal({ title = 'Confirmação', message, confirmText = 'Confirmar', cancelText = 'Cancelar', type = 'danger', onConfirm }) {
+    let modal = document.getElementById('global-confirm-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'global-confirm-modal';
+        modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4 transition-all duration-200 hidden';
+        modal.innerHTML = `
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] w-full max-w-sm p-6 shadow-2xl space-y-5 text-center transform transition-all duration-200 my-auto" id="global-confirm-card">
+                <div id="global-confirm-icon-bg" class="h-14 w-14 rounded-full flex items-center justify-center mx-auto bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                    <i data-lucide="alert-triangle" id="global-confirm-icon" class="h-7 w-7"></i>
+                </div>
+                <div class="space-y-1.5">
+                    <h3 id="global-confirm-title" class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white"></h3>
+                    <p id="global-confirm-message" class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed"></p>
+                </div>
+                <div class="flex items-center justify-center gap-2.5 pt-2">
+                    <button id="global-confirm-cancel" class="flex-1 py-3 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        Cancelar
+                    </button>
+                    <button id="global-confirm-ok" class="flex-1 py-3 rounded-full text-xs font-extrabold text-white bg-rose-600 hover:bg-rose-500 shadow-lg shadow-rose-600/20 transition-all">
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    const titleEl = document.getElementById('global-confirm-title');
+    const msgEl = document.getElementById('global-confirm-message');
+    const okBtn = document.getElementById('global-confirm-ok');
+    const cancelBtn = document.getElementById('global-confirm-cancel');
+    const iconBg = document.getElementById('global-confirm-icon-bg');
+    const iconEl = document.getElementById('global-confirm-icon');
+
+    titleEl.textContent = title;
+    msgEl.textContent = message;
+    okBtn.textContent = confirmText;
+    cancelBtn.textContent = cancelText;
+    cancelBtn.style.display = 'block';
+
+    if (type === 'danger') {
+        iconBg.className = 'h-14 w-14 rounded-full flex items-center justify-center mx-auto bg-rose-500/10 text-rose-500 border border-rose-500/20';
+        iconEl.setAttribute('data-lucide', 'trash-2');
+        okBtn.className = 'flex-1 py-3 rounded-full text-xs font-extrabold text-white bg-rose-600 hover:bg-rose-500 shadow-lg shadow-rose-600/20 transition-all';
+    } else {
+        iconBg.className = 'h-14 w-14 rounded-full flex items-center justify-center mx-auto bg-blue-500/10 text-blue-500 border border-blue-500/20';
+        iconEl.setAttribute('data-lucide', 'check-circle');
+        okBtn.className = 'flex-1 py-3 rounded-full text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-600/20 transition-all';
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+    modal.classList.remove('hidden');
+
+    const handleOk = () => {
+        modal.classList.add('hidden');
+        okBtn.removeEventListener('click', handleOk);
+        cancelBtn.removeEventListener('click', handleCancel);
+        if (onConfirm) onConfirm();
+    };
+
+    const handleCancel = () => {
+        modal.classList.add('hidden');
+        okBtn.removeEventListener('click', handleOk);
+        cancelBtn.removeEventListener('click', handleCancel);
+    };
+
+    okBtn.addEventListener('click', handleOk);
+    cancelBtn.addEventListener('click', handleCancel);
+}
+
+export function showAlertModal({ title = 'Aviso', message, type = 'info', onOk }) {
+    showConfirmModal({
+        title,
+        message,
+        confirmText: 'Entendido',
+        cancelText: '',
+        type: type === 'error' ? 'danger' : 'info',
+        onConfirm: onOk
+    });
+    const cancelBtn = document.getElementById('global-confirm-cancel');
+    if (cancelBtn) cancelBtn.style.display = 'none';
+}
+
 // --- SISTEMA DE TOAST / NOTIFICAÇÕES ---
 export function showToast(message, type = 'success') {
     let container = document.getElementById('toast-container');
@@ -132,7 +217,7 @@ export async function fetchConfiguracaoHorarios() {
     }
 
     return {
-        dias_semana: [1, 2, 3, 4, 5, 6], // Segunda a Sábado (0=Dom, 1=Seg...)
+        dias_semana: [1, 2, 3, 4, 5, 6],
         hora_inicio: "08:00",
         hora_fim: "18:00",
         intervalo_minutos: 30
@@ -156,17 +241,15 @@ export async function saveConfiguracaoHorarios(configValor) {
 export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
     const config = await fetchConfiguracaoHorarios();
     
-    // Obter o dia da semana da data selecionada (considerando timezone local YYYY-MM-DD)
     const [year, month, day] = dateStr.split('-').map(Number);
     const dateObj = new Date(year, month - 1, day);
-    const dayOfWeek = dateObj.getDay(); // 0 = Domingo, 1 = Segunda, etc.
+    const dayOfWeek = dateObj.getDay();
 
     const diasAtivos = config.dias_semana || [1, 2, 3, 4, 5, 6];
     if (!diasAtivos.includes(dayOfWeek)) {
         return { closed: true, slots: [] };
     }
 
-    // Gerar slots em intervalos
     const intervalo = config.intervalo_minutos || 30;
     const [startH, startM] = (config.hora_inicio || "08:00").split(':').map(Number);
     const [endH, endM] = (config.hora_fim || "18:00").split(':').map(Number);
@@ -174,7 +257,6 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
     let currentMinutes = startH * 60 + startM;
     const endMinutes = endH * 60 + endM;
 
-    // Buscar agendamentos existentes para essa data
     const startIso = `${dateStr}T00:00:00.000Z`;
     const endIso = `${dateStr}T23:59:59.999Z`;
 
@@ -210,10 +292,7 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
         const slotStart = currentMinutes;
         const slotEnd = currentMinutes + servicoDuracao;
 
-        // Verificar conflito com agendamentos existentes
-        const isOccupied = occupiedRanges.some(r => {
-            return (slotStart < r.end && slotEnd > r.start);
-        });
+        const isOccupied = occupiedRanges.some(r => (slotStart < r.end && slotEnd > r.start));
 
         slots.push({
             time: timeStr,
@@ -246,34 +325,64 @@ export async function fetchServicosAtivos() {
     return data || [];
 }
 
-export async function populateServicosDropdown(selectId) {
+export async function populateServicosDropdown(selectId, customComboboxListId = null) {
     const select = document.getElementById(selectId);
-    if (!select) return;
-
-    select.innerHTML = '<option value="">Carregando serviços...</option>';
+    const customList = customComboboxListId ? document.getElementById(customComboboxListId) : null;
+    
     try {
         const servicos = await fetchServicosAtivos();
         const ativos = servicos.filter(s => s.ativo !== false);
 
-        if (!ativos || ativos.length === 0) {
-            select.innerHTML = '<option value="" disabled selected>Nenhum serviço disponível</option>';
-            return;
+        if (select) {
+            if (!ativos || ativos.length === 0) {
+                select.innerHTML = '<option value="" disabled selected>Nenhum serviço disponível</option>';
+            } else {
+                select.innerHTML = '<option value="" disabled selected>Selecione um serviço...</option>';
+                ativos.forEach(servico => {
+                    const preco = servico.tabela_precos && servico.tabela_precos[0] 
+                        ? ` - R$ ${parseFloat(servico.tabela_precos[0].valor).toFixed(2)}` 
+                        : '';
+                    const option = document.createElement('option');
+                    option.value = servico.id;
+                    option.dataset.duracao = servico.duracao_minutos;
+                    option.textContent = `${servico.nome}${preco} (${servico.duracao_minutos} min)`;
+                    select.appendChild(option);
+                });
+            }
         }
 
-        select.innerHTML = '<option value="" disabled selected>Selecione um serviço...</option>';
-        ativos.forEach(servico => {
-            const preco = servico.tabela_precos && servico.tabela_precos[0] 
-                ? ` - R$ ${parseFloat(servico.tabela_precos[0].valor).toFixed(2)}` 
-                : '';
-            const option = document.createElement('option');
-            option.value = servico.id;
-            option.dataset.duracao = servico.duracao_minutos;
-            option.textContent = `${servico.nome} (${servico.duracao_minutos} min)${preco}`;
-            select.appendChild(option);
-        });
+        if (customList) {
+            customList.innerHTML = '';
+            if (!ativos || ativos.length === 0) {
+                customList.innerHTML = '<div class="p-3 text-xs text-slate-400 text-center">Nenhum serviço cadastrado</div>';
+            } else {
+                ativos.forEach(servico => {
+                    const preco = servico.tabela_precos && servico.tabela_precos[0] 
+                        ? `R$ ${parseFloat(servico.tabela_precos[0].valor).toFixed(2)}` 
+                        : '';
+                    const item = document.createElement('div');
+                    item.className = 'combobox-option p-3 hover:bg-blue-500/10 dark:hover:bg-slate-800 cursor-pointer flex items-center justify-between gap-3 text-xs font-medium text-slate-800 dark:text-slate-200 transition-colors border-b border-slate-100 dark:border-slate-800/50 last:border-0';
+                    item.dataset.value = servico.id;
+                    item.dataset.duracao = servico.duracao_minutos;
+                    item.dataset.nome = servico.nome;
+                    item.dataset.preco = preco;
+                    item.innerHTML = `
+                        <div class="min-w-0 flex-1">
+                            <span class="font-extrabold text-slate-900 dark:text-white block truncate">${escapeHtml(servico.nome)}</span>
+                            <span class="text-[11px] text-slate-400">${servico.duracao_minutos} minutos</span>
+                        </div>
+                        <span class="font-black text-emerald-600 dark:text-emerald-400 shrink-0 text-xs">${preco}</span>
+                    `;
+                    customList.appendChild(item);
+                });
+            }
+        }
+
+        return ativos;
     } catch (err) {
-        select.innerHTML = '<option value="" disabled selected>Erro ao carregar serviços</option>';
+        if (select) select.innerHTML = '<option value="" disabled selected>Erro ao carregar serviços</option>';
         showToast('Erro ao carregar lista de serviços', 'error');
+        return [];
     }
 }
 
@@ -302,7 +411,6 @@ export async function updateAgendamentoStatus(id, newStatus) {
 }
 
 export async function updateAgendamento(id, { servico_id, data_hora_inicio, observacoes, status }) {
-    // Busca duração do serviço
     const { data: servico } = await supabase.from('servicos').select('duracao_minutos').eq('id', servico_id).single();
     const duracao = servico?.duracao_minutos || 30;
 
@@ -336,7 +444,7 @@ export async function deleteAgendamento(id) {
     return true;
 }
 
-// --- RENDERIZAÇÃO DE AGENDAMENTOS COM AÇÕES E ALTERAÇÃO DE STATUS ---
+// --- RENDERIZAÇÃO DE AGENDAMENTOS COM BOTÕES HORIZONTAIS ---
 export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -449,21 +557,21 @@ function renderAgendamentosList(container, agendamentos) {
         item.className = 'group p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors rounded-2xl';
         
         item.innerHTML = `
-            <div class="flex items-start gap-4">
+            <div class="flex items-start gap-4 flex-1 min-w-0">
                 <div class="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 font-bold border border-blue-100 dark:border-blue-900/40">
                     <span class="text-xs font-semibold uppercase">${dataInicio.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</span>
                     <span class="text-base font-extrabold leading-none">${dataInicio.getDate()}</span>
                 </div>
-                <div class="space-y-1">
+                <div class="space-y-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <h4 class="font-semibold text-slate-900 dark:text-white text-base">${escapeHtml(clienteNome)}</h4>
+                        <h4 class="font-semibold text-slate-900 dark:text-white text-base truncate">${escapeHtml(clienteNome)}</h4>
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${statusClass}">
                             ${statusLabel}
                         </span>
                     </div>
                     <p class="text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
-                        <i data-lucide="scissors" class="h-3.5 w-3.5 text-blue-500"></i>
-                        ${escapeHtml(servicoNome)} (${duracao} min)
+                        <i data-lucide="scissors" class="h-3.5 w-3.5 text-blue-500 shrink-0"></i>
+                        <span class="truncate">${escapeHtml(servicoNome)} (${duracao} min)</span>
                     </p>
                     <div class="flex items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 flex-wrap">
                         <span class="flex items-center gap-1">
@@ -479,9 +587,9 @@ function renderAgendamentosList(container, agendamentos) {
                 </div>
             </div>
 
-            <div class="flex items-center gap-2 flex-wrap self-end lg:self-center">
-                <!-- Seletor de Alteração de Status Rápida -->
-                <select class="status-select rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium focus:outline-none" data-id="${ag.id}">
+            <!-- AÇÕES NA HORIZONTAL -->
+            <div class="flex flex-row items-center gap-2 shrink-0 self-end lg:self-center pt-2 lg:pt-0">
+                <select class="status-select rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 font-medium focus:outline-none max-w-[140px] truncate" data-id="${ag.id}">
                     <option value="pendente" ${statusLower === 'pendente' ? 'selected' : ''}>Pendente</option>
                     <option value="em_atendimento" ${statusLower === 'em_atendimento' ? 'selected' : ''}>Em Atendimento</option>
                     <option value="concluido" ${statusLower === 'concluido' || statusLower === 'atendido' ? 'selected' : ''}>Já Atendido</option>
@@ -490,19 +598,20 @@ function renderAgendamentosList(container, agendamentos) {
 
                 ${clienteWhatsapp ? `
                     <a href="https://wa.me/55${cleanPhone(clienteWhatsapp)}" target="_blank" rel="noopener noreferrer" 
-                        class="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all">
-                        <i data-lucide="message-circle" class="h-3.5 w-3.5"></i>
-                        <span class="hidden sm:inline">WhatsApp</span>
+                        class="flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shrink-0">
+                        <i data-lucide="message-circle" class="h-4 w-4"></i>
                     </a>
                 ` : ''}
 
-                <button class="btn-edit-agendamento p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-colors" data-agendamento='${JSON.stringify(ag)}' title="Editar Agendamento">
-                    <i data-lucide="edit-3" class="h-4 w-4"></i>
-                </button>
+                <div class="flex flex-row items-center gap-1 shrink-0">
+                    <button class="btn-edit-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors" data-agendamento='${JSON.stringify(ag)}' title="Editar Agendamento">
+                        <i data-lucide="edit-3" class="h-4 w-4"></i>
+                    </button>
 
-                <button class="btn-delete-agendamento p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors" data-id="${ag.id}" title="Excluir Agendamento">
-                    <i data-lucide="trash-2" class="h-4 w-4"></i>
-                </button>
+                    <button class="btn-delete-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors" data-id="${ag.id}" title="Excluir Agendamento">
+                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    </button>
+                </div>
             </div>
         `;
 
@@ -571,28 +680,29 @@ export async function fetchAndRenderClientes(containerId) {
             const item = document.createElement('div');
             item.className = 'p-4 sm:p-5 flex items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors';
             item.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <div class="h-10 w-10 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-semibold flex items-center justify-center text-sm border border-slate-200 dark:border-slate-700">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="h-10 w-10 shrink-0 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-semibold flex items-center justify-center text-sm border border-slate-200 dark:border-slate-700">
                         ${cliente.nome.charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                        <h4 class="font-semibold text-slate-900 dark:text-white text-sm sm:text-base">${escapeHtml(cliente.nome)}</h4>
+                    <div class="min-w-0">
+                        <h4 class="font-semibold text-slate-900 dark:text-white text-sm sm:text-base truncate">${escapeHtml(cliente.nome)}</h4>
                         <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                             <i data-lucide="phone" class="h-3 w-3"></i>
                             ${cleanPhone(cliente.whatsapp)}
                         </p>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
+                
+                <!-- BOTÕES CLIENTES NA HORIZONTAL -->
+                <div class="flex flex-row items-center gap-1.5 shrink-0">
                     <a href="https://wa.me/55${cleanPhone(cliente.whatsapp)}" target="_blank" rel="noopener noreferrer" 
-                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all">
+                        class="flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shrink-0">
                         <i data-lucide="message-circle" class="h-4 w-4"></i>
-                        <span class="hidden sm:inline">Conversar</span>
                     </a>
-                    <button class="btn-edit-cliente p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-colors" data-cliente='${JSON.stringify(cliente)}' title="Editar Cliente">
+                    <button class="btn-edit-cliente flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors" data-cliente='${JSON.stringify(cliente)}' title="Editar Cliente">
                         <i data-lucide="edit-3" class="h-4 w-4"></i>
                     </button>
-                    <button class="btn-delete-cliente p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors" data-id="${cliente.id}" title="Excluir Cliente">
+                    <button class="btn-delete-cliente flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors" data-id="${cliente.id}" title="Excluir Cliente">
                         <i data-lucide="trash-2" class="h-4 w-4"></i>
                     </button>
                 </div>
