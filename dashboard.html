@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>eStocking - Dashboard / Agenda</title>
-    
+    <title>Acionar - Agenda de Compromissos</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -35,25 +35,43 @@
     <style>
         * { -webkit-tap-highlight-color: transparent; }
         ::-webkit-scrollbar { width: 0px; background: transparent; }
+        input[type="date"], input[type="time"] {
+            min-height: 48px;
+            -webkit-appearance: none;
+        }
     </style>
 </head>
 <body class="min-h-[100dvh] bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
-    
-    <!-- Header -->
-    <header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/70 pt-safe-top backdrop-blur-xl transition-colors duration-300 dark:border-slate-800/80 dark:bg-[#020617]/70">
-        <div class="px-5 py-4 max-w-7xl mx-auto flex items-center justify-between">
-            <div class="flex flex-col">
-                <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Painel Principal</span>
-                <h1 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">Agendamentos</h1>
-            </div>
-            
+
+    <!-- Header Principal -->
+    <header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 pt-safe-top backdrop-blur-xl transition-colors duration-300 dark:border-slate-800/80 dark:bg-[#020617]/80">
+        <div class="px-4 sm:px-6 py-3.5 max-w-7xl mx-auto flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <span id="userLabelDesktop" class="hidden text-xs font-medium text-slate-500 dark:text-slate-400 md:inline-block"></span>
-                <button id="theme-toggle" class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                <div class="h-9 w-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white font-black text-lg shadow-md shadow-blue-500/20">
+                    A
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Painel Principal</span>
+                    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Agenda de Atendimentos</h1>
+                </div>
+            </div>
+
+            <!-- Navegação Desktop & Controles -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <nav class="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                    <a href="./dashboard.html" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm">Agenda</a>
+                    <a href="./clientes.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Clientes</a>
+                    <a href="./servicos.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Serviços</a>
+                </nav>
+
+                <span id="userLabelDesktop" class="hidden lg:inline-block text-xs font-medium text-slate-500 dark:text-slate-400 px-2 truncate max-w-[150px]"></span>
+
+                <button id="theme-toggle" aria-label="Alternar Tema" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 shadow-sm transition-transform active:scale-95">
                     <i id="theme-toggle-dark-icon" data-lucide="moon" class="hidden h-5 w-5"></i>
                     <i id="theme-toggle-light-icon" data-lucide="sun" class="hidden h-5 w-5"></i>
                 </button>
-                <button id="btnLogout" class="hidden md:flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:text-red-500 transition-colors">
+
+                <button id="btnLogout" aria-label="Sair" class="hidden md:flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors shadow-sm">
                     <i data-lucide="log-out" class="h-5 w-5"></i>
                 </button>
             </div>
@@ -61,183 +79,286 @@
     </header>
 
     <!-- Conteúdo Principal -->
-    <main class="flex-1 overflow-y-auto pb-28 md:pb-8">
+    <main class="flex-1 overflow-y-auto pb-28 md:pb-10">
         <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-            
-            <div class="flex justify-between items-center bg-white p-4 sm:p-6 rounded-[2rem] shadow-sm ring-1 ring-slate-200 dark:bg-slate-900/40 dark:ring-slate-800">
+
+            <!-- Banner de Ações Rápidas -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md">
                 <div>
-                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Gerenciar Agenda</h2>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Visualize e crie compromissos</p>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Gestão Inteligente</span>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Próximos Compromissos</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Visualize seus agendamentos e cadastre novos horários facilmente.</p>
                 </div>
-                <button class="flex items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white dark:bg-white dark:text-slate-900 hover:opacity-90 transition-opacity">
-                    <i data-lucide="plus" class="h-4 w-4"></i>
-                    Novo Agendamento
+
+                <button id="btnOpenModalAgendamento" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95">
+                    <i data-lucide="plus-circle" class="h-5 w-5"></i>
+                    <span>Novo Agendamento</span>
                 </button>
             </div>
 
-            <section class="rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden dark:bg-slate-900/40 dark:ring-slate-800">
-                <div id="agendamentosContainer" class="divide-y divide-slate-100 dark:divide-slate-800/60 p-6">
-                    <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
-                        <div class="h-12 w-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-3 dark:bg-slate-800 dark:text-slate-500">
-                            <i data-lucide="calendar" class="h-6 w-6"></i>
-                        </div>
-                        <p class="text-sm font-medium text-slate-900 dark:text-slate-200">Nenhum agendamento encontrado</p>
-                    </div>
+            <!-- Filtros de Data e Status -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                <button id="filterAll" class="filter-btn active px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm shrink-0">
+                    Todos os Agendamentos
+                </button>
+                <button id="filterToday" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0">
+                    Hoje
+                </button>
+            </div>
+
+            <!-- Container da Lista de Agendamentos -->
+            <section class="rounded-[2.5rem] bg-white dark:bg-slate-900/60 shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden backdrop-blur-md">
+                <div id="agendamentosContainer" class="p-2 sm:p-4 divide-y divide-slate-100 dark:divide-slate-800/60">
+                    <!-- Preenchido dinamicamente via Supabase -->
                 </div>
             </section>
+
         </div>
     </main>
 
-    <!-- Menu inferior (Mobile) -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/80 pb-safe-bottom backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#020617]/80 md:hidden">
+    <!-- Menu Inferior Mobile (Mobile-First Navigation) -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/90 pb-safe-bottom backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#020617]/90 md:hidden">
         <div class="flex h-16 items-center justify-around px-2">
-            <a href="./dashboard.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-blue-600 dark:text-blue-400">
+            <a href="./dashboard.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-blue-600 dark:text-blue-400 font-bold">
                 <i data-lucide="calendar" class="h-5 w-5"></i>
-                <span class="text-[10px] font-medium">Agenda</span>
+                <span class="text-[10px]">Agenda</span>
             </a>
-            <a href="./clientes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500">
+            <a href="./clientes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
                 <i data-lucide="users" class="h-5 w-5"></i>
-                <span class="text-[10px] font-medium">Clientes</span>
+                <span class="text-[10px]">Clientes</span>
             </a>
-            <button id="bottomLogout" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-red-500">
+            <a href="./servicos.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                <i data-lucide="scissors" class="h-5 w-5"></i>
+                <span class="text-[10px]">Serviços</span>
+            </a>
+            <button id="bottomLogout" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400">
                 <i data-lucide="log-out" class="h-5 w-5"></i>
-                <span class="text-[10px] font-medium">Sair</span>
+                <span class="text-[10px]">Sair</span>
             </button>
         </div>
     </nav>
 
-    <!-- MODAL NOVO AGENDAMENTO -->
-    <div id="modalAgendamento" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden p-4 overflow-y-auto">
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] w-full max-w-lg p-6 shadow-2xl space-y-6 my-auto max-h-[90vh] overflow-y-auto">
-            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-                <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Novo Agendamento</h3>
-                <button id="btnCloseModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+    <!-- MODAL DE NOVO AGENDAMENTO (Adaptado para Mobile sem estourar as bordas) -->
+    <div id="modalAgendamento" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden p-0 sm:p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-lg p-6 sm:p-8 shadow-2xl space-y-5 max-h-[92vh] sm:max-h-[90vh] overflow-y-auto box-border my-0 sm:my-auto">
+            
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="h-10 w-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        <i data-lucide="calendar-plus" class="h-5 w-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Novo Agendamento</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Preencha os dados abaixo</p>
+                    </div>
+                </div>
+                <button id="btnCloseModal" class="h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
                     <i data-lucide="x" class="h-5 w-5"></i>
                 </button>
             </div>
-            
+
             <form id="formAgendamento" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nome do Cliente</label>
-                    <input type="text" id="inputCliente" required class="w-full rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Nome do Cliente -->
+                <div class="space-y-1.5">
+                    <label for="inputCliente" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nome do Cliente</label>
+                    <input type="text" id="inputCliente" required placeholder="Ex: João Silva" 
+                        class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Serviço / Descrição</label>
-                    <input type="text" id="inputServico" required class="w-full rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                <!-- WhatsApp do Cliente -->
+                <div class="space-y-1.5">
+                    <label for="inputWhatsapp" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">WhatsApp do Cliente</label>
+                    <input type="tel" id="inputWhatsapp" required placeholder="(11) 99999-9999" 
+                        class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Data</label>
-                        <input type="date" id="inputData" required class="w-full rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                <!-- Lista Dinâmica de Serviços (Alimentada via Supabase / servicos) -->
+                <div class="space-y-1.5">
+                    <label for="selectServico" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Serviço Desejado</label>
+                    <select id="selectServico" required 
+                        class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
+                        <option value="">Carregando serviços...</option>
+                    </select>
+                </div>
+
+                <!-- Data e Hora adaptados para Mobile sem estourar as bordas -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="space-y-1.5 w-full">
+                        <label for="inputData" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Data</label>
+                        <input type="date" id="inputData" required 
+                            class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Hora</label>
-                        <input type="time" id="inputHora" required class="w-full rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div class="space-y-1.5 w-full">
+                        <label for="inputHora" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Horário de Início</label>
+                        <input type="time" id="inputHora" required 
+                            class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
                     </div>
                 </div>
-                <div class="flex justify-end gap-3 pt-4">
-                    <button type="button" id="btnCancelModal" class="px-5 py-2.5 rounded-full text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
-                    <button type="submit" class="px-6 py-2.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-600/20">Salvar Agendamento</button>
+
+                <!-- Observações -->
+                <div class="space-y-1.5">
+                    <label for="inputObservacoes" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Observações (Opcional)</label>
+                    <textarea id="inputObservacoes" rows="2" placeholder="Ex: Cliente prefere confirmação via WhatsApp..." 
+                        class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 box-border"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" id="btnCancelModal" class="px-5 py-3 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        Cancelar
+                    </button>
+                    <button type="submit" id="btnSubmitForm" class="flex items-center justify-center gap-2 px-6 py-3.5 rounded-full text-xs font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-500/25 transition-transform active:scale-95">
+                        <i data-lucide="check" class="h-4 w-4"></i>
+                        <span>Confirmar Agendamento</span>
+                    </button>
                 </div>
             </form>
+
         </div>
     </div>
 
     <!-- Scripts -->
     <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+        import { 
+            initTheme, 
+            showToast, 
+            applyPhoneMask, 
+            populateServicosDropdown, 
+            criarAgendamentoCliente, 
+            fetchAndRenderAgendamentos
+        } from './js/app.js';
+        import { supabase } from './js/supabase.js';
 
-        // Lógica de Alternância de Tema (Dark/Light)
-        const themeToggleBtn = document.getElementById('theme-toggle');
-        const darkIcon = document.getElementById('theme-toggle-dark-icon');
-        const lightIcon = document.getElementById('theme-toggle-light-icon');
+        // 1. Inicializa o tema (Dark Mode)
+        initTheme();
 
-        function updateThemeIcons() {
-            if (document.documentElement.classList.contains('dark')) {
-                lightIcon.classList.remove('hidden');
-                darkIcon.classList.add('hidden');
-            } else {
-                lightIcon.classList.add('hidden');
-                darkIcon.classList.remove('hidden');
-            }
+        // 2. Elementos DOM
+        const modal = document.getElementById('modalAgendamento');
+        const openModalBtn = document.getElementById('btnOpenModalAgendamento');
+        const closeModalBtn = document.getElementById('btnCloseModal');
+        const cancelModalBtn = document.getElementById('btnCancelModal');
+        const formAgendamento = document.getElementById('formAgendamento');
+        const whatsappInput = document.getElementById('inputWhatsapp');
+        const inputData = document.getElementById('inputData');
+        const inputHora = document.getElementById('inputHora');
+
+        const filterAllBtn = document.getElementById('filterAll');
+        const filterTodayBtn = document.getElementById('filterToday');
+
+        // Máscara no WhatsApp
+        applyPhoneMask(whatsappInput);
+
+        // Preenche data atual como valor padrão no input
+        const todayISO = new Date().toISOString().split('T')[0];
+        if (inputData) inputData.value = todayISO;
+        if (inputHora) inputHora.value = '09:00';
+
+        // 3. Controle do Modal
+        async function openModal() {
+            modal.classList.remove('hidden');
+            await populateServicosDropdown('selectServico');
         }
-        updateThemeIcons();
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
 
-        themeToggleBtn.addEventListener('click', function() {
-            if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-                localStorage.setItem('color-theme', 'light');
-            } else {
-                document.documentElement.classList.add('dark');
-                localStorage.setItem('color-theme', 'dark');
-            }
-            updateThemeIcons();
+        openModalBtn?.addEventListener('click', openModal);
+        closeModalBtn?.addEventListener('click', closeModal);
+        cancelModalBtn?.addEventListener('click', closeModal);
+
+        modal?.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
         });
 
-        // Configuração do Supabase
-        const SUPABASE_URL = '__SUPABASE_URL__';
-        const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
-        
-        const safeUrl = SUPABASE_URL === '__SUPABASE_URL__' ? 'https://preview-mock.supabase.co' : SUPABASE_URL;
-        const supabase = createClient(safeUrl, SUPABASE_ANON_KEY);
+        // 4. Submissão EXCLUSIVA via RPC 'criar_agendamento_cliente' do Supabase
+        formAgendamento?.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-        // Autenticação
+            const nomeCliente = document.getElementById('inputCliente').value.trim();
+            const whatsappCliente = document.getElementById('inputWhatsapp').value.trim();
+            const servicoIdSelecionado = document.getElementById('selectServico').value;
+            const dataVal = document.getElementById('inputData').value;
+            const horaVal = document.getElementById('inputHora').value;
+            const observacoesCliente = document.getElementById('inputObservacoes').value.trim();
+
+            if (!servicoIdSelecionado) {
+                showToast('Por favor, selecione um serviço da lista.', 'error');
+                return;
+            }
+
+            const dataHoraInicioISO = `${dataVal}T${horaVal}:00.000Z`;
+            const submitBtn = document.getElementById('btnSubmitForm');
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Salvando...</span>
+            `;
+
+            try {
+                // Chamada exclusivamente utilizando a função RPC do Supabase
+                const { data, error } = await supabase.rpc('criar_agendamento_cliente', {
+                    p_nome: nomeCliente,
+                    p_whatsapp: whatsappCliente.replace(/\D/g, ''),
+                    p_servico_id: servicoIdSelecionado,
+                    p_data_hora_inicio: dataHoraInicioISO,
+                    p_observacoes: observacoesCliente || null
+                });
+
+                if (error) throw error;
+
+                showToast('Agendamento criado com sucesso!', 'success');
+                closeModal();
+                formAgendamento.reset();
+
+                // Recarrega lista de agendamentos do Supabase
+                await fetchAndRenderAgendamentos('agendamentosContainer');
+
+            } catch (err) {
+                console.error("Erro na RPC do Supabase:", err);
+                showToast('Erro ao agendar: ' + (err.message || 'Erro de conexão'), 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `
+                    <i data-lucide="check" class="h-4 w-4"></i>
+                    <span>Confirmar Agendamento</span>
+                `;
+                if (window.lucide) window.lucide.createIcons();
+            }
+        });
+
+        // 5. Filtros da Agenda
+        filterAllBtn?.addEventListener('click', () => {
+            filterAllBtn.className = 'filter-btn active px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm shrink-0';
+            filterTodayBtn.className = 'filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0';
+            fetchAndRenderAgendamentos('agendamentosContainer');
+        });
+
+        filterTodayBtn?.addEventListener('click', () => {
+            filterTodayBtn.className = 'filter-btn active px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm shrink-0';
+            filterAllBtn.className = 'filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0';
+            fetchAndRenderAgendamentos('agendamentosContainer', todayISO);
+        });
+
+        // 6. Autenticação e Logout
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                console.log("Sessão não encontrada. (Redirecionamento evitado para visualização)");
-            } else {
-                const userLabel = session.user.email || 'Usuário';
+            if (session?.user?.email) {
                 const desktopLabel = document.getElementById('userLabelDesktop');
-                if(desktopLabel) desktopLabel.textContent = userLabel;
+                if (desktopLabel) desktopLabel.textContent = session.user.email;
             }
-        } catch (error) {
-            console.warn("Modo Preview: Ignorando erro de autenticação pois as credenciais são placeholders.");
-        }
+        } catch (e) {}
 
-        // Logout
         const handleLogout = async () => {
-            await supabase.auth.signOut();
+            try { await supabase.auth.signOut(); } catch (e) {}
             window.location.href = './index.html';
         };
 
         document.getElementById('btnLogout')?.addEventListener('click', handleLogout);
         document.getElementById('bottomLogout')?.addEventListener('click', handleLogout);
 
-        // Controle do Modal de Novo Agendamento
-        const modal = document.getElementById('modalAgendamento');
-        const openModalBtn = document.querySelector('button.bg-slate-900, button.dark\\:bg-white');
-        const closeModalBtn = document.getElementById('btnCloseModal');
-        const cancelModalBtn = document.getElementById('btnCancelModal');
-
-        openModalBtn?.addEventListener('click', () => modal.classList.remove('hidden'));
-        closeModalBtn?.addEventListener('click', () => modal.classList.add('hidden'));
-        cancelModalBtn?.addEventListener('click', () => modal.classList.add('hidden'));
-
-        // Salvar Novo Agendamento no Supabase
-        document.getElementById('formAgendamento')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const cliente = document.getElementById('inputCliente').value;
-            const servico = document.getElementById('inputServico').value;
-            const data = document.getElementById('inputData').value;
-            const hora = document.getElementById('inputHora').value;
-            const data_hora = `${data}T${hora}:00`;
-
-            try {
-                const { error } = await supabase.from('agendamentos').insert([{ cliente, servico, data_hora, status: 'Pendente' }]);
-                if (error) throw error;
-                
-                alert('Agendamento criado com sucesso!');
-                modal.classList.add('hidden');
-                window.location.reload();
-            } catch (err) {
-                console.error(err);
-                alert('Erro ao salvar agendamento. Verifique se a tabela "agendamentos" existe no Supabase.');
-            }
-        });
-
-        // Inicializa Ícones do Lucide
-        lucide.createIcons();
+        // Inicialização
+        await fetchAndRenderAgendamentos('agendamentosContainer');
+        if (window.lucide) window.lucide.createIcons();
     </script>
 </body>
 </html>

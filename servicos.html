@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="antialiased">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Acionar - Gestão de Serviços & Preços</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    spacing: { 'safe-bottom': 'env(safe-area-inset-bottom)', 'safe-top': 'env(safe-area-inset-top)' }
+                }
+            }
+        }
+    </script>
+    <script>
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+    </style>
+</head>
+<body class="min-h-[100dvh] bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
+
+    <!-- Header Principal -->
+    <header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 pt-safe-top backdrop-blur-xl transition-colors duration-300 dark:border-slate-800/80 dark:bg-[#020617]/80">
+        <div class="px-4 sm:px-6 py-3.5 max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="h-9 w-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white font-black text-lg shadow-md shadow-blue-500/20">
+                    A
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Catálogo</span>
+                    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Serviços & Tabela de Preços</h1>
+                </div>
+            </div>
+
+            <!-- Navegação Desktop & Controles -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <nav class="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                    <a href="./dashboard.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Agenda</a>
+                    <a href="./clientes.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Clientes</a>
+                    <a href="./servicos.html" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm">Serviços</a>
+                </nav>
+
+                <button id="theme-toggle" aria-label="Alternar Tema" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 shadow-sm">
+                    <i id="theme-toggle-dark-icon" data-lucide="moon" class="hidden h-5 w-5"></i>
+                    <i id="theme-toggle-light-icon" data-lucide="sun" class="hidden h-5 w-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="flex-1 overflow-y-auto pb-28 md:pb-10">
+        <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+            <!-- Banner de Ações Rápidas -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md">
+                <div>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Produtos & Serviços</span>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Catálogo de Serviços</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Cadastre serviços e valores diretamente no Supabase.</p>
+                </div>
+
+                <button id="btnOpenServicoModal" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95">
+                    <i data-lucide="plus-circle" class="h-5 w-5"></i>
+                    <span>Novo Serviço</span>
+                </button>
+            </div>
+
+            <!-- Lista de Serviços -->
+            <section class="rounded-[2.5rem] bg-white dark:bg-slate-900/60 shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden backdrop-blur-md">
+                <div id="servicosContainer" class="p-2 sm:p-4 divide-y divide-slate-100 dark:divide-slate-800/60">
+                    <!-- Preenchido via JS do Supabase -->
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Menu Inferior Mobile -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/90 pb-safe-bottom backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#020617]/90 md:hidden">
+        <div class="flex h-16 items-center justify-around px-2">
+            <a href="./dashboard.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                <i data-lucide="calendar" class="h-5 w-5"></i>
+                <span class="text-[10px]">Agenda</span>
+            </a>
+            <a href="./clientes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                <i data-lucide="users" class="h-5 w-5"></i>
+                <span class="text-[10px]">Clientes</span>
+            </a>
+            <a href="./servicos.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-blue-600 dark:text-blue-400 font-bold">
+                <i data-lucide="scissors" class="h-5 w-5"></i>
+                <span class="text-[10px]">Serviços</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Modal Novo Serviço -->
+    <div id="modalServico" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden p-0 sm:p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-lg p-6 sm:p-8 shadow-2xl space-y-5 my-0 sm:my-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="scissors" class="h-5 w-5 text-blue-500"></i>
+                    Cadastrar Novo Serviço
+                </h3>
+                <button id="btnCloseServicoModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
+            </div>
+
+            <form id="formNovoServico" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nome do Serviço</label>
+                    <input type="text" id="servicoNome" required placeholder="Ex: Corte Masculino Premium" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Descrição</label>
+                    <textarea id="servicoDescricao" rows="2" placeholder="Ex: Inclui lavagem, corte e finalização..." class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Duração (Minutos)</label>
+                        <input type="number" id="servicoDuracao" required min="5" max="480" value="30" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Preço (R$)</label>
+                        <input type="number" id="servicoValor" required step="0.01" min="0" placeholder="50.00" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" id="btnCancelServicoModal" class="px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
+                    <button type="submit" class="px-6 py-2.5 rounded-full text-xs font-extrabold bg-blue-600 text-white hover:bg-blue-500 shadow-md">Salvar Serviço</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { initTheme, showToast, fetchServicosAtivos } from './js/app.js';
+        import { supabase } from './js/supabase.js';
+
+        initTheme();
+
+        const container = document.getElementById('servicosContainer');
+        const modal = document.getElementById('modalServico');
+        const openBtn = document.getElementById('btnOpenServicoModal');
+        const closeBtn = document.getElementById('btnCloseServicoModal');
+        const cancelBtn = document.getElementById('btnCancelServicoModal');
+        const form = document.getElementById('formNovoServico');
+
+        openBtn?.addEventListener('click', () => modal.classList.remove('hidden'));
+        const closeModal = () => modal.classList.add('hidden');
+        closeBtn?.addEventListener('click', closeModal);
+        cancelBtn?.addEventListener('click', closeModal);
+
+        async function renderServicos() {
+            container.innerHTML = `
+                <div class="flex items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                </div>
+            `;
+
+            try {
+                const servicos = await fetchServicosAtivos();
+                
+                if (!servicos || servicos.length === 0) {
+                    container.innerHTML = `<p class="text-center py-8 text-sm text-slate-500">Nenhum serviço cadastrado.</p>`;
+                    return;
+                }
+
+                container.innerHTML = '';
+                servicos.forEach(servico => {
+                    const valor = servico.tabela_precos && servico.tabela_precos[0] 
+                        ? `R$ ${parseFloat(servico.tabela_precos[0].valor).toFixed(2)}`
+                        : 'A consultar';
+
+                    const card = document.createElement('div');
+                    card.className = 'p-4 sm:p-5 flex items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors';
+                    card.innerHTML = `
+                        <div class="flex items-start gap-3">
+                            <div class="h-10 w-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold flex items-center justify-center text-sm shrink-0">
+                                <i data-lucide="scissors" class="h-5 w-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base">${servico.nome}</h4>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${servico.descricao || 'Sem descrição'}</p>
+                                <span class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">
+                                    <i data-lucide="clock" class="h-3 w-3"></i> ${servico.duracao_minutos} minutos
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400">${valor}</span>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
+                if (window.lucide) window.lucide.createIcons();
+            } catch (err) {
+                container.innerHTML = `<p class="text-center py-8 text-sm text-rose-500">Erro ao carregar serviços do Supabase.</p>`;
+            }
+        }
+
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById('servicoNome').value.trim();
+            const descricao = document.getElementById('servicoDescricao').value.trim();
+            const duracao_minutos = parseInt(document.getElementById('servicoDuracao').value);
+            const valor = parseFloat(document.getElementById('servicoValor').value);
+
+            try {
+                const { data: servicoData, error: sErr } = await supabase
+                    .from('servicos')
+                    .insert([{ nome, descricao, duracao_minutos, ativo: true }])
+                    .select()
+                    .single();
+
+                if (sErr) throw sErr;
+
+                if (servicoData?.id && !isNaN(valor)) {
+                    const { error: pErr } = await supabase
+                        .from('tabela_precos')
+                        .insert([{ servico_id: servicoData.id, valor }]);
+
+                    if (pErr) console.error("Erro ao salvar preço:", pErr);
+                }
+
+                showToast('Serviço cadastrado com sucesso!', 'success');
+                closeModal();
+                form.reset();
+                await renderServicos();
+            } catch (err) {
+                showToast('Erro ao cadastrar serviço: ' + err.message, 'error');
+            }
+        });
+
+        await renderServicos();
+        if (window.lucide) window.lucide.createIcons();
+    </script>
+</body>
+</html>

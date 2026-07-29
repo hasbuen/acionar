@@ -1,89 +1,166 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="antialiased">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>eStocking - Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Acionar - Login</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    spacing: { 'safe-bottom': 'env(safe-area-inset-bottom)', 'safe-top': 'env(safe-area-inset-top)' }
+                }
+            }
+        }
+    </script>
+    <script>
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
     <style>
-        :root { color-scheme: dark; }
-        body { background-color: #020617; }
+        * { -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(129,140,248,0.16),_transparent_25%),#020617] px-4 py-8 text-slate-100">
-    <div class="w-full max-w-md overflow-hidden rounded-[36px] border border-slate-800/70 bg-slate-950/95 shadow-[0_40px_120px_-60px_rgba(15,23,42,0.9)] backdrop-blur-xl">
-        <div class="bg-slate-900/95 px-8 py-10 text-center">
-  
-            <h1 class="text-4xl font-semibold text-white">Acionar</h1>
-            <p class="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-400">Acesse ao seu ambiente de controle de agendamentos.</p>
+<body class="min-h-[100dvh] bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col justify-between px-4 py-6 sm:py-12 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.12),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.12),_transparent_30%)]">
+
+    <!-- Header superior com modo escuro -->
+    <header class="w-full max-w-md mx-auto flex items-center justify-between pt-safe-top">
+        <div class="flex items-center gap-2">
+            <div class="h-9 w-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 font-black text-lg">
+                A
+            </div>
+            <span class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Acionar</span>
         </div>
 
-        <div class="px-8 py-8">
-            <div id="error-message" class="hidden rounded-3xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200"></div>
+        <button id="theme-toggle" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 shadow-sm">
+            <i id="theme-toggle-dark-icon" data-lucide="moon" class="hidden h-5 w-5"></i>
+            <i id="theme-toggle-light-icon" data-lucide="sun" class="hidden h-5 w-5"></i>
+        </button>
+    </header>
 
-            <form id="login-form" class="space-y-5">
-                <div class="space-y-2">
-                    <label for="email" class="text-sm font-medium text-slate-300">E-mail</label>
-                    <input id="email" name="email" type="email" required placeholder="Digite seu e-mail"
-                        class="w-full rounded-[28px] border border-slate-800/80 bg-slate-950 px-4 py-3 text-slate-100 placeholder:text-slate-500 transition focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20" />
+    <!-- Card Principal de Login -->
+    <main class="w-full max-w-md mx-auto my-auto py-6">
+        <div class="overflow-hidden rounded-[2.5rem] border border-slate-200/80 bg-white/90 dark:border-slate-800/80 dark:bg-slate-950/80 shadow-2xl backdrop-blur-xl p-6 sm:p-8 space-y-6">
+            
+            <div class="text-center space-y-2">
+                <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Acesse o Painel</h1>
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Ambiente seguro para controle de agendamentos e clientes.</p>
+            </div>
+
+            <div id="error-message" class="hidden rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs sm:text-sm text-rose-600 dark:text-rose-300 flex items-start gap-2">
+                <i data-lucide="alert-circle" class="h-5 w-5 shrink-0"></i>
+                <span id="error-text"></span>
+            </div>
+
+            <form id="login-form" class="space-y-4">
+                <div class="space-y-1.5">
+                    <label for="email" class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">E-mail</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                            <i data-lucide="mail" class="h-5 w-5"></i>
+                        </div>
+                        <input id="email" name="email" type="email" required placeholder="seuemail@empresa.com"
+                            class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/60 pl-11 pr-4 py-3.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                    </div>
                 </div>
 
-                <div class="space-y-2">
-                    <label for="password" class="text-sm font-medium text-slate-300">Senha</label>
-                    <input id="password" name="password" type="password" required placeholder="Digite sua senha"
-                        class="w-full rounded-[28px] border border-slate-800/80 bg-slate-950 px-4 py-3 text-slate-100 placeholder:text-slate-500 transition focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20" />
+                <div class="space-y-1.5">
+                    <label for="password" class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Senha</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                            <i data-lucide="lock" class="h-5 w-5"></i>
+                        </div>
+                        <input id="password" name="password" type="password" required placeholder="••••••••"
+                            class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/60 pl-11 pr-4 py-3.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                    </div>
                 </div>
 
                 <button id="submit-btn" type="submit"
-                    class="w-full rounded-[28px] bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition duration-200 hover:scale-[1.01] hover:shadow-sky-500/30 flex items-center justify-center gap-2">
+                    class="w-full rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 py-3.5 px-4 text-sm font-semibold text-white shadow-xl shadow-blue-500/25 transition duration-200 hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 mt-2">
+                    <span>Entrar</span>
                     <i data-lucide="arrow-right" class="h-4 w-4"></i>
-                    Entrar
                 </button>
             </form>
+
         </div>
-    </div>
+    </main>
+
+    <footer class="w-full text-center text-xs text-slate-400 dark:text-slate-600 pb-safe-bottom">
+        &copy; 2026 Acionar - Sistema de Agendamentos Inteligente.
+    </footer>
 
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+        import { initTheme } from './js/app.js';
 
         const SUPABASE_URL = '__SUPABASE_URL__';
         const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        initTheme();
+
         const loginForm = document.getElementById('login-form');
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
         const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
         const submitBtn = document.getElementById('submit-btn');
 
         async function checkSession() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                window.location.href = './dashboard.html';
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    window.location.href = './dashboard.html';
+                }
+            } catch (err) {
+                console.log("Check Session status:", err);
             }
         }
 
-        function showError(message) {
-            errorMessage.textContent = message;
+        function showError(msg) {
+            if (!msg) {
+                errorMessage.classList.add('hidden');
+                return;
+            }
+            errorText.textContent = msg;
             errorMessage.classList.remove('hidden');
         }
 
         loginForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             showError('');
-            errorMessage.classList.add('hidden');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = 'Entrando...';
+            submitBtn.innerHTML = `
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Entrando...</span>
+            `;
 
             const email = emailInput.value.trim();
             const password = passwordInput.value;
 
             const { error } = await supabase.auth.signInWithPassword({ email, password });
+            
             if (error) {
                 showError('Falha na autenticação: ' + error.message);
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Entrar no Painel';
+                submitBtn.innerHTML = `<span>Entrar</span><i data-lucide="arrow-right" class="h-4 w-4"></i>`;
+                if (window.lucide) window.lucide.createIcons();
                 return;
             }
 
@@ -91,7 +168,7 @@
         });
 
         await checkSession();
-        lucide.createIcons();
+        if (window.lucide) window.lucide.createIcons();
     </script>
 </body>
 </html>

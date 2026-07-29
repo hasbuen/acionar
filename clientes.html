@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>eStocking - Clientes</title>
-    
+    <title>Acionar - Gestão de Clientes</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -38,16 +38,29 @@
     </style>
 </head>
 <body class="min-h-[100dvh] bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
-    
-    <header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/70 pt-safe-top backdrop-blur-xl transition-colors duration-300 dark:border-slate-800/80 dark:bg-[#020617]/70">
-        <div class="px-5 py-4 max-w-7xl mx-auto flex items-center justify-between">
-            <div class="flex flex-col">
-                <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Cadastros</span>
-                <h1 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">Clientes</h1>
-            </div>
-            
+
+    <!-- Header Principal -->
+    <header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 pt-safe-top backdrop-blur-xl transition-colors duration-300 dark:border-slate-800/80 dark:bg-[#020617]/80">
+        <div class="px-4 sm:px-6 py-3.5 max-w-7xl mx-auto flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <button id="theme-toggle" class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                <div class="h-9 w-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white font-black text-lg shadow-md shadow-blue-500/20">
+                    A
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Cadastros</span>
+                    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Base de Clientes</h1>
+                </div>
+            </div>
+
+            <!-- Navegação Desktop & Controles -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <nav class="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                    <a href="./dashboard.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Agenda</a>
+                    <a href="./clientes.html" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm">Clientes</a>
+                    <a href="./servicos.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Serviços</a>
+                </nav>
+
+                <button id="theme-toggle" aria-label="Alternar Tema" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 shadow-sm">
                     <i id="theme-toggle-dark-icon" data-lucide="moon" class="hidden h-5 w-5"></i>
                     <i id="theme-toggle-light-icon" data-lucide="sun" class="hidden h-5 w-5"></i>
                 </button>
@@ -55,55 +68,124 @@
         </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto pb-28 md:pb-8">
+    <!-- Conteúdo Principal -->
+    <main class="flex-1 overflow-y-auto pb-28 md:pb-10">
         <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-            
-            <div class="flex justify-between items-center bg-white p-4 sm:p-6 rounded-[2rem] shadow-sm ring-1 ring-slate-200 dark:bg-slate-900/40 dark:ring-slate-800">
+
+            <!-- Banner com busca e botão novo cliente -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md">
                 <div>
-                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Gerenciar Clientes</h2>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Base de clientes cadastrados</p>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Contatos</span>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Gerenciar Clientes</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Visualize os contatos cadastrados no Supabase.</p>
                 </div>
-                <button id="btnOpenClientModal" class="flex items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white dark:bg-white dark:text-slate-900">
-                    <i data-lucide="user-plus" class="h-4 w-4"></i>
-                    Novo Cliente
+
+                <button id="btnOpenClientModal" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95">
+                    <i data-lucide="user-plus" class="h-5 w-5"></i>
+                    <span>Novo Cliente</span>
                 </button>
             </div>
 
-            <section class="rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden dark:bg-slate-900/40 dark:ring-slate-800">
-                <div id="clientesContainer" class="divide-y divide-slate-100 dark:divide-slate-800/60">
-                    <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
-                        <div class="h-12 w-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-3 dark:bg-slate-800 dark:text-slate-500">
-                            <i data-lucide="users" class="h-6 w-6"></i>
-                        </div>
-                        <p class="text-sm font-medium text-slate-900 dark:text-slate-200">Nenhum cliente cadastrado</p>
-                    </div>
+            <!-- Lista de Clientes -->
+            <section class="rounded-[2.5rem] bg-white dark:bg-slate-900/60 shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden backdrop-blur-md">
+                <div id="clientesContainer" class="p-2 sm:p-4 divide-y divide-slate-100 dark:divide-slate-800/60">
+                    <!-- Preenchido via JS do Supabase -->
                 </div>
             </section>
+
         </div>
     </main>
 
-    <!-- Menu inferior -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/80 pb-safe-bottom backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#020617]/80 md:hidden">
+    <!-- Menu Inferior Mobile -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/90 pb-safe-bottom backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#020617]/90 md:hidden">
         <div class="flex h-16 items-center justify-around px-2">
-            <a href="./dashboard.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500">
+            <a href="./dashboard.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
                 <i data-lucide="calendar" class="h-5 w-5"></i>
-                <span class="text-[10px] font-medium">Agenda</span>
+                <span class="text-[10px]">Agenda</span>
             </a>
-            <a href="./clientes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-blue-600 dark:text-blue-400">
+            <a href="./clientes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-blue-600 dark:text-blue-400 font-bold">
                 <i data-lucide="users" class="h-5 w-5"></i>
-                <span class="text-[10px] font-medium">Clientes</span>
+                <span class="text-[10px]">Clientes</span>
+            </a>
+            <a href="./servicos.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                <i data-lucide="scissors" class="h-5 w-5"></i>
+                <span class="text-[10px]">Serviços</span>
             </a>
         </div>
     </nav>
 
+    <!-- Modal Novo Cliente -->
+    <div id="modalCliente" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden p-0 sm:p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-md p-6 sm:p-8 shadow-2xl space-y-5 my-0 sm:my-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="user-plus" class="h-5 w-5 text-blue-500"></i>
+                    Cadastrar Novo Cliente
+                </h3>
+                <button id="btnCloseClientModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
+            </div>
+
+            <form id="formNovoCliente" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nome Completo</label>
+                    <input type="text" id="newNome" required placeholder="Ex: Maria Oliveira" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">WhatsApp</label>
+                    <input type="tel" id="newWhatsapp" required placeholder="(11) 99999-9999" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" id="btnCancelClientModal" class="px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
+                    <button type="submit" class="px-6 py-2.5 rounded-full text-xs font-extrabold bg-blue-600 text-white hover:bg-blue-500 shadow-md">Salvar Cliente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-        const themeToggleBtn = document.getElementById('theme-toggle');
-        themeToggleBtn.addEventListener('click', () => {
-            document.documentElement.classList.toggle('dark');
-            localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        import { initTheme, showToast, applyPhoneMask, cleanPhone, fetchAndRenderClientes } from './js/app.js';
+        import { supabase } from './js/supabase.js';
+
+        initTheme();
+
+        const modal = document.getElementById('modalCliente');
+        const openBtn = document.getElementById('btnOpenClientModal');
+        const closeBtn = document.getElementById('btnCloseClientModal');
+        const cancelBtn = document.getElementById('btnCancelClientModal');
+        const form = document.getElementById('formNovoCliente');
+        const whatsappInput = document.getElementById('newWhatsapp');
+
+        applyPhoneMask(whatsappInput);
+
+        openBtn?.addEventListener('click', () => modal.classList.remove('hidden'));
+        const closeModal = () => modal.classList.add('hidden');
+        closeBtn?.addEventListener('click', closeModal);
+        cancelBtn?.addEventListener('click', closeModal);
+
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById('newNome').value.trim();
+            const whatsapp = cleanPhone(document.getElementById('newWhatsapp').value);
+
+            try {
+                const { error } = await supabase.from('clientes').insert([{ nome, whatsapp }]);
+                if (error) throw error;
+                showToast('Cliente cadastrado com sucesso!', 'success');
+                closeModal();
+                form.reset();
+                await fetchAndRenderClientes('clientesContainer');
+            } catch (err) {
+                showToast('Erro ao cadastrar cliente: ' + err.message, 'error');
+            }
         });
-        lucide.createIcons();
+
+        await fetchAndRenderClientes('clientesContainer');
+        if (window.lucide) window.lucide.createIcons();
     </script>
 </body>
 </html>
