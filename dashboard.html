@@ -124,8 +124,8 @@
                 </div>
             </div>
 
-            <!-- CARD INFORMATIVO DICA PWA PARA IPHONE (IOS) & ANDROID EM SEGUNDO PLANO -->
-            <div id="pwaNoticeCard" class="p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 border border-blue-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <!-- CARD INFORMATIVO DICA PWA (DISMISSÁVEL PERSISTENTE) -->
+            <div id="pwaNoticeCard" class="p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 border border-blue-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs hidden">
                 <div class="flex items-center gap-3">
                     <div class="h-8 w-8 rounded-xl bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
@@ -135,7 +135,7 @@
                         <span class="text-slate-500 dark:text-slate-400 font-medium">No <strong>Android</strong> ative o alarme acima. No <strong>iPhone (iOS)</strong>, toque no botão 📤 do Safari e selecione <em>"Adicionar à Tela de Início"</em>.</span>
                     </div>
                 </div>
-                <button type="button" onclick="document.getElementById('pwaNoticeCard').remove()" class="text-slate-400 hover:text-slate-200 text-xs font-bold shrink-0 self-end sm:self-center">
+                <button type="button" id="btnDismissPwaNotice" class="text-slate-400 hover:text-slate-200 text-xs font-bold shrink-0 self-end sm:self-center transition-colors">
                     Entendido ✕
                 </button>
             </div>
@@ -363,6 +363,19 @@
 
         initTheme();
         registerServiceWorker();
+
+        // PERSISTÊNCIA DO FECHAMENTO DO CARD INFORMATIVO PWA
+        const pwaNoticeCard = document.getElementById('pwaNoticeCard');
+        const btnDismissPwaNotice = document.getElementById('btnDismissPwaNotice');
+
+        if (localStorage.getItem('pwa-notice-dismissed') !== 'true') {
+            if (pwaNoticeCard) pwaNoticeCard.classList.remove('hidden');
+        }
+
+        btnDismissPwaNotice?.addEventListener('click', () => {
+            localStorage.setItem('pwa-notice-dismissed', 'true');
+            if (pwaNoticeCard) pwaNoticeCard.remove();
+        });
 
         const modal = document.getElementById('modalAgendamento');
         const openModalBtn = document.getElementById('btnOpenModalAgendamento');
