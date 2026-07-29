@@ -556,7 +556,7 @@ export async function deleteAgendamento(id) {
     return true;
 }
 
-// --- RENDERIZAÇÃO DE AGENDAMENTOS COM CICLO DE VIDA RIGOROSO DE STATUS ---
+// --- RENDERIZAÇÃO DE AGENDAMENTOS COM BOTÕES DE ÍCONE ULTRA-COMPACTOS ---
 export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null, silent = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -669,14 +669,13 @@ function renderAgendamentosList(container, agendamentos) {
         const statusLabel = isSolicitacao
             ? 'AGUARDANDO CONFIRMAÇÃO'
             : statusLower === 'pendente'
-            ? 'CONFIRMADO / PENDENTE'
+            ? 'CONFIRMADO'
             : statusLower === 'em_atendimento' 
             ? 'EM ATENDIMENTO' 
             : statusLower === 'concluido' || statusLower === 'atendido'
             ? 'JÁ ATENDIDO' 
             : statusLower.toUpperCase();
 
-        // Monta o menu de status baseado no estado atual (Ciclo de Vida Rigoroso)
         let statusMenuHtml = '';
         if (statusLower === 'pendente') {
             statusMenuHtml = `
@@ -729,26 +728,26 @@ function renderAgendamentosList(container, agendamentos) {
         }
 
         const item = document.createElement('div');
-        item.className = 'group p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors rounded-2xl';
+        item.className = 'group p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors rounded-2xl overflow-hidden';
         
         item.innerHTML = `
-            <div class="flex items-start gap-4 flex-1 min-w-0">
-                <div class="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 font-bold border border-blue-100 dark:border-blue-900/40">
-                    <span class="text-xs font-semibold uppercase">${dataInicio.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</span>
-                    <span class="text-base font-extrabold leading-none">${dataInicio.getDate()}</span>
+            <div class="flex items-start gap-3 flex-1 min-w-0">
+                <div class="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 font-bold border border-blue-100 dark:border-blue-900/40">
+                    <span class="text-[10px] font-semibold uppercase">${dataInicio.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</span>
+                    <span class="text-sm font-extrabold leading-none">${dataInicio.getDate()}</span>
                 </div>
                 <div class="space-y-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <h4 class="font-semibold text-slate-900 dark:text-white text-base truncate">${escapeHtml(clienteNome)}</h4>
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${statusClass}">
+                        <h4 class="font-semibold text-slate-900 dark:text-white text-sm sm:text-base truncate max-w-[140px] sm:max-w-none">${escapeHtml(clienteNome)}</h4>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${statusClass} shrink-0">
                             ${statusLabel}
                         </span>
                     </div>
-                    <p class="text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
+                    <p class="text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1">
                         <i data-lucide="scissors" class="h-3.5 w-3.5 text-blue-500 shrink-0"></i>
-                        <span class="truncate">${escapeHtml(servicoNome)} (${duracao} min)</span>
+                        <span class="truncate max-w-[200px] sm:max-w-none">${escapeHtml(servicoNome)} (${duracao} min)</span>
                     </p>
-                    <div class="flex items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 flex-wrap">
+                    <div class="flex items-center gap-2.5 text-[11px] text-slate-400 dark:text-slate-500 flex-wrap">
                         <span class="flex items-center gap-1">
                             <i data-lucide="clock" class="h-3 w-3"></i>
                             ${horaInicio}${horaFim}
@@ -757,36 +756,37 @@ function renderAgendamentosList(container, agendamentos) {
                             <i data-lucide="calendar" class="h-3 w-3"></i>
                             ${dataFormatada}
                         </span>
-                        ${ag.observacoes ? `<span class="italic text-slate-400 dark:text-slate-500 max-w-xs truncate" title="${escapeHtml(ag.observacoes)}">Obs: ${escapeHtml(ag.observacoes)}</span>` : ''}
+                        ${ag.observacoes ? `<span class="italic text-slate-400 dark:text-slate-500 max-w-[180px] truncate" title="${escapeHtml(ag.observacoes)}">Obs: ${escapeHtml(ag.observacoes)}</span>` : ''}
                     </div>
                 </div>
             </div>
 
-            <!-- CONTROLE REFINADO DE STATUS / BOTÕES -->
-            <div class="flex flex-row items-center gap-2 shrink-0 self-end lg:self-center pt-2 lg:pt-0">
+            <!-- BOTÕES DE AÇÃO HORIZONTAIS COMPACTOS (ÍCONES MANTENDO MESMO TAMANHO H-9 W-9) -->
+            <div class="flex flex-row items-center justify-end gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/40">
                 ${isSolicitacao ? `
-                    <div class="flex items-center gap-2">
-                        <button type="button" class="btn-aceitar-agendamento flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 transition-transform active:scale-95" 
-                            data-id="${ag.id}" 
-                            data-cliente-nome="${escapeHtml(clienteNome)}"
-                            data-servico-nome="${escapeHtml(servicoNome)}"
-                            data-whatsapp="${cleanPhone(clienteWhatsapp)}"
-                            data-data-formatada="${dataFormatada}"
-                            data-hora-inicio="${horaInicio}">
-                            <i data-lucide="check-circle" class="h-4 w-4"></i>
-                            <span>Aceitar Agendamento</span>
-                        </button>
-                        <button type="button" class="btn-recusar-agendamento flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 font-extrabold text-xs border border-rose-500/20 transition-all" 
-                            data-id="${ag.id}">
-                            <i data-lucide="x-circle" class="h-4 w-4"></i>
-                            <span>Recusar</span>
-                        </button>
-                    </div>
+                    <!-- BOTÃO ACEITAR (ÍCONE DE CONFIRMAÇÃO VERDE) -->
+                    <button type="button" class="btn-aceitar-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-md shadow-emerald-600/20 transition-transform active:scale-95 shrink-0" 
+                        title="Aceitar Agendamento"
+                        data-id="${ag.id}" 
+                        data-cliente-nome="${escapeHtml(clienteNome)}"
+                        data-servico-nome="${escapeHtml(servicoNome)}"
+                        data-whatsapp="${cleanPhone(clienteWhatsapp)}"
+                        data-data-formatada="${dataFormatada}"
+                        data-hora-inicio="${horaInicio}">
+                        <i data-lucide="check" class="h-4 w-4"></i>
+                    </button>
+
+                    <!-- BOTÃO RECUSAR (ÍCONE X VERMELHO) -->
+                    <button type="button" class="btn-recusar-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 font-extrabold border border-rose-500/20 transition-all shrink-0" 
+                        title="Recusar Agendamento"
+                        data-id="${ag.id}">
+                        <i data-lucide="x" class="h-4 w-4"></i>
+                    </button>
                 ` : `
-                    <div class="relative status-dropdown-wrapper">
-                        <button type="button" class="btn-status-trigger inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black border transition-all ${statusClass}" data-id="${ag.id}">
-                            <span>${statusLabel}</span>
-                            <i data-lucide="chevron-down" class="h-3.5 w-3.5 opacity-60"></i>
+                    <div class="relative status-dropdown-wrapper shrink-0">
+                        <button type="button" class="btn-status-trigger flex items-center justify-center h-9 px-2.5 rounded-xl text-xs font-black border transition-all ${statusClass}" data-id="${ag.id}">
+                            <span class="truncate max-w-[90px] sm:max-w-none">${statusLabel}</span>
+                            <i data-lucide="chevron-down" class="h-3.5 w-3.5 opacity-60 ml-1"></i>
                         </button>
 
                         <div class="status-menu absolute right-0 top-full mt-1.5 z-30 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 hidden w-48 space-y-1">
@@ -802,15 +802,13 @@ function renderAgendamentosList(container, agendamentos) {
                     </a>
                 ` : ''}
 
-                <div class="flex flex-row items-center gap-1 shrink-0">
-                    <button class="btn-edit-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors" data-agendamento='${JSON.stringify(ag)}' title="Editar Agendamento">
-                        <i data-lucide="edit-3" class="h-4 w-4"></i>
-                    </button>
+                <button class="btn-edit-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors shrink-0" data-agendamento='${JSON.stringify(ag)}' title="Editar Agendamento">
+                    <i data-lucide="edit-3" class="h-4 w-4"></i>
+                </button>
 
-                    <button class="btn-delete-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors" data-id="${ag.id}" title="Excluir Agendamento">
-                        <i data-lucide="trash-2" class="h-4 w-4"></i>
-                    </button>
-                </div>
+                <button class="btn-delete-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shrink-0" data-id="${ag.id}" title="Excluir Agendamento">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                </button>
             </div>
         `;
 

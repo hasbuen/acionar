@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="antialiased">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Agendar Horário - Acionar</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- CDN Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- CDN Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- CDN Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    spacing: { 'safe-bottom': 'env(safe-area-inset-bottom)', 'safe-top': 'env(safe-area-inset-top)' }
+                }
+            }
+        }
+    </script>
+    <script>
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        input[type="date"] { min-height: 48px; }
+    </style>
+</head>
+<body class="min-h-[100dvh] bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col justify-between">
+
+    <!-- Header Principal -->
+    <header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 pt-safe-top backdrop-blur-xl transition-colors duration-300 dark:border-slate-800/80 dark:bg-[#020617]/80">
+        <div class="px-4 sm:px-6 py-3.5 max-w-xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white font-black text-xl shadow-md shadow-blue-500/20">
+                    A
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Agendamento Online</span>
+                    <h1 class="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">Reserve seu Horário</h1>
+                </div>
+            </div>
+
+            <button id="theme-toggle" aria-label="Alternar Tema" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 shadow-sm transition-transform active:scale-95">
+                <i id="theme-toggle-dark-icon" data-lucide="moon" class="hidden h-5 w-5"></i>
+                <i id="theme-toggle-light-icon" data-lucide="sun" class="hidden h-5 w-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Conteúdo do Formulário de Agendamento -->
+    <main class="flex-1 overflow-y-auto py-6 px-4 sm:px-6">
+        <div class="max-w-xl mx-auto space-y-6">
+
+            <!-- Card do Estabelecimento & Endereço -->
+            <div class="bg-white dark:bg-slate-900/60 p-5 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-2">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="map-pin" class="h-4 w-4 text-blue-500 shrink-0"></i>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">Localização</span>
+                </div>
+                <p id="labelEndereco" class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    Carregando endereço do espaço...
+                </p>
+            </div>
+
+            <!-- Form de Agendamento -->
+            <form id="formAgendamentoCliente" class="space-y-6">
+
+                <!-- PASSO 1: SELEÇÃO DE SERVIÇO -->
+                <div class="bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-4">
+                    <div class="flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                        <div class="h-8 w-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center font-black text-sm">1</div>
+                        <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Escolha o Serviço</h2>
+                    </div>
+
+                    <input type="hidden" id="selectedServicoId" required>
+
+                    <div id="servicosGrid" class="space-y-2.5">
+                        <div class="py-8 text-center text-xs text-slate-400 font-medium">Carregando serviços disponíveis...</div>
+                    </div>
+                </div>
+
+                <!-- PASSO 2: DATA E HORÁRIO -->
+                <div class="bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-4">
+                    <div class="flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                        <div class="h-8 w-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center font-black text-sm">2</div>
+                        <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Data & Horário</h2>
+                    </div>
+
+                    <div>
+                        <label for="inputDataAgendamento" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Selecione o Dia</label>
+                        <input type="date" id="inputDataAgendamento" required 
+                            class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Horários Livres</label>
+                        <input type="hidden" id="selectedHora" required>
+
+                        <div id="timeChipsContainer" class="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1.5 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl bg-slate-50/50 dark:bg-slate-950/40">
+                            <div class="col-span-full py-4 text-xs text-slate-400 text-center font-medium">Selecione um serviço e uma data...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASSO 3: SEUS DADOS -->
+                <div class="bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-4">
+                    <div class="flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                        <div class="h-8 w-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center font-black text-sm">3</div>
+                        <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Seus Dados de Contato</h2>
+                    </div>
+
+                    <div>
+                        <label for="inputNomeCliente" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Seu Nome Completo</label>
+                        <input type="text" id="inputNomeCliente" required placeholder="Ex: Maria Oliveira" 
+                            class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+                    </div>
+
+                    <div>
+                        <label for="inputWhatsappCliente" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Seu WhatsApp</label>
+                        <input type="tel" id="inputWhatsappCliente" required placeholder="(11) 99999-9999" 
+                            class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+                    </div>
+
+                    <div>
+                        <label for="inputObsCliente" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Observações (Opcional)</label>
+                        <textarea id="inputObsCliente" rows="2" placeholder="Ex: Primeira vez no espaço..." 
+                            class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"></textarea>
+                    </div>
+                </div>
+
+                <!-- Botão de Enviar -->
+                <button type="submit" id="btnSubmitAgendamento" class="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 py-4 text-base font-extrabold text-white shadow-xl shadow-blue-500/25 transition-transform active:scale-95">
+                    <i data-lucide="check-circle" class="h-5 w-5"></i>
+                    <span>Solicitar Agendamento</span>
+                </button>
+            </form>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-4 text-center text-xs text-slate-400 border-t border-slate-200/60 dark:border-slate-800/60">
+        Acionar Agendamentos &copy; 2026 — Todos os direitos reservados.
+    </footer>
+
+    <!-- MODAL DE SUCESSO -->
+    <div id="modalSucesso" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 hidden">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] w-full max-w-md p-6 sm:p-8 shadow-2xl text-center space-y-5 my-auto">
+            <div class="h-16 w-16 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center mx-auto">
+                <i data-lucide="check" class="h-8 w-8"></i>
+            </div>
+            <div class="space-y-2">
+                <h3 class="text-xl font-extrabold text-slate-900 dark:text-white">Agendamento Solicitado! 🎉</h3>
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                    Sua solicitação foi enviada com sucesso! O estabelecimento recebeu seu pedido e enviará a confirmação direta no seu WhatsApp.
+                </p>
+            </div>
+            <button id="btnCloseSucesso" class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/25 transition-transform active:scale-95">
+                Entendido
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { 
+            initTheme, 
+            showToast, 
+            applyPhoneMask, 
+            fetchServicosAtivos, 
+            getAvailableTimeSlots,
+            fetchConfiguracaoMensagemWhatsApp,
+            cleanPhone
+        } from './js/app.js';
+        import { supabase } from './js/supabase.js';
+
+        initTheme();
+
+        const inputData = document.getElementById('inputDataAgendamento');
+        const inputPhone = document.getElementById('inputWhatsappCliente');
+        const servicosGrid = document.getElementById('servicosGrid');
+        const timeChipsContainer = document.getElementById('timeChipsContainer');
+        const labelEndereco = document.getElementById('labelEndereco');
+        const hiddenServicoId = document.getElementById('selectedServicoId');
+        const hiddenHora = document.getElementById('selectedHora');
+        const form = document.getElementById('formAgendamentoCliente');
+        const modalSucesso = document.getElementById('modalSucesso');
+        const btnCloseSucesso = document.getElementById('btnCloseSucesso');
+
+        applyPhoneMask(inputPhone);
+
+        const todayISO = new Date().toISOString().split('T')[0];
+        if (inputData) {
+            inputData.value = todayISO;
+            inputData.min = todayISO;
+        }
+
+        let selectedServicoDuracao = 30;
+
+        // Carrega Endereço do Estabelecimento
+        async function loadEndereco() {
+            try {
+                const config = await fetchConfiguracaoMensagemWhatsApp();
+                if (labelEndereco) {
+                    labelEndereco.textContent = config.endereco || "Rua Principal, 123 - Centro";
+                }
+            } catch (e) {
+                if (labelEndereco) labelEndereco.textContent = "Atendimento Presencial";
+            }
+        }
+
+        // Carrega Serviços Ativos
+        async function loadServicos() {
+            try {
+                const servicos = await fetchServicosAtivos();
+                const ativos = servicos.filter(s => s.ativo !== false);
+
+                if (!ativos || ativos.length === 0) {
+                    servicosGrid.innerHTML = '<div class="p-4 text-xs text-slate-400 text-center font-medium">Nenhum serviço disponível para agendamento no momento.</div>';
+                    return;
+                }
+
+                servicosGrid.innerHTML = '';
+                ativos.forEach(servico => {
+                    const preco = servico.tabela_precos && servico.tabela_precos[0] 
+                        ? `R$ ${parseFloat(servico.tabela_precos[0].valor).toFixed(2)}` 
+                        : '';
+
+                    const card = document.createElement('div');
+                    card.className = 'servico-card p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-blue-500 cursor-pointer flex items-center justify-between gap-3 transition-all';
+                    card.dataset.id = servico.id;
+                    card.dataset.duracao = servico.duracao_minutos;
+
+                    card.innerHTML = `
+                        <div class="min-w-0 flex-1">
+                            <h4 class="font-extrabold text-slate-900 dark:text-white text-sm truncate">${servico.nome}</h4>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                                <span>${servico.duracao_minutos} minutos</span>
+                                ${servico.descricao ? `<span>• ${servico.descricao}</span>` : ''}
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <span class="font-black text-emerald-600 dark:text-emerald-400 text-sm">${preco}</span>
+                            <div class="radio-check h-6 w-6 rounded-full border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center text-white transition-colors">
+                                <i data-lucide="check" class="h-3.5 w-3.5 hidden"></i>
+                            </div>
+                        </div>
+                    `;
+
+                    card.addEventListener('click', () => {
+                        document.querySelectorAll('.servico-card').forEach(c => {
+                            c.className = 'servico-card p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-blue-500 cursor-pointer flex items-center justify-between gap-3 transition-all';
+                            const r = c.querySelector('.radio-check');
+                            r.className = 'radio-check h-6 w-6 rounded-full border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center text-white transition-colors';
+                            r.querySelector('i').classList.add('hidden');
+                        });
+
+                        card.className = 'servico-card p-4 rounded-2xl border-2 border-blue-600 bg-blue-500/10 cursor-pointer flex items-center justify-between gap-3 shadow-md transition-all scale-[1.01]';
+                        const check = card.querySelector('.radio-check');
+                        check.className = 'radio-check h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center text-white transition-colors';
+                        check.querySelector('i').classList.remove('hidden');
+
+                        hiddenServicoId.value = servico.id;
+                        selectedServicoDuracao = parseInt(servico.duracao_minutos || 30);
+                        updateAvailableSlots();
+                    });
+
+                    servicosGrid.appendChild(card);
+                });
+
+                if (window.lucide) window.lucide.createIcons();
+
+            } catch (err) {
+                servicosGrid.innerHTML = `<div class="p-4 text-xs text-rose-500 text-center font-medium">Erro ao carregar serviços: ${err.message}</div>`;
+            }
+        }
+
+        // Atualiza Chips de Horários
+        async function updateAvailableSlots() {
+            const dateVal = inputData.value;
+            const servicoId = hiddenServicoId.value;
+
+            if (!servicoId) {
+                timeChipsContainer.innerHTML = '<div class="col-span-full py-4 text-xs text-slate-400 text-center font-medium">Por favor, selecione um serviço primeiro.</div>';
+                return;
+            }
+
+            if (!dateVal) return;
+
+            hiddenHora.value = '';
+            timeChipsContainer.innerHTML = '<div class="col-span-full py-4 text-xs text-slate-400 text-center font-medium">Buscando horários livres...</div>';
+
+            const { closed, slots } = await getAvailableTimeSlots(dateVal, selectedServicoDuracao);
+
+            if (closed) {
+                timeChipsContainer.innerHTML = `
+                    <div class="col-span-full py-4 px-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 text-xs text-center font-bold">
+                        Estabelecimento fechado nesta data
+                    </div>
+                `;
+                return;
+            }
+
+            if (!slots || slots.length === 0) {
+                timeChipsContainer.innerHTML = `
+                    <div class="col-span-full py-4 px-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 text-xs text-center font-medium">
+                        Nenhum horário disponível para este dia
+                    </div>
+                `;
+                return;
+            }
+
+            timeChipsContainer.innerHTML = '';
+            slots.forEach(slot => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+
+                if (slot.available) {
+                    btn.className = 'time-chip px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-extrabold text-xs text-center shadow-sm hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all';
+                    btn.textContent = slot.time;
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.time-chip').forEach(b => {
+                            b.className = 'time-chip px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-extrabold text-xs text-center shadow-sm hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all';
+                        });
+                        btn.className = 'time-chip px-3 py-2.5 rounded-xl border border-blue-600 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-xs text-center shadow-lg shadow-blue-500/25 scale-105 transition-all';
+                        hiddenHora.value = slot.time;
+                    });
+                } else {
+                    btn.className = 'px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800/40 bg-slate-100/50 dark:bg-slate-900/30 text-slate-300 dark:text-slate-600 font-semibold text-xs text-center line-through cursor-not-allowed';
+                    btn.textContent = slot.time;
+                    btn.disabled = true;
+                }
+
+                timeChipsContainer.appendChild(btn);
+            });
+        }
+
+        inputData?.addEventListener('change', updateAvailableSlots);
+
+        // Submissão do Agendamento
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const servicoId = hiddenServicoId.value;
+            const horaVal = hiddenHora.value;
+            const dataVal = inputData.value;
+            const nome = document.getElementById('inputNomeCliente').value.trim();
+            const whatsapp = document.getElementById('inputWhatsappCliente').value.trim();
+            const observacoes = document.getElementById('inputObsCliente').value.trim();
+
+            if (!servicoId) {
+                showToast('Por favor, selecione um serviço na lista.', 'error');
+                return;
+            }
+            if (!horaVal) {
+                showToast('Por favor, escolha um horário disponível.', 'error');
+                return;
+            }
+
+            const dataHoraInicioISO = `${dataVal}T${horaVal}:00.000Z`;
+
+            const submitBtn = document.getElementById('btnSubmitAgendamento');
+            submitBtn.disabled = true;
+
+            try {
+                const { error } = await supabase.rpc('criar_agendamento_cliente', {
+                    p_nome: nome,
+                    p_whatsapp: cleanPhone(whatsapp),
+                    p_servico_id: servicoId,
+                    p_data_hora_inicio: dataHoraInicioISO,
+                    p_observacoes: observacoes || null
+                });
+
+                if (error) throw error;
+
+                modalSucesso.classList.remove('hidden');
+                form.reset();
+                inputData.value = todayISO;
+                hiddenServicoId.value = '';
+                hiddenHora.value = '';
+                document.querySelectorAll('.servico-card').forEach(c => {
+                    c.className = 'servico-card p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-blue-500 cursor-pointer flex items-center justify-between gap-3 transition-all';
+                });
+                timeChipsContainer.innerHTML = '<div class="col-span-full py-4 text-xs text-slate-400 text-center font-medium">Selecione um serviço e uma data...</div>';
+
+            } catch (err) {
+                showToast('Erro ao enviar solicitação: ' + err.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+
+        btnCloseSucesso?.addEventListener('click', () => {
+            modalSucesso.classList.add('hidden');
+        });
+
+        await loadEndereco();
+        await loadServicos();
+
+        if (window.lucide) window.lucide.createIcons();
+    </script>
+</body>
+</html>
