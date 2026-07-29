@@ -318,6 +318,7 @@
             initTheme, 
             showToast, 
             showConfirmModal,
+            showChangeStatusModal,
             applyPhoneMask, 
             populateServicosDropdown, 
             fetchAndRenderAgendamentos,
@@ -388,9 +389,6 @@
         document.addEventListener('click', (e) => {
             if (!listComboboxServico.contains(e.target) && e.target !== btnComboboxServico) {
                 listComboboxServico.classList.add('hidden');
-            }
-            if (!e.target.closest('.status-dropdown-wrapper')) {
-                document.querySelectorAll('.status-menu').forEach(menu => menu.classList.add('hidden'));
             }
         });
 
@@ -583,33 +581,29 @@
                 return;
             }
 
-            // Abrir menu popover de status
-            const btnStatusTrigger = e.target.closest('.btn-status-trigger');
-            if (btnStatusTrigger) {
-                e.stopPropagation();
-                const wrapper = btnStatusTrigger.closest('.status-dropdown-wrapper');
-                const menu = wrapper.querySelector('.status-menu');
-                
-                document.querySelectorAll('.status-menu').forEach(m => {
-                    if (m !== menu) m.classList.add('hidden');
+            // ABRIR MODAL ELEGANTE DE ALTERAÇÃO DE STATUS (EVITA CORTAR O LAYOUT)
+            const btnOpenStatusModal = e.target.closest('.btn-open-status-modal');
+            if (btnOpenStatusModal) {
+                const id = btnOpenStatusModal.dataset.id;
+                const currentStatus = btnOpenStatusModal.dataset.status;
+                const clienteNome = btnOpenStatusModal.dataset.clienteNome;
+                const servicoNome = btnOpenStatusModal.dataset.servicoNome;
+
+                showChangeStatusModal({
+                    id,
+                    currentStatus,
+                    clienteNome,
+                    servicoNome,
+                    onSelect: async (newStatus) => {
+                        try {
+                            await updateAgendamentoStatus(id, newStatus);
+                            showToast('Status atualizado com sucesso!', 'success');
+                            refreshAgenda(true);
+                        } catch (err) {
+                            showToast('Erro ao atualizar status: ' + err.message, 'error');
+                        }
+                    }
                 });
-
-                menu.classList.toggle('hidden');
-                return;
-            }
-
-            // Seleção de novo status no popover
-            const btnChangeStatus = e.target.closest('.btn-change-status');
-            if (btnChangeStatus) {
-                const id = btnChangeStatus.dataset.id;
-                const newStatus = btnChangeStatus.dataset.status;
-                try {
-                    await updateAgendamentoStatus(id, newStatus);
-                    showToast('Status atualizado com sucesso!', 'success');
-                    refreshAgenda(true);
-                } catch (err) {
-                    showToast('Erro ao atualizar status: ' + err.message, 'error');
-                }
                 return;
             }
 
