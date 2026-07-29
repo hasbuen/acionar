@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="antialiased">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>eStocking - Clientes</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    spacing: { 'safe-bottom': 'env(safe-area-inset-bottom)', 'safe-top': 'env(safe-area-inset-top)' }
+                }
+            }
+        }
+    </script>
+    <script>
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+    </style>
+</head>
+<body class="min-h-[100dvh] bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
+    
+    <header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/70 pt-safe-top backdrop-blur-xl transition-colors duration-300 dark:border-slate-800/80 dark:bg-[#020617]/70">
+        <div class="px-5 py-4 max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex flex-col">
+                <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Cadastros</span>
+                <h1 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">Clientes</h1>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button id="theme-toggle" class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    <i id="theme-toggle-dark-icon" data-lucide="moon" class="hidden h-5 w-5"></i>
+                    <i id="theme-toggle-light-icon" data-lucide="sun" class="hidden h-5 w-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto pb-28 md:pb-8">
+        <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            
+            <div class="flex justify-between items-center bg-white p-4 sm:p-6 rounded-[2rem] shadow-sm ring-1 ring-slate-200 dark:bg-slate-900/40 dark:ring-slate-800">
+                <div>
+                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Gerenciar Clientes</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Base de clientes cadastrados</p>
+                </div>
+                <button id="btnOpenClientModal" class="flex items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white dark:bg-white dark:text-slate-900">
+                    <i data-lucide="user-plus" class="h-4 w-4"></i>
+                    Novo Cliente
+                </button>
+            </div>
+
+            <section class="rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden dark:bg-slate-900/40 dark:ring-slate-800">
+                <div id="clientesContainer" class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
+                        <div class="h-12 w-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-3 dark:bg-slate-800 dark:text-slate-500">
+                            <i data-lucide="users" class="h-6 w-6"></i>
+                        </div>
+                        <p class="text-sm font-medium text-slate-900 dark:text-slate-200">Nenhum cliente cadastrado</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Menu inferior -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/80 pb-safe-bottom backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#020617]/80 md:hidden">
+        <div class="flex h-16 items-center justify-around px-2">
+            <a href="./dashboard.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500">
+                <i data-lucide="calendar" class="h-5 w-5"></i>
+                <span class="text-[10px] font-medium">Agenda</span>
+            </a>
+            <a href="./clientes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-blue-600 dark:text-blue-400">
+                <i data-lucide="users" class="h-5 w-5"></i>
+                <span class="text-[10px] font-medium">Clientes</span>
+            </a>
+        </div>
+    </nav>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+        lucide.createIcons();
+    </script>
+</body>
+</html>

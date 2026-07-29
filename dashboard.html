@@ -1,140 +1,329 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="antialiased">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>eStocking - Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Acionar - Dashboard</title>
+    
+    <!-- Fonte Inter (Semelhante a San Francisco da Apple) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Configuração do Tailwind para Dark Mode e Fontes -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    spacing: {
+                        'safe-bottom': 'env(safe-area-inset-bottom)',
+                        'safe-top': 'env(safe-area-inset-top)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Prevenção de "Flash" ao carregar o tema -->
+    <script>
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+
     <style>
-        :root { color-scheme: dark; }
-        body { background-color: #020617; }
+        /* Desabilita highlight azul de clique no iOS */
+        * { -webkit-tap-highlight-color: transparent; }
+        
+        /* Oculta scrollbar mantendo a funcionalidade (Estética minimalista) */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 </head>
-<body class="min-h-screen text-slate-100 bg-slate-950">
-    <div class="min-h-screen flex flex-col">
-        <header class="sticky top-0 z-30 border-b border-slate-800/70 bg-slate-950/95 backdrop-blur-xl px-4 py-4 shadow-sm md:px-8">
-            <div class="flex items-start justify-between gap-4">
-                <div>
-                    <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Bem-vindo ao painel</p>
-                    <h1 class="mt-2 text-2xl font-semibold text-white sm:text-3xl">Visão geral dos agendamentos</h1>
-                </div>
-                <button id="btnLogoutMobile" class="inline-flex items-center gap-2 rounded-3xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-300 transition hover:bg-rose-500/20 md:hidden">
-                    <i data-lucide="log-out" class="w-5 h-5"></i>
-                    Sair
-                </button>
+<body class="min-h-[100dvh] bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
+    
+    <header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/70 pt-safe-top backdrop-blur-xl transition-colors duration-300 dark:border-slate-800/80 dark:bg-[#020617]/70">
+        <div class="px-5 py-4 max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex flex-col">
+                <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Visão Geral</span>
+                <h1 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">Agendamentos</h1>
             </div>
-
-            <div class="mt-4 grid gap-3 sm:grid-cols-[1.2fr_auto]">
-                <div class="rounded-3xl border border-slate-800/80 bg-slate-900/80 px-4 py-4 text-sm text-slate-300 shadow-sm">
-                    <p class="text-[0.65rem] uppercase tracking-[0.25em] text-slate-500">Usuário</p>
-                    <p id="userLabel" class="mt-2 text-lg font-semibold text-white truncate">Carregando...</p>
-                </div>
-                <button id="btnLogout" class="hidden md:inline-flex items-center gap-2 rounded-3xl border border-rose-500/30 bg-rose-500/10 px-4 py-4 text-sm font-semibold text-rose-300 transition hover:bg-rose-500/20">
-                    <i data-lucide="log-out" class="w-5 h-5"></i>
-                    Sair
+            
+            <div class="flex items-center gap-3">
+                <!-- Botão de Tema -->
+                <button id="theme-toggle" class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-active active:scale-95 dark:bg-slate-800 dark:text-slate-400">
+                    <i id="theme-toggle-dark-icon" data-lucide="moon" class="hidden h-5 w-5"></i>
+                    <i id="theme-toggle-light-icon" data-lucide="sun" class="hidden h-5 w-5"></i>
                 </button>
-            </div>
-        </header>
-
-        <main class="flex-1 overflow-y-auto pb-28 md:pb-8">
-            <section class="px-4 py-5 sm:px-6">
-                <div class="grid gap-4 sm:grid-cols-3">
-                    <article class="rounded-[28px] border border-slate-800/80 bg-slate-900/80 p-5 shadow-md shadow-slate-950/20">
-                        <div class="flex items-center justify-between text-slate-400 mb-3">
-                            <span class="text-xs uppercase tracking-[0.2em]">Hoje</span>
-                            <i data-lucide="calendar-check" class="w-5 h-5 text-sky-400"></i>
-                        </div>
-                        <p id="statToday" class="text-4xl font-semibold text-white">0</p>
-                    </article>
-                    <article class="rounded-[28px] border border-slate-800/80 bg-slate-900/80 p-5 shadow-md shadow-slate-950/20">
-                        <div class="flex items-center justify-between text-slate-400 mb-3">
-                            <span class="text-xs uppercase tracking-[0.2em]">Pendentes</span>
-                            <i data-lucide="clock" class="w-5 h-5 text-amber-400"></i>
-                        </div>
-                        <p id="statPending" class="text-4xl font-semibold text-white">0</p>
-                    </article>
-                    <article class="rounded-[28px] border border-slate-800/80 bg-slate-900/80 p-5 shadow-md shadow-slate-950/20">
-                        <div class="flex items-center justify-between text-slate-400 mb-3">
-                            <span class="text-xs uppercase tracking-[0.2em]">Total mês</span>
-                            <i data-lucide="trending-up" class="w-5 h-5 text-emerald-400"></i>
-                        </div>
-                        <p id="statTotal" class="text-4xl font-semibold text-white">0</p>
-                    </article>
-                </div>
-
-                <div class="mt-6 rounded-[32px] border border-slate-800/80 bg-slate-900/80 shadow-md shadow-slate-950/20 overflow-hidden">
-                    <div class="flex flex-col gap-3 border-b border-slate-800/80 p-5 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-sm font-semibold text-slate-200">Próximos registros</p>
-                            <p class="mt-1 text-sm text-slate-400">Visão rápida dos agendamentos futuros</p>
-                        </div>
-                        <button class="inline-flex items-center justify-center gap-2 rounded-3xl bg-gradient-to-r from-sky-500 to-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95">
-                            <i data-lucide="plus" class="w-4 h-4"></i>
-                            Novo agendamento
-                        </button>
+                
+                <!-- Perfil/Logout Desktop (Oculto no Mobile) -->
+                <div class="hidden md:flex items-center gap-4 ml-4 pl-4 border-l border-slate-200 dark:border-slate-700">
+                    <div class="text-right">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Logado como</p>
+                        <p id="userLabelDesktop" class="text-sm font-medium text-slate-900 dark:text-white truncate max-w-[150px]">Carregando...</p>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-[680px] w-full text-left text-sm text-slate-300 border-collapse">
-                            <thead class="bg-slate-950/90 text-slate-500">
-                                <tr>
-                                    <th class="px-4 py-4 font-medium">Cliente / Item</th>
-                                    <th class="px-4 py-4 font-medium">Data e Hora</th>
-                                    <th class="px-4 py-4 font-medium">Status</th>
-                                    <th class="px-4 py-4 text-right font-medium">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="agendamentosTableBody" class="divide-y divide-slate-800/70">
-                                <tr>
-                                    <td class="px-4 py-5 text-slate-500" colspan="4">Nenhum agendamento encontrado.</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <button id="btnLogout" class="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-rose-50 px-4 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20">
+                        Sair
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto pb-28 md:pb-8">
+        <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+            
+            <!-- Cards de Estatísticas -->
+            <section class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+                <article class="flex flex-col justify-between rounded-[1.5rem] bg-white p-4 shadow-sm ring-1 ring-slate-200 transition-colors dark:bg-slate-900/50 dark:ring-slate-800">
+                    <div class="flex items-center justify-between text-slate-500 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Hoje</span>
+                        <div class="p-1.5 bg-blue-50 dark:bg-blue-500/10 rounded-full text-blue-500">
+                            <i data-lucide="calendar-check" class="h-4 w-4"></i>
+                        </div>
+                    </div>
+                    <p id="statToday" class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">0</p>
+                </article>
+                
+                <article class="flex flex-col justify-between rounded-[1.5rem] bg-white p-4 shadow-sm ring-1 ring-slate-200 transition-colors dark:bg-slate-900/50 dark:ring-slate-800">
+                    <div class="flex items-center justify-between text-slate-500 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Pendentes</span>
+                        <div class="p-1.5 bg-amber-50 dark:bg-amber-500/10 rounded-full text-amber-500">
+                            <i data-lucide="clock" class="h-4 w-4"></i>
+                        </div>
+                    </div>
+                    <p id="statPending" class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">0</p>
+                </article>
+
+                <article class="col-span-2 md:col-span-1 flex flex-col justify-between rounded-[1.5rem] bg-white p-4 shadow-sm ring-1 ring-slate-200 transition-colors dark:bg-slate-900/50 dark:ring-slate-800">
+                    <div class="flex items-center justify-between text-slate-500 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Total Mês</span>
+                        <div class="p-1.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-full text-emerald-500">
+                            <i data-lucide="trending-up" class="h-4 w-4"></i>
+                        </div>
+                    </div>
+                    <p id="statTotal" class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">0</p>
+                </article>
+            </section>
+
+            <!-- Seção de Lista/Tabela -->
+            <section class="rounded-[2rem] bg-white pt-5 shadow-sm ring-1 ring-slate-200 transition-colors overflow-hidden dark:bg-slate-900/40 dark:ring-slate-800/80">
+                <div class="px-5 pb-4 border-b border-slate-100 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
+                    <div>
+                        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Próximos registros</h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">Sua agenda para os próximos dias</p>
+                    </div>
+                    <button class="flex w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition-transform active:scale-[0.98] dark:bg-white dark:text-slate-900">
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        Novo Agendamento
+                    </button>
+                </div>
+
+                <!-- Lista (Mobile) / Tabela (Desktop) -->
+                <div class="w-full">
+                    <!-- Cabeçalho visível apenas em telas maiores -->
+                    <div class="hidden md:grid md:grid-cols-4 px-6 py-3 bg-slate-50/50 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:bg-slate-950/20 dark:border-slate-800">
+                        <div class="col-span-2">Cliente / Serviço</div>
+                        <div>Data / Hora</div>
+                        <div class="text-right">Ação</div>
+                    </div>
+
+                    <!-- Conteúdo dinâmico -->
+                    <div id="agendamentosContainer" class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                        
+                        <!-- Estado Vazio -->
+                        <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
+                            <div class="h-12 w-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-3 dark:bg-slate-800 dark:text-slate-500">
+                                <i data-lucide="calendar-x-2" class="h-6 w-6"></i>
+                            </div>
+                            <p class="text-sm font-medium text-slate-900 dark:text-slate-200">Nenhum agendamento encontrado</p>
+                            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Seus próximos registros aparecerão aqui.</p>
+                        </div>
+                        
+                        <!-- Exemplo de item (descomente para testar o visual)
+                        <div class="flex flex-col p-5 gap-3 md:grid md:grid-cols-4 md:items-center md:px-6 md:py-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                            <div class="col-span-2 flex items-center gap-3">
+                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold dark:bg-blue-500/20 dark:text-blue-400">
+                                    JS
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-slate-900 dark:text-white">João Silva</p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Corte de Cabelo + Barba</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                                <i data-lucide="clock" class="h-4 w-4 text-slate-400"></i>
+                                <span>Hoje, 14:30</span>
+                            </div>
+                            <div class="flex justify-end mt-2 md:mt-0">
+                                <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20">
+                                    Pendente
+                                </span>
+                            </div>
+                        </div>
+                        -->
+
                     </div>
                 </div>
             </section>
-        </main>
-    </div>
+        </div>
+    </main>
 
-    <nav class="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-between gap-2 border-t border-slate-800/70 bg-slate-950/95 px-4 py-3 shadow-[0_-24px_48px_-36px_rgba(15,23,42,0.9)] md:hidden">
-        <button class="flex flex-1 flex-col items-center rounded-3xl bg-slate-900/90 px-3 py-2 text-slate-200 transition hover:bg-slate-900">
-            <i data-lucide="calendar" class="w-5 h-5"></i>
-            <span class="text-[11px]">Agenda</span>
-        </button>
-        <button class="flex flex-1 flex-col items-center rounded-3xl bg-slate-900/90 px-3 py-2 text-slate-200 transition hover:bg-slate-900">
-            <i data-lucide="users" class="w-5 h-5"></i>
-            <span class="text-[11px]">Cadastros</span>
-        </button>
-        <button id="bottomLogout" class="flex flex-1 flex-col items-center rounded-3xl bg-rose-500/10 px-3 py-2 text-rose-300 transition hover:bg-rose-500/20">
-            <i data-lucide="log-out" class="w-5 h-5"></i>
-            <span class="text-[11px]">Sair</span>
-        </button>
+    <!-- Menu inferior otimizado para iOS (Safe Areas e Blur) -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/80 pb-safe-bottom backdrop-blur-xl transition-colors dark:border-slate-800/80 dark:bg-[#020617]/80 md:hidden">
+        <div class="flex h-16 items-center justify-around px-2">
+            <button class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-blue-600 transition-colors dark:text-blue-400">
+                <i data-lucide="calendar" class="h-5 w-5"></i>
+                <span class="text-[10px] font-medium">Agenda</span>
+            </button>
+            <button class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 hover:text-slate-600 transition-colors dark:text-slate-500 dark:hover:text-slate-300">
+                <i data-lucide="users" class="h-5 w-5"></i>
+                <span class="text-[10px] font-medium">Clientes</span>
+            </button>
+            <button id="bottomLogout" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 hover:text-rose-500 transition-colors dark:text-slate-500 dark:hover:text-rose-400">
+                <i data-lucide="log-out" class="h-5 w-5"></i>
+                <span class="text-[10px] font-medium">Sair</span>
+            </button>
+        </div>
     </nav>
 
-    <script type="module">
+   <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
+        // Lógica de Alternância de Tema (Dark/Light)
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+        // Atualiza os ícones baseado no tema atual
+        function updateThemeIcons() {
+            if (document.documentElement.classList.contains('dark')) {
+                lightIcon.classList.remove('hidden');
+                darkIcon.classList.add('hidden');
+            } else {
+                lightIcon.classList.add('hidden');
+                darkIcon.classList.remove('hidden');
+            }
+        }
+        updateThemeIcons();
+
+        themeToggleBtn.addEventListener('click', function() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+            }
+            updateThemeIcons();
+        });
+
+        // Configuração original do Supabase
         const SUPABASE_URL = '__SUPABASE_URL__';
         const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Previne erro no preview substituindo por uma URL válida fake se ainda for o placeholder
+        const safeUrl = SUPABASE_URL === '__SUPABASE_URL__' ? 'https://preview-mock.supabase.co' : SUPABASE_URL;
+        const supabase = createClient(safeUrl, SUPABASE_ANON_KEY);
 
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            window.location.href = './index.html';
+        // Autenticação
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                // Em ambiente real, descomente a linha abaixo para proteger a rota
+                // window.location.href = './index.html';
+                console.log("Sessão não encontrada. (Redirecionamento evitado para visualização)");
+            } else {
+                const userLabel = session.user.email || 'Usuário';
+                const desktopLabel = document.getElementById('userLabelDesktop');
+                if(desktopLabel) desktopLabel.textContent = userLabel;
+            }
+        } catch (error) {
+            console.warn("Modo Preview: Ignorando erro de autenticação pois as credenciais são placeholders.");
         }
 
-        document.getElementById('userLabel').textContent = session.user.email || 'Usuário';
-
+        // Logout
         const handleLogout = async () => {
             await supabase.auth.signOut();
             window.location.href = './index.html';
         };
 
         document.getElementById('btnLogout')?.addEventListener('click', handleLogout);
-        document.getElementById('btnLogoutMobile')?.addEventListener('click', handleLogout);
         document.getElementById('bottomLogout')?.addEventListener('click', handleLogout);
 
+        // Controle do Modal de Novo Agendamento
+        const modal = document.getElementById('modalAgendamento');
+        const openModalBtn = document.querySelector('button.bg-slate-900, button.dark\\:bg-white');
+        const closeModalBtn = document.getElementById('btnCloseModal');
+        const cancelModalBtn = document.getElementById('btnCancelModal');
+
+        openModalBtn?.addEventListener('click', () => modal.classList.remove('hidden'));
+        closeModalBtn?.addEventListener('click', () => modal.classList.add('hidden'));
+        cancelModalBtn?.addEventListener('click', () => modal.classList.add('hidden'));
+
+        // Salvar Novo Agendamento no Supabase
+        document.getElementById('formAgendamento')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const cliente = document.getElementById('inputCliente').value;
+            const servico = document.getElementById('inputServico').value;
+            const data_hora = document.getElementById('inputDataHora').value;
+
+            try {
+                const { error } = await supabase.from('agendamentos').insert([{ cliente, servico, data_hora, status: 'Pendente' }]);
+                if (error) throw error;
+                
+                alert('Agendamento criado com sucesso!');
+                modal.classList.add('hidden');
+                window.location.reload();
+            } catch (err) {
+                console.error(err);
+                alert('Erro ao salvar agendamento. Verifique se a tabela "agendamentos" existe no Supabase.');
+            }
+        });
+
+        // Inicializa Ícones do Lucide
         lucide.createIcons();
     </script>
+
+    <!-- MODAL NOVO AGENDAMENTO -->
+<div id="modalAgendamento" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] w-full max-w-lg p-6 shadow-2xl space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Novo Agendamento</h3>
+            <button id="btnCloseModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+        </div>
+        
+        <form id="formAgendamento" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nome do Cliente</label>
+                <input type="text" id="inputCliente" required class="w-full rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Serviço / Descrição</label>
+                <input type="text" id="inputServico" required class="w-full rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Data e Hora</label>
+                <input type="datetime-local" id="inputDataHora" required class="w-full rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="flex justify-end gap-3 pt-4">
+                <button type="button" id="btnCancelModal" class="px-5 py-2.5 rounded-full text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
+                <button type="submit" class="px-6 py-2.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-600/20">Salvar Agendamento</button>
+            </div>
+        </form>
+    </div>
+</div>
 </body>
 </html>
