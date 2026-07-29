@@ -58,6 +58,7 @@
                     <a href="./dashboard.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Agenda</a>
                     <a href="./clientes.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Clientes</a>
                     <a href="./servicos.html" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm">Serviços</a>
+                    <a href="./configuracoes.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Horários</a>
                 </nav>
 
                 <button id="theme-toggle" aria-label="Alternar Tema" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 shadow-sm">
@@ -72,12 +73,11 @@
     <main class="flex-1 overflow-y-auto pb-28 md:pb-10">
         <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-            <!-- Banner de Ações Rápidas -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md">
                 <div>
                     <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Produtos & Serviços</span>
                     <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Catálogo de Serviços</h2>
-                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Cadastre serviços e valores diretamente no Supabase.</p>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Cadastre e edite os valores e durações de cada serviço.</p>
                 </div>
 
                 <button id="btnOpenServicoModal" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95">
@@ -89,7 +89,7 @@
             <!-- Lista de Serviços -->
             <section class="rounded-[2.5rem] bg-white dark:bg-slate-900/60 shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden backdrop-blur-md">
                 <div id="servicosContainer" class="p-2 sm:p-4 divide-y divide-slate-100 dark:divide-slate-800/60">
-                    <!-- Preenchido via JS do Supabase -->
+                    <!-- Preenchido via JS -->
                 </div>
             </section>
 
@@ -110,6 +110,10 @@
             <a href="./servicos.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-blue-600 dark:text-blue-400 font-bold">
                 <i data-lucide="scissors" class="h-5 w-5"></i>
                 <span class="text-[10px]">Serviços</span>
+            </a>
+            <a href="./configuracoes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                <i data-lucide="clock" class="h-5 w-5"></i>
+                <span class="text-[10px]">Horários</span>
             </a>
         </div>
     </nav>
@@ -157,24 +161,73 @@
         </div>
     </div>
 
+    <!-- Modal Editar Serviço -->
+    <div id="modalEditServico" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden p-0 sm:p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-lg p-6 sm:p-8 shadow-2xl space-y-5 my-0 sm:my-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="edit-3" class="h-5 w-5 text-blue-500"></i>
+                    Editar Serviço
+                </h3>
+                <button id="btnCloseEditServicoModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
+            </div>
+
+            <form id="formEditServico" class="space-y-4">
+                <input type="hidden" id="editServicoId">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nome do Serviço</label>
+                    <input type="text" id="editServicoNome" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Descrição</label>
+                    <textarea id="editServicoDescricao" rows="2" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Duração (Minutos)</label>
+                        <input type="number" id="editServicoDuracao" required min="5" max="480" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Preço (R$)</label>
+                        <input type="number" id="editServicoValor" required step="0.01" min="0" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" id="btnCancelEditServicoModal" class="px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
+                    <button type="submit" class="px-6 py-2.5 rounded-full text-xs font-extrabold bg-blue-600 text-white hover:bg-blue-500 shadow-md">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script type="module">
-        import { initTheme, showToast, fetchServicosAtivos } from './js/app.js';
+        import { initTheme, showToast, fetchServicosAtivos, updateServico, deleteServico } from './js/app.js';
         import { supabase } from './js/supabase.js';
 
         initTheme();
 
         const container = document.getElementById('servicosContainer');
-        const modal = document.getElementById('modalServico');
+        const modalNew = document.getElementById('modalServico');
         const openBtn = document.getElementById('btnOpenServicoModal');
         const closeBtn = document.getElementById('btnCloseServicoModal');
         const cancelBtn = document.getElementById('btnCancelServicoModal');
-        const form = document.getElementById('formNovoServico');
+        const formNew = document.getElementById('formNovoServico');
 
-        openBtn?.addEventListener('click', () => modal.classList.remove('hidden'));
-        const closeModal = () => modal.classList.add('hidden');
-        closeBtn?.addEventListener('click', closeModal);
-        cancelBtn?.addEventListener('click', closeModal);
+        const modalEdit = document.getElementById('modalEditServico');
+        const closeEditBtn = document.getElementById('btnCloseEditServicoModal');
+        const cancelEditBtn = document.getElementById('btnCancelEditServicoModal');
+        const formEdit = document.getElementById('formEditServico');
+
+        openBtn?.addEventListener('click', () => modalNew.classList.remove('hidden'));
+        const closeModalNew = () => modalNew.classList.add('hidden');
+        closeBtn?.addEventListener('click', closeModalNew);
+        cancelBtn?.addEventListener('click', closeModalNew);
 
         async function renderServicos() {
             container.innerHTML = `
@@ -193,8 +246,9 @@
 
                 container.innerHTML = '';
                 servicos.forEach(servico => {
-                    const valor = servico.tabela_precos && servico.tabela_precos[0] 
-                        ? `R$ ${parseFloat(servico.tabela_precos[0].valor).toFixed(2)}`
+                    const rawValor = servico.tabela_precos && servico.tabela_precos[0] ? servico.tabela_precos[0].valor : 0;
+                    const valorFormatado = servico.tabela_precos && servico.tabela_precos[0] 
+                        ? `R$ ${parseFloat(rawValor).toFixed(2)}`
                         : 'A consultar';
 
                     const card = document.createElement('div');
@@ -212,8 +266,14 @@
                                 </span>
                             </div>
                         </div>
-                        <div class="text-right shrink-0">
-                            <span class="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400">${valor}</span>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <span class="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400">${valorFormatado}</span>
+                            <button class="btn-edit-servico p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-colors" data-servico='${JSON.stringify({...servico, rawValor})}' title="Editar Serviço">
+                                <i data-lucide="edit-3" class="h-4 w-4"></i>
+                            </button>
+                            <button class="btn-delete-servico p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors" data-id="${servico.id}" title="Excluir Serviço">
+                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                            </button>
                         </div>
                     `;
                     container.appendChild(card);
@@ -225,7 +285,7 @@
             }
         }
 
-        form?.addEventListener('submit', async (e) => {
+        formNew?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const nome = document.getElementById('servicoNome').value.trim();
             const descricao = document.getElementById('servicoDescricao').value.trim();
@@ -242,19 +302,66 @@
                 if (sErr) throw sErr;
 
                 if (servicoData?.id && !isNaN(valor)) {
-                    const { error: pErr } = await supabase
-                        .from('tabela_precos')
-                        .insert([{ servico_id: servicoData.id, valor }]);
-
-                    if (pErr) console.error("Erro ao salvar preço:", pErr);
+                    await supabase.from('tabela_precos').insert([{ servico_id: servicoData.id, valor }]);
                 }
 
                 showToast('Serviço cadastrado com sucesso!', 'success');
-                closeModal();
-                form.reset();
+                closeModalNew();
+                formNew.reset();
                 await renderServicos();
             } catch (err) {
                 showToast('Erro ao cadastrar serviço: ' + err.message, 'error');
+            }
+        });
+
+        // Eventos Editar / Excluir Serviço
+        container?.addEventListener('click', async (e) => {
+            const btnDelete = e.target.closest('.btn-delete-servico');
+            if (btnDelete) {
+                const id = btnDelete.dataset.id;
+                if (confirm('Deseja realmente apagar este serviço?')) {
+                    try {
+                        await deleteServico(id);
+                        showToast('Serviço excluído!', 'success');
+                        await renderServicos();
+                    } catch (err) {
+                        showToast('Erro ao excluir serviço: ' + err.message, 'error');
+                    }
+                }
+                return;
+            }
+
+            const btnEdit = e.target.closest('.btn-edit-servico');
+            if (btnEdit) {
+                const s = JSON.parse(btnEdit.dataset.servico);
+                document.getElementById('editServicoId').value = s.id;
+                document.getElementById('editServicoNome').value = s.nome;
+                document.getElementById('editServicoDescricao').value = s.descricao || '';
+                document.getElementById('editServicoDuracao').value = s.duracao_minutos;
+                document.getElementById('editServicoValor').value = s.rawValor || 0;
+                modalEdit.classList.remove('hidden');
+            }
+        });
+
+        const closeModalEdit = () => modalEdit.classList.add('hidden');
+        closeEditBtn?.addEventListener('click', closeModalEdit);
+        cancelEditBtn?.addEventListener('click', closeModalEdit);
+
+        formEdit?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editServicoId').value;
+            const nome = document.getElementById('editServicoNome').value.trim();
+            const descricao = document.getElementById('editServicoDescricao').value.trim();
+            const duracao_minutos = parseInt(document.getElementById('editServicoDuracao').value);
+            const valor = parseFloat(document.getElementById('editServicoValor').value);
+
+            try {
+                await updateServico(id, { nome, descricao, duracao_minutos, ativo: true }, valor);
+                showToast('Serviço atualizado com sucesso!', 'success');
+                closeModalEdit();
+                await renderServicos();
+            } catch (err) {
+                showToast('Erro ao atualizar serviço: ' + err.message, 'error');
             }
         });
 

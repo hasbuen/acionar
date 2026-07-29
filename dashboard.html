@@ -35,7 +35,7 @@
     <style>
         * { -webkit-tap-highlight-color: transparent; }
         ::-webkit-scrollbar { width: 0px; background: transparent; }
-        input[type="date"], input[type="time"] {
+        input[type="date"], select {
             min-height: 48px;
             -webkit-appearance: none;
         }
@@ -62,6 +62,7 @@
                     <a href="./dashboard.html" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm">Agenda</a>
                     <a href="./clientes.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Clientes</a>
                     <a href="./servicos.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Serviços</a>
+                    <a href="./configuracoes.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Horários</a>
                 </nav>
 
                 <span id="userLabelDesktop" class="hidden lg:inline-block text-xs font-medium text-slate-500 dark:text-slate-400 px-2 truncate max-w-[150px]"></span>
@@ -87,7 +88,7 @@
                 <div>
                     <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Gestão Inteligente</span>
                     <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Próximos Compromissos</h2>
-                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Visualize seus agendamentos e cadastre novos horários facilmente.</p>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Visualize, edite status e cadastre horários de atendimento.</p>
                 </div>
 
                 <button id="btnOpenModalAgendamento" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95">
@@ -99,24 +100,33 @@
             <!-- Filtros de Data e Status -->
             <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                 <button id="filterAll" class="filter-btn active px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm shrink-0">
-                    Todos os Agendamentos
+                    Todos
                 </button>
                 <button id="filterToday" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0">
                     Hoje
+                </button>
+                <button id="filterPendente" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 border border-slate-200 dark:border-slate-800 shrink-0">
+                    Pendentes
+                </button>
+                <button id="filterEmAtendimento" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 border border-slate-200 dark:border-slate-800 shrink-0">
+                    Em Atendimento
+                </button>
+                <button id="filterConcluido" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 border border-slate-200 dark:border-slate-800 shrink-0">
+                    Atendidos
                 </button>
             </div>
 
             <!-- Container da Lista de Agendamentos -->
             <section class="rounded-[2.5rem] bg-white dark:bg-slate-900/60 shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden backdrop-blur-md">
                 <div id="agendamentosContainer" class="p-2 sm:p-4 divide-y divide-slate-100 dark:divide-slate-800/60">
-                    <!-- Preenchido dinamicamente via Supabase -->
+                    <!-- Preenchido via Supabase -->
                 </div>
             </section>
 
         </div>
     </main>
 
-    <!-- Menu Inferior Mobile (Mobile-First Navigation) -->
+    <!-- Menu Inferior Mobile -->
     <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/90 pb-safe-bottom backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#020617]/90 md:hidden">
         <div class="flex h-16 items-center justify-around px-2">
             <a href="./dashboard.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-blue-600 dark:text-blue-400 font-bold">
@@ -131,14 +141,14 @@
                 <i data-lucide="scissors" class="h-5 w-5"></i>
                 <span class="text-[10px]">Serviços</span>
             </a>
-            <button id="bottomLogout" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400">
-                <i data-lucide="log-out" class="h-5 w-5"></i>
-                <span class="text-[10px]">Sair</span>
-            </button>
+            <a href="./configuracoes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                <i data-lucide="clock" class="h-5 w-5"></i>
+                <span class="text-[10px]">Horários</span>
+            </a>
         </div>
     </nav>
 
-    <!-- MODAL DE NOVO AGENDAMENTO (Adaptado para Mobile sem estourar as bordas) -->
+    <!-- MODAL DE NOVO AGENDAMENTO -->
     <div id="modalAgendamento" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden p-0 sm:p-4 overflow-y-auto">
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-lg p-6 sm:p-8 shadow-2xl space-y-5 max-h-[92vh] sm:max-h-[90vh] overflow-y-auto box-border my-0 sm:my-auto">
             
@@ -149,7 +159,7 @@
                     </div>
                     <div>
                         <h3 class="text-lg font-bold text-slate-900 dark:text-white">Novo Agendamento</h3>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">Preencha os dados abaixo</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Horários validados automaticamente pelo expediente</p>
                     </div>
                 </div>
                 <button id="btnCloseModal" class="h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
@@ -158,47 +168,44 @@
             </div>
 
             <form id="formAgendamento" class="space-y-4">
-                <!-- Nome do Cliente -->
-                <div class="space-y-1.5">
-                    <label for="inputCliente" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nome do Cliente</label>
+                <div>
+                    <label for="inputCliente" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nome do Cliente</label>
                     <input type="text" id="inputCliente" required placeholder="Ex: João Silva" 
                         class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
                 </div>
 
-                <!-- WhatsApp do Cliente -->
-                <div class="space-y-1.5">
-                    <label for="inputWhatsapp" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">WhatsApp do Cliente</label>
+                <div>
+                    <label for="inputWhatsapp" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">WhatsApp do Cliente</label>
                     <input type="tel" id="inputWhatsapp" required placeholder="(11) 99999-9999" 
                         class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
                 </div>
 
-                <!-- Lista Dinâmica de Serviços (Alimentada via Supabase / servicos) -->
-                <div class="space-y-1.5">
-                    <label for="selectServico" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Serviço Desejado</label>
+                <div>
+                    <label for="selectServico" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Serviço Desejado</label>
                     <select id="selectServico" required 
                         class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
                         <option value="">Carregando serviços...</option>
                     </select>
                 </div>
 
-                <!-- Data e Hora adaptados para Mobile sem estourar as bordas -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div class="space-y-1.5 w-full">
-                        <label for="inputData" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Data</label>
+                    <div>
+                        <label for="inputData" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Data do Atendimento</label>
                         <input type="date" id="inputData" required 
                             class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
                     </div>
-                    <div class="space-y-1.5 w-full">
-                        <label for="inputHora" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Horário de Início</label>
-                        <input type="time" id="inputHora" required 
+                    <div>
+                        <label for="selectHora" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Horário Disponível</label>
+                        <select id="selectHora" required 
                             class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
+                            <option value="">Selecione a data...</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- Observações -->
-                <div class="space-y-1.5">
-                    <label for="inputObservacoes" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Observações (Opcional)</label>
-                    <textarea id="inputObservacoes" rows="2" placeholder="Ex: Cliente prefere confirmação via WhatsApp..." 
+                <div>
+                    <label for="inputObservacoes" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Observações (Opcional)</label>
+                    <textarea id="inputObservacoes" rows="2" placeholder="Ex: Cliente prefere confirmação por mensagem..." 
                         class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 box-border"></textarea>
                 </div>
 
@@ -216,6 +223,60 @@
         </div>
     </div>
 
+    <!-- MODAL DE EDIÇÃO DE AGENDAMENTO -->
+    <div id="modalEditAgendamento" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden p-0 sm:p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-lg p-6 sm:p-8 shadow-2xl space-y-5 my-0 sm:my-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-4">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="edit-3" class="h-5 w-5 text-blue-500"></i>
+                    Editar Agendamento
+                </h3>
+                <button id="btnCloseEditModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
+            </div>
+
+            <form id="formEditAgendamento" class="space-y-4">
+                <input type="hidden" id="editAgendamentoId">
+                <div>
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Serviço</label>
+                    <select id="editSelectServico" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Data</label>
+                        <input type="date" id="editInputData" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Horário</label>
+                        <input type="time" id="editInputHora" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Status</label>
+                    <select id="editSelectStatus" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="pendente">Pendente</option>
+                        <option value="em_atendimento">Em Atendimento</option>
+                        <option value="concluido">Atendido / Concluído</option>
+                        <option value="cancelado">Cancelado</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Observações</label>
+                    <textarea id="editInputObservacoes" rows="2" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-3">
+                    <button type="button" id="btnCancelEditModal" class="px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
+                    <button type="submit" class="px-6 py-2.5 rounded-full text-xs font-extrabold bg-blue-600 text-white hover:bg-blue-500 shadow-md">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script type="module">
         import { 
@@ -224,14 +285,17 @@
             applyPhoneMask, 
             populateServicosDropdown, 
             criarAgendamentoCliente, 
-            fetchAndRenderAgendamentos
+            fetchAndRenderAgendamentos,
+            updateAgendamentoStatus,
+            updateAgendamento,
+            deleteAgendamento,
+            getAvailableTimeSlots
         } from './js/app.js';
         import { supabase } from './js/supabase.js';
 
-        // 1. Inicializa o tema (Dark Mode)
         initTheme();
 
-        // 2. Elementos DOM
+        // Elementos DOM
         const modal = document.getElementById('modalAgendamento');
         const openModalBtn = document.getElementById('btnOpenModalAgendamento');
         const closeModalBtn = document.getElementById('btnCloseModal');
@@ -239,64 +303,92 @@
         const formAgendamento = document.getElementById('formAgendamento');
         const whatsappInput = document.getElementById('inputWhatsapp');
         const inputData = document.getElementById('inputData');
-        const inputHora = document.getElementById('inputHora');
+        const selectHora = document.getElementById('selectHora');
+        const selectServico = document.getElementById('selectServico');
 
-        const filterAllBtn = document.getElementById('filterAll');
-        const filterTodayBtn = document.getElementById('filterToday');
+        // Modal Edição
+        const modalEdit = document.getElementById('modalEditAgendamento');
+        const closeEditBtn = document.getElementById('btnCloseEditModal');
+        const cancelEditBtn = document.getElementById('btnCancelEditModal');
+        const formEdit = document.getElementById('formEditAgendamento');
 
-        // Máscara no WhatsApp
         applyPhoneMask(whatsappInput);
 
-        // Preenche data atual como valor padrão no input
+        // Define data atual padrão
         const todayISO = new Date().toISOString().split('T')[0];
         if (inputData) inputData.value = todayISO;
-        if (inputHora) inputHora.value = '09:00';
 
-        // 3. Controle do Modal
+        // Atualizar lista de horários livres quando altera a Data ou Serviço
+        async function updateAvailableSlots() {
+            const dateVal = inputData.value;
+            if (!dateVal) return;
+
+            selectHora.innerHTML = '<option value="">Carregando horários...</option>';
+            const servicoOption = selectServico.options[selectServico.selectedIndex];
+            const duracao = servicoOption?.dataset?.duracao ? parseInt(servicoOption.dataset.duracao) : 30;
+
+            const { closed, slots } = await getAvailableTimeSlots(dateVal, duracao);
+
+            if (closed) {
+                selectHora.innerHTML = '<option value="" disabled selected>Estabelecimento fechado nesta data</option>';
+                return;
+            }
+
+            if (!slots || slots.length === 0) {
+                selectHora.innerHTML = '<option value="" disabled selected>Nenhum horário disponível</option>';
+                return;
+            }
+
+            selectHora.innerHTML = '<option value="" disabled selected>Selecione um horário...</option>';
+            slots.forEach(slot => {
+                const opt = document.createElement('option');
+                opt.value = slot.time;
+                opt.textContent = slot.available ? `${slot.time} - Disponível` : `${slot.time} - Ocupado`;
+                if (!slot.available) opt.disabled = true;
+                selectHora.appendChild(opt);
+            });
+        }
+
+        inputData?.addEventListener('change', updateAvailableSlots);
+        selectServico?.addEventListener('change', updateAvailableSlots);
+
         async function openModal() {
             modal.classList.remove('hidden');
             await populateServicosDropdown('selectServico');
+            await updateAvailableSlots();
         }
-        function closeModal() {
-            modal.classList.add('hidden');
-        }
+        function closeModal() { modal.classList.add('hidden'); }
 
         openModalBtn?.addEventListener('click', openModal);
         closeModalBtn?.addEventListener('click', closeModal);
         cancelModalBtn?.addEventListener('click', closeModal);
 
-        modal?.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-        });
-
-        // 4. Submissão EXCLUSIVA via RPC 'criar_agendamento_cliente' do Supabase
+        // Submissão de Novo Agendamento
         formAgendamento?.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const nomeCliente = document.getElementById('inputCliente').value.trim();
             const whatsappCliente = document.getElementById('inputWhatsapp').value.trim();
-            const servicoIdSelecionado = document.getElementById('selectServico').value;
-            const dataVal = document.getElementById('inputData').value;
-            const horaVal = document.getElementById('inputHora').value;
+            const servicoIdSelecionado = selectServico.value;
+            const dataVal = inputData.value;
+            const horaVal = selectHora.value;
             const observacoesCliente = document.getElementById('inputObservacoes').value.trim();
 
             if (!servicoIdSelecionado) {
-                showToast('Por favor, selecione um serviço da lista.', 'error');
+                showToast('Por favor, selecione um serviço.', 'error');
+                return;
+            }
+            if (!horaVal) {
+                showToast('Por favor, selecione um horário válido.', 'error');
                 return;
             }
 
             const dataHoraInicioISO = `${dataVal}T${horaVal}:00.000Z`;
             const submitBtn = document.getElementById('btnSubmitForm');
-            
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `
-                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                <span>Salvando...</span>
-            `;
 
             try {
-                // Chamada exclusivamente utilizando a função RPC do Supabase
-                const { data, error } = await supabase.rpc('criar_agendamento_cliente', {
+                const { error } = await supabase.rpc('criar_agendamento_cliente', {
                     p_nome: nomeCliente,
                     p_whatsapp: whatsappCliente.replace(/\D/g, ''),
                     p_servico_id: servicoIdSelecionado,
@@ -309,37 +401,98 @@
                 showToast('Agendamento criado com sucesso!', 'success');
                 closeModal();
                 formAgendamento.reset();
-
-                // Recarrega lista de agendamentos do Supabase
                 await fetchAndRenderAgendamentos('agendamentosContainer');
 
             } catch (err) {
-                console.error("Erro na RPC do Supabase:", err);
-                showToast('Erro ao agendar: ' + (err.message || 'Erro de conexão'), 'error');
+                showToast('Erro ao agendar: ' + err.message, 'error');
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = `
-                    <i data-lucide="check" class="h-4 w-4"></i>
-                    <span>Confirmar Agendamento</span>
-                `;
-                if (window.lucide) window.lucide.createIcons();
             }
         });
 
-        // 5. Filtros da Agenda
-        filterAllBtn?.addEventListener('click', () => {
-            filterAllBtn.className = 'filter-btn active px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm shrink-0';
-            filterTodayBtn.className = 'filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0';
-            fetchAndRenderAgendamentos('agendamentosContainer');
+        // Eventos Globais na Lista de Agendamentos (Status, Editar, Excluir)
+        const container = document.getElementById('agendamentosContainer');
+        container?.addEventListener('change', async (e) => {
+            if (e.target.classList.contains('status-select')) {
+                const id = e.target.dataset.id;
+                const newStatus = e.target.value;
+                try {
+                    await updateAgendamentoStatus(id, newStatus);
+                    showToast('Status atualizado com sucesso!', 'success');
+                    await fetchAndRenderAgendamentos('agendamentosContainer');
+                } catch (err) {
+                    showToast('Erro ao atualizar status: ' + err.message, 'error');
+                }
+            }
         });
 
-        filterTodayBtn?.addEventListener('click', () => {
-            filterTodayBtn.className = 'filter-btn active px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm shrink-0';
-            filterAllBtn.className = 'filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0';
-            fetchAndRenderAgendamentos('agendamentosContainer', todayISO);
+        container?.addEventListener('click', async (e) => {
+            const btnDelete = e.target.closest('.btn-delete-agendamento');
+            if (btnDelete) {
+                const id = btnDelete.dataset.id;
+                if (confirm('Tem certeza que deseja apagar este agendamento?')) {
+                    try {
+                        await deleteAgendamento(id);
+                        showToast('Agendamento excluído!', 'success');
+                        await fetchAndRenderAgendamentos('agendamentosContainer');
+                    } catch (err) {
+                        showToast('Erro ao excluir: ' + err.message, 'error');
+                    }
+                }
+                return;
+            }
+
+            const btnEdit = e.target.closest('.btn-edit-agendamento');
+            if (btnEdit) {
+                const ag = JSON.parse(btnEdit.dataset.agendamento);
+                document.getElementById('editAgendamentoId').value = ag.id;
+                
+                await populateServicosDropdown('editSelectServico');
+                document.getElementById('editSelectServico').value = ag.servico_id || ag.servicos?.id || '';
+
+                const d = new Date(ag.data_hora_inicio);
+                document.getElementById('editInputData').value = d.toISOString().split('T')[0];
+                document.getElementById('editInputHora').value = d.toTimeString().slice(0, 5);
+                document.getElementById('editSelectStatus').value = ag.status || 'pendente';
+                document.getElementById('editInputObservacoes').value = ag.observacoes || '';
+
+                modalEdit.classList.remove('hidden');
+            }
         });
 
-        // 6. Autenticação e Logout
+        const closeEdit = () => modalEdit.classList.add('hidden');
+        closeEditBtn?.addEventListener('click', closeEdit);
+        cancelEditBtn?.addEventListener('click', closeEdit);
+
+        formEdit?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editAgendamentoId').value;
+            const servico_id = document.getElementById('editSelectServico').value;
+            const dataVal = document.getElementById('editInputData').value;
+            const horaVal = document.getElementById('editInputHora').value;
+            const status = document.getElementById('editSelectStatus').value;
+            const observacoes = document.getElementById('editInputObservacoes').value.trim();
+
+            const data_hora_inicio = `${dataVal}T${horaVal}:00.000Z`;
+
+            try {
+                await updateAgendamento(id, { servico_id, data_hora_inicio, observacoes, status });
+                showToast('Agendamento atualizado com sucesso!', 'success');
+                closeEdit();
+                await fetchAndRenderAgendamentos('agendamentosContainer');
+            } catch (err) {
+                showToast('Erro ao atualizar agendamento: ' + err.message, 'error');
+            }
+        });
+
+        // Filtros
+        document.getElementById('filterAll')?.addEventListener('click', () => fetchAndRenderAgendamentos('agendamentosContainer'));
+        document.getElementById('filterToday')?.addEventListener('click', () => fetchAndRenderAgendamentos('agendamentosContainer', todayISO));
+        document.getElementById('filterPendente')?.addEventListener('click', () => fetchAndRenderAgendamentos('agendamentosContainer', null, 'pendente'));
+        document.getElementById('filterEmAtendimento')?.addEventListener('click', () => fetchAndRenderAgendamentos('agendamentosContainer', null, 'em_atendimento'));
+        document.getElementById('filterConcluido')?.addEventListener('click', () => fetchAndRenderAgendamentos('agendamentosContainer', null, 'concluido'));
+
+        // Autenticação
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.email) {
@@ -354,9 +507,7 @@
         };
 
         document.getElementById('btnLogout')?.addEventListener('click', handleLogout);
-        document.getElementById('bottomLogout')?.addEventListener('click', handleLogout);
 
-        // Inicialização
         await fetchAndRenderAgendamentos('agendamentosContainer');
         if (window.lucide) window.lucide.createIcons();
     </script>

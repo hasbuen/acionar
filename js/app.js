@@ -86,7 +86,7 @@ export function showToast(message, type = 'success') {
     }, 4500);
 }
 
-function escapeHtml(str) {
+export function escapeHtml(str) {
     return String(str || '').replace(/[&<>"']/g, m => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
     }[m]));
@@ -116,7 +116,117 @@ export function cleanPhone(formatted) {
     return (formatted || '').replace(/\D/g, '');
 }
 
-// --- BUSCA DIRETA DE SERVIÇOS ATIVOS NA TABELA 'servicos' DO SUPABASE ---
+// --- GESTÃO DE CONFIGURAÇÕES DE HORÁRIO DE FUNCIONAMENTO ---
+export async function fetchConfiguracaoHorarios() {
+    try {
+        const { data, error } = await supabase
+            .from('configuracoes')
+            .select('valor')
+            .eq('chave', 'horario_funcionamento')
+            .maybeSingle();
+
+        if (error) throw error;
+        if (data && data.valor) return data.valor;
+    } catch (err) {
+        console.warn("Usando configuração de horário padrão:", err);
+    }
+
+    return {
+        dias_semana: [1, 2, 3, 4, 5, 6], // Segunda a Sábado (0=Dom, 1=Seg...)
+        hora_inicio: "08:00",
+        hora_fim: "18:00",
+        intervalo_minutos: 30
+    };
+}
+
+export async function saveConfiguracaoHorarios(configValor) {
+    const { error } = await supabase
+        .from('configuracoes')
+        .upsert({
+            chave: 'horario_funcionamento',
+            valor: configValor,
+            descricao: 'Configuração de dias e horários de funcionamento do estabelecimento'
+        }, { onConflict: 'chave' });
+
+    if (error) throw error;
+    return true;
+}
+
+// --- CÁLCULO DE HORÁRIOS DISPONÍVEIS ---
+export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
+    const config = await fetchConfiguracaoHorarios();
+    
+    // Obter o dia da semana da data selecionada (considerando timezone local YYYY-MM-DD)
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    const dayOfWeek = dateObj.getDay(); // 0 = Domingo, 1 = Segunda, etc.
+
+    const diasAtivos = config.dias_semana || [1, 2, 3, 4, 5, 6];
+    if (!diasAtivos.includes(dayOfWeek)) {
+        return { closed: true, slots: [] };
+    }
+
+    // Gerar slots em intervalos
+    const intervalo = config.intervalo_minutos || 30;
+    const [startH, startM] = (config.hora_inicio || "08:00").split(':').map(Number);
+    const [endH, endM] = (config.hora_fim || "18:00").split(':').map(Number);
+
+    let currentMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+
+    // Buscar agendamentos existentes para essa data
+    const startIso = `${dateStr}T00:00:00.000Z`;
+    const endIso = `${dateStr}T23:59:59.999Z`;
+
+    let occupiedRanges = [];
+    try {
+        const { data: agendamentos, error } = await supabase
+            .from('agendamentos')
+            .select('data_hora_inicio, data_hora_fim, status')
+            .neq('status', 'cancelado')
+            .gte('data_hora_inicio', startIso)
+            .lte('data_hora_inicio', endIso);
+
+        if (!error && agendamentos) {
+            occupiedRanges = agendamentos.map(ag => {
+                const s = new Date(ag.data_hora_inicio);
+                const e = new Date(ag.data_hora_fim);
+                return {
+                    start: s.getHours() * 60 + s.getMinutes(),
+                    end: e.getHours() * 60 + e.getMinutes()
+                };
+            });
+        }
+    } catch (err) {
+        console.warn("Erro ao verificar horários ocupados:", err);
+    }
+
+    const slots = [];
+    while (currentMinutes + servicoDuracao <= endMinutes) {
+        const h = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
+        const m = (currentMinutes % 60).toString().padStart(2, '0');
+        const timeStr = `${h}:${m}`;
+
+        const slotStart = currentMinutes;
+        const slotEnd = currentMinutes + servicoDuracao;
+
+        // Verificar conflito com agendamentos existentes
+        const isOccupied = occupiedRanges.some(r => {
+            return (slotStart < r.end && slotEnd > r.start);
+        });
+
+        slots.push({
+            time: timeStr,
+            available: !isOccupied
+        });
+
+        currentMinutes += intervalo;
+    }
+
+    return { closed: false, slots };
+}
+
+// --- BUSCA DIRETA DE SERVIÇOS ATIVOS DA TABELA 'servicos' ---
 export async function fetchServicosAtivos() {
     const { data, error } = await supabase
         .from('servicos')
@@ -130,18 +240,12 @@ export async function fetchServicosAtivos() {
                 valor
             )
         `)
-        .eq('ativo', true)
         .order('nome');
 
-    if (error) {
-        console.error("Erro ao buscar serviços:", error);
-        throw error;
-    }
-
+    if (error) throw error;
     return data || [];
 }
 
-// --- POPULAR DROPDOWN DE SERVIÇOS NO MODAL ---
 export async function populateServicosDropdown(selectId) {
     const select = document.getElementById(selectId);
     if (!select) return;
@@ -149,29 +253,31 @@ export async function populateServicosDropdown(selectId) {
     select.innerHTML = '<option value="">Carregando serviços...</option>';
     try {
         const servicos = await fetchServicosAtivos();
+        const ativos = servicos.filter(s => s.ativo !== false);
 
-        if (!servicos || servicos.length === 0) {
-            select.innerHTML = '<option value="" disabled selected>Nenhum serviço cadastrado</option>';
+        if (!ativos || ativos.length === 0) {
+            select.innerHTML = '<option value="" disabled selected>Nenhum serviço disponível</option>';
             return;
         }
 
         select.innerHTML = '<option value="" disabled selected>Selecione um serviço...</option>';
-        servicos.forEach(servico => {
+        ativos.forEach(servico => {
             const preco = servico.tabela_precos && servico.tabela_precos[0] 
                 ? ` - R$ ${parseFloat(servico.tabela_precos[0].valor).toFixed(2)}` 
                 : '';
             const option = document.createElement('option');
             option.value = servico.id;
+            option.dataset.duracao = servico.duracao_minutos;
             option.textContent = `${servico.nome} (${servico.duracao_minutos} min)${preco}`;
             select.appendChild(option);
         });
     } catch (err) {
         select.innerHTML = '<option value="" disabled selected>Erro ao carregar serviços</option>';
-        showToast('Erro ao carregar lista de serviços do Supabase', 'error');
+        showToast('Erro ao carregar lista de serviços', 'error');
     }
 }
 
-// --- SUBMISSÃO EXCLUSIVA VIA RPC 'criar_agendamento_cliente' DO SUPABASE ---
+// --- SUBMISSÃO E CRUD DE AGENDAMENTOS VIA SUPABASE ---
 export async function criarAgendamentoCliente({ nomeCliente, whatsappCliente, servicoIdSelecionado, dataHoraInicioISO, observacoesCliente }) {
     const { data, error } = await supabase.rpc('criar_agendamento_cliente', {
         p_nome: nomeCliente,
@@ -181,16 +287,57 @@ export async function criarAgendamentoCliente({ nomeCliente, whatsappCliente, se
         p_observacoes: observacoesCliente || null
     });
 
-    if (error) {
-        console.error("Erro na RPC criar_agendamento_cliente:", error);
-        throw error;
-    }
-
+    if (error) throw error;
     return data;
 }
 
-// --- BUSCAR E RENDERIZAR AGENDAMENTOS DIRETAMENTE DO SUPABASE ---
-export async function fetchAndRenderAgendamentos(containerId, filterDate = null) {
+export async function updateAgendamentoStatus(id, newStatus) {
+    const { error } = await supabase
+        .from('agendamentos')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+    if (error) throw error;
+    return true;
+}
+
+export async function updateAgendamento(id, { servico_id, data_hora_inicio, observacoes, status }) {
+    // Busca duração do serviço
+    const { data: servico } = await supabase.from('servicos').select('duracao_minutos').eq('id', servico_id).single();
+    const duracao = servico?.duracao_minutos || 30;
+
+    const dataInicio = new Date(data_hora_inicio);
+    const dataFim = new Date(dataInicio.getTime() + duracao * 60000);
+
+    const payload = {
+        servico_id,
+        data_hora_inicio,
+        data_hora_fim: dataFim.toISOString(),
+        observacoes: observacoes || null
+    };
+    if (status) payload.status = status;
+
+    const { error } = await supabase
+        .from('agendamentos')
+        .update(payload)
+        .eq('id', id);
+
+    if (error) throw error;
+    return true;
+}
+
+export async function deleteAgendamento(id) {
+    const { error } = await supabase
+        .from('agendamentos')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw error;
+    return true;
+}
+
+// --- RENDERIZAÇÃO DE AGENDAMENTOS COM AÇÕES E ALTERAÇÃO DE STATUS ---
+export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -205,15 +352,19 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null)
             .from('agendamentos')
             .select(`
                 id,
+                cliente_id,
+                servico_id,
                 data_hora_inicio,
                 data_hora_fim,
                 status,
                 observacoes,
                 clientes (
+                    id,
                     nome,
                     whatsapp
                 ),
                 servicos (
+                    id,
                     nome,
                     duracao_minutos
                 )
@@ -227,6 +378,10 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null)
 
         if (filterDate) {
             agendamentos = agendamentos.filter(a => a.data_hora_inicio && a.data_hora_inicio.startsWith(filterDate));
+        }
+
+        if (filterStatus) {
+            agendamentos = agendamentos.filter(a => a.status === filterStatus);
         }
 
         renderAgendamentosList(container, agendamentos);
@@ -274,16 +429,24 @@ function renderAgendamentosList(container, agendamentos) {
             horaFim = ' - ' + df.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         }
 
-        const statusClass = ag.status === 'concluido' || ag.status === 'confirmado'
+        const statusLower = (ag.status || 'pendente').toLowerCase();
+        
+        const statusClass = statusLower === 'concluido' || statusLower === 'atendido'
             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-            : ag.status === 'cancelado'
+            : statusLower === 'em_atendimento'
+            ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20'
+            : statusLower === 'cancelado'
             ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
             : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
 
-        const statusText = (ag.status || 'Pendente').toUpperCase();
+        const statusLabel = statusLower === 'em_atendimento' 
+            ? 'EM ATENDIMENTO' 
+            : statusLower === 'concluido' 
+            ? 'ATENDIDO / CONCLUÍDO' 
+            : statusLower.toUpperCase();
 
         const item = document.createElement('div');
-        item.className = 'group p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors rounded-2xl';
+        item.className = 'group p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors rounded-2xl';
         
         item.innerHTML = `
             <div class="flex items-start gap-4">
@@ -295,7 +458,7 @@ function renderAgendamentosList(container, agendamentos) {
                     <div class="flex items-center gap-2 flex-wrap">
                         <h4 class="font-semibold text-slate-900 dark:text-white text-base">${escapeHtml(clienteNome)}</h4>
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${statusClass}">
-                            ${statusText}
+                            ${statusLabel}
                         </span>
                     </div>
                     <p class="text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
@@ -316,14 +479,30 @@ function renderAgendamentosList(container, agendamentos) {
                 </div>
             </div>
 
-            <div class="flex items-center gap-2 self-end sm:self-center">
+            <div class="flex items-center gap-2 flex-wrap self-end lg:self-center">
+                <!-- Seletor de Alteração de Status Rápida -->
+                <select class="status-select rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium focus:outline-none" data-id="${ag.id}">
+                    <option value="pendente" ${statusLower === 'pendente' ? 'selected' : ''}>Pendente</option>
+                    <option value="em_atendimento" ${statusLower === 'em_atendimento' ? 'selected' : ''}>Em Atendimento</option>
+                    <option value="concluido" ${statusLower === 'concluido' || statusLower === 'atendido' ? 'selected' : ''}>Já Atendido</option>
+                    <option value="cancelado" ${statusLower === 'cancelado' ? 'selected' : ''}>Cancelado</option>
+                </select>
+
                 ${clienteWhatsapp ? `
                     <a href="https://wa.me/55${cleanPhone(clienteWhatsapp)}" target="_blank" rel="noopener noreferrer" 
-                        class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all">
-                        <i data-lucide="message-circle" class="h-4 w-4"></i>
-                        <span>WhatsApp</span>
+                        class="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all">
+                        <i data-lucide="message-circle" class="h-3.5 w-3.5"></i>
+                        <span class="hidden sm:inline">WhatsApp</span>
                     </a>
                 ` : ''}
+
+                <button class="btn-edit-agendamento p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-colors" data-agendamento='${JSON.stringify(ag)}' title="Editar Agendamento">
+                    <i data-lucide="edit-3" class="h-4 w-4"></i>
+                </button>
+
+                <button class="btn-delete-agendamento p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors" data-id="${ag.id}" title="Excluir Agendamento">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                </button>
             </div>
         `;
 
@@ -333,7 +512,27 @@ function renderAgendamentosList(container, agendamentos) {
     if (window.lucide) window.lucide.createIcons();
 }
 
-// --- BUSCAR E RENDERIZAR CLIENTES DIRETAMENTE DO SUPABASE ---
+// --- CRUD DE CLIENTES ---
+export async function updateCliente(id, { nome, whatsapp }) {
+    const { error } = await supabase
+        .from('clientes')
+        .update({ nome, whatsapp: cleanPhone(whatsapp) })
+        .eq('id', id);
+
+    if (error) throw error;
+    return true;
+}
+
+export async function deleteCliente(id) {
+    const { error } = await supabase
+        .from('clientes')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw error;
+    return true;
+}
+
 export async function fetchAndRenderClientes(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -384,11 +583,19 @@ export async function fetchAndRenderClientes(containerId) {
                         </p>
                     </div>
                 </div>
-                <a href="https://wa.me/55${cleanPhone(cliente.whatsapp)}" target="_blank" rel="noopener noreferrer" 
-                    class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all">
-                    <i data-lucide="message-circle" class="h-4 w-4"></i>
-                    <span class="hidden sm:inline">Conversar</span>
-                </a>
+                <div class="flex items-center gap-2">
+                    <a href="https://wa.me/55${cleanPhone(cliente.whatsapp)}" target="_blank" rel="noopener noreferrer" 
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all">
+                        <i data-lucide="message-circle" class="h-4 w-4"></i>
+                        <span class="hidden sm:inline">Conversar</span>
+                    </a>
+                    <button class="btn-edit-cliente p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-colors" data-cliente='${JSON.stringify(cliente)}' title="Editar Cliente">
+                        <i data-lucide="edit-3" class="h-4 w-4"></i>
+                    </button>
+                    <button class="btn-delete-cliente p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors" data-id="${cliente.id}" title="Excluir Cliente">
+                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    </button>
+                </div>
             `;
             container.appendChild(item);
         });
@@ -403,4 +610,32 @@ export async function fetchAndRenderClientes(containerId) {
             </div>
         `;
     }
+}
+
+// --- CRUD DE SERVIÇOS ---
+export async function updateServico(id, { nome, descricao, duracao_minutos, ativo }, valor) {
+    const { error: sErr } = await supabase
+        .from('servicos')
+        .update({ nome, descricao, duracao_minutos, ativo })
+        .eq('id', id);
+
+    if (sErr) throw sErr;
+
+    if (valor !== undefined && !isNaN(valor)) {
+        await supabase
+            .from('tabela_precos')
+            .insert([{ servico_id: id, valor }]);
+    }
+
+    return true;
+}
+
+export async function deleteServico(id) {
+    const { error } = await supabase
+        .from('servicos')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw error;
+    return true;
 }
