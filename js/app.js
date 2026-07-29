@@ -44,18 +44,22 @@ function updateThemeIcons() {
     }
 }
 
-// --- SOM DE ALARME E NOTIFICAÇÃO NATIVA DO CELULAR (WEB AUDIO + NOTIFICATIONS API) ---
+// --- SOM DE ALARME E NOTIFICAÇÃO NATIVA DO CELULAR ---
 let audioCtx = null;
 
 export function initAudioContext() {
-    if (!audioCtx) {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (AudioContextClass) {
-            audioCtx = new AudioContextClass();
+    try {
+        if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+                audioCtx = new AudioContextClass();
+            }
         }
-    }
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    } catch (e) {
+        console.warn("AudioContext init warning:", e);
     }
 }
 
@@ -78,7 +82,7 @@ export function playNotificationSound() {
         osc1.start(now);
         osc1.stop(now + 0.35);
 
-        // Tom 2 (A5 - 880Hz) - Som nítido e agradável de alarme de agendamento
+        // Tom 2 (A5 - 880Hz) - Som nítido e agradável de alarme
         const osc2 = audioCtx.createOscillator();
         const gain2 = audioCtx.createGain();
         osc2.type = 'sine';
@@ -90,7 +94,7 @@ export function playNotificationSound() {
         osc2.start(now + 0.18);
         osc2.stop(now + 0.65);
 
-        // Vibrar o celular se suportado pelo aparelho
+        // Vibrar celular se suportado
         if ('vibrate' in navigator) {
             navigator.vibrate([250, 120, 250]);
         }
@@ -99,31 +103,60 @@ export function playNotificationSound() {
     }
 }
 
-export async function requestNotificationPermission() {
+// SOLICITAÇÃO DIRETA E SINCRONA DE PERMISSÃO PARA MOBILE
+export function requestNotificationPermission(callback) {
     initAudioContext();
 
     if (!('Notification' in window)) {
-        showToast('Navegador não suporta notificações de sistema.', 'info');
-        return false;
+        showToast('Navegador não suporta notificações de sistema. Alarme sonoro ativado!', 'info');
+        playNotificationSound();
+        if (callback) callback(true);
+        return;
     }
 
     if (Notification.permission === 'granted') {
         playNotificationSound();
-        showToast('Notificações sonoras e alertas estão ativos!', 'success');
-        return true;
+        showToast('Alarme sonoro e notificações já estão ativos!', 'success');
+        if (callback) callback(true);
+        return;
     }
 
-    if (Notification.permission !== 'denied') {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            playNotificationSound();
-            showToast('Notificações e alarme ativados com sucesso!', 'success');
-            return true;
+    // Executa a solicitação direta para evitar bloqueio pelo navegador do celular
+    try {
+        const req = Notification.requestPermission((permission) => {
+            if (permission === 'granted') {
+                playNotificationSound();
+                showToast('Notificações e alarme ativados com sucesso!', 'success');
+                if (callback) callback(true);
+            } else {
+                showToast('Permissão negada. O alarme sonoro interno continuará ativo!', 'info');
+                playNotificationSound();
+                if (callback) callback(false);
+            }
+        });
+
+        // Para navegadores modernos que retornam Promise
+        if (req && typeof req.then === 'function') {
+            req.then((permission) => {
+                if (permission === 'granted') {
+                    playNotificationSound();
+                    showToast('Notificações e alarme ativados com sucesso!', 'success');
+                    if (callback) callback(true);
+                } else {
+                    showToast('Permissão negada. O alarme sonoro interno continuará ativo!', 'info');
+                    playNotificationSound();
+                    if (callback) callback(false);
+                }
+            }).catch(() => {
+                playNotificationSound();
+                if (callback) callback(false);
+            });
         }
+    } catch (e) {
+        console.warn("Erro ao solicitar permissão de notificação:", e);
+        playNotificationSound();
+        if (callback) callback(false);
     }
-
-    showToast('Permissão de notificação negada no navegador.', 'info');
-    return false;
 }
 
 export function triggerSystemNotification(title, body) {
@@ -156,7 +189,6 @@ export function subscribeToAgendamentos(callback) {
                 (payload) => {
                     console.log('⚡ Atualização em tempo real detectada:', payload);
 
-                    // Se for um NOVO agendamento recebido (INSERT)
                     if (payload.eventType === 'INSERT') {
                         triggerSystemNotification(
                             '🔔 NOVO AGENDAMENTO RECEBIDO!',
@@ -748,7 +780,7 @@ export async function deleteAgendamento(id) {
     return true;
 }
 
-// --- RENDERIZAÇÃO DE AGENDAMENTOS COM MODAL LIMPO DE ALTERAÇÃO DE STATUS ---
+// --- RENDERIZAÇÃO DE AGENDAMENTOS ---
 export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null, silent = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -817,7 +849,7 @@ function renderAgendamentosList(container, agendamentos) {
         container.innerHTML = `
             <div class="flex flex-col items-center justify-center py-14 px-4 text-center">
                 <div class="h-14 w-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-4 dark:bg-slate-800/80 dark:text-slate-500">
-                    <i data-lucide="calendar-x" class="h-7 w-7"></i>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><line x1="10" x2="14" y1="14" y2="18"/><line x1="14" x2="10" y1="14" y2="18"/></svg>
                 </div>
                 <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200">Nenhum agendamento encontrado</h3>
                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">Clique no botão de novo agendamento para registrar um compromisso.</p>
@@ -885,16 +917,16 @@ function renderAgendamentosList(container, agendamentos) {
                         </span>
                     </div>
                     <p class="text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1">
-                        <i data-lucide="scissors" class="h-3.5 w-3.5 text-blue-500 shrink-0"></i>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg>
                         <span class="truncate max-w-[200px] sm:max-w-none">${escapeHtml(servicoNome)} (${duracao} min)</span>
                     </p>
                     <div class="flex items-center gap-2.5 text-[11px] text-slate-400 dark:text-slate-500 flex-wrap">
                         <span class="flex items-center gap-1">
-                            <i data-lucide="clock" class="h-3 w-3"></i>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                             ${horaInicio}${horaFim}
                         </span>
                         <span class="flex items-center gap-1">
-                            <i data-lucide="calendar" class="h-3 w-3"></i>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                             ${dataFormatada}
                         </span>
                         ${ag.observacoes ? `<span class="italic text-slate-400 dark:text-slate-500 max-w-[180px] truncate" title="${escapeHtml(ag.observacoes)}">Obs: ${escapeHtml(ag.observacoes)}</span>` : ''}
@@ -902,10 +934,10 @@ function renderAgendamentosList(container, agendamentos) {
                 </div>
             </div>
 
-            <!-- BOTÕES DE AÇÃO HORIZONTAIS -->
+            <!-- BOTÕES DE AÇÃO HORIZONTAIS COMPACTOS -->
             <div class="flex flex-row items-center justify-end gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/40">
                 ${isSolicitacao ? `
-                    <!-- BOTÃO ACEITAR (CONFIRMAÇÃO VERDE) -->
+                    <!-- BOTÃO ACEITAR VERDE -->
                     <button type="button" class="btn-aceitar-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-md shadow-emerald-600/20 transition-transform active:scale-95 shrink-0" 
                         title="Aceitar Agendamento"
                         data-id="${ag.id}" 
@@ -914,40 +946,40 @@ function renderAgendamentosList(container, agendamentos) {
                         data-whatsapp="${cleanPhone(clienteWhatsapp)}"
                         data-data-formatada="${dataFormatada}"
                         data-hora-inicio="${horaInicio}">
-                        <i data-lucide="check" class="h-4 w-4"></i>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     </button>
 
-                    <!-- BOTÃO RECUSAR (X VERMELHO) -->
+                    <!-- BOTÃO RECUSAR X VERMELHO -->
                     <button type="button" class="btn-recusar-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 font-extrabold border border-rose-500/20 transition-all shrink-0" 
                         title="Recusar Agendamento"
                         data-id="${ag.id}">
-                        <i data-lucide="x" class="h-4 w-4"></i>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
                     </button>
                 ` : `
-                    <!-- BOTÃO BADGE DE STATUS QUE ABRE MODAL SEM CORTAR -->
+                    <!-- BADGE STATUS MODAL -->
                     <button type="button" class="btn-open-status-modal flex items-center justify-center h-9 px-3 rounded-xl text-xs font-black border transition-all ${statusClass} shrink-0" 
                         data-id="${ag.id}"
                         data-status="${statusLower}"
                         data-cliente-nome="${escapeHtml(clienteNome)}"
                         data-servico-nome="${escapeHtml(servicoNome)}">
                         <span>${statusLabel}</span>
-                        <i data-lucide="chevron-down" class="h-3.5 w-3.5 opacity-70 ml-1"></i>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-70 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                     </button>
                 `}
 
                 ${clienteWhatsapp ? `
                     <a href="https://wa.me/55${cleanPhone(clienteWhatsapp)}" target="_blank" rel="noopener noreferrer" 
                         class="flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shrink-0" title="Conversar no WhatsApp">
-                        <i data-lucide="message-circle" class="h-4 w-4"></i>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
                     </a>
                 ` : ''}
 
                 <button class="btn-edit-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors shrink-0" data-agendamento='${JSON.stringify(ag)}' title="Editar Agendamento">
-                    <i data-lucide="edit-3" class="h-4 w-4"></i>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                 </button>
 
                 <button class="btn-delete-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shrink-0" data-id="${ag.id}" title="Excluir Agendamento">
-                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                 </button>
             </div>
         `;
@@ -1002,7 +1034,7 @@ export async function fetchAndRenderClientes(containerId) {
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-14 px-4 text-center">
                     <div class="h-14 w-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-4 dark:bg-slate-800/80 dark:text-slate-500">
-                        <i data-lucide="users" class="h-7 w-7"></i>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     </div>
                     <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200">Nenhum cliente cadastrado</h3>
                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">Os clientes cadastrados via agendamento aparecerão aqui.</p>
@@ -1024,7 +1056,7 @@ export async function fetchAndRenderClientes(containerId) {
                     <div class="min-w-0">
                         <h4 class="font-semibold text-slate-900 dark:text-white text-sm sm:text-base truncate">${escapeHtml(cliente.nome)}</h4>
                         <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                            <i data-lucide="phone" class="h-3 w-3"></i>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                             ${cleanPhone(cliente.whatsapp)}
                         </p>
                     </div>
@@ -1034,13 +1066,13 @@ export async function fetchAndRenderClientes(containerId) {
                 <div class="flex flex-row items-center gap-1.5 shrink-0">
                     <a href="https://wa.me/55${cleanPhone(cliente.whatsapp)}" target="_blank" rel="noopener noreferrer" 
                         class="flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shrink-0">
-                        <i data-lucide="message-circle" class="h-4 w-4"></i>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
                     </a>
                     <button class="btn-edit-cliente flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors" data-cliente='${JSON.stringify(cliente)}' title="Editar Cliente">
-                        <i data-lucide="edit-3" class="h-4 w-4"></i>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                     </button>
                     <button class="btn-delete-cliente flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors" data-id="${cliente.id}" title="Excluir Cliente">
-                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                     </button>
                 </div>
             `;

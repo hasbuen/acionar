@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Acionar - Gestão de Serviços & Preços</title>
+    <title>Acionar - Serviços & Preços</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -48,7 +48,7 @@
                 </div>
                 <div class="flex flex-col">
                     <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Catálogo</span>
-                    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Serviços & Tabela de Preços</h1>
+                    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Serviços & Preços</h1>
                 </div>
             </div>
 
@@ -62,8 +62,8 @@
                 </nav>
 
                 <button id="theme-toggle" aria-label="Alternar Tema" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 shadow-sm">
-                    <i id="theme-toggle-dark-icon" data-lucide="moon" class="hidden h-5 w-5"></i>
-                    <i id="theme-toggle-light-icon" data-lucide="sun" class="hidden h-5 w-5"></i>
+                    <svg id="theme-toggle-dark-icon" xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    <svg id="theme-toggle-light-icon" xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
                 </button>
             </div>
         </div>
@@ -73,133 +73,82 @@
     <main class="flex-1 overflow-y-auto pb-28 md:pb-10">
         <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
+            <!-- Banner do Módulo -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md">
                 <div>
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Produtos & Serviços</span>
-                    <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Catálogo de Serviços</h2>
-                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Cadastre e edite os valores e durações de cada serviço.</p>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Configuração de Ofertas</span>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Serviços Oferecidos</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Defina durações e tabela de preços para seus atendimentos.</p>
                 </div>
 
-                <button id="btnOpenServicoModal" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95">
-                    <i data-lucide="plus-circle" class="h-5 w-5"></i>
+                <button id="btnOpenModalServico" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg>
                     <span>Novo Serviço</span>
                 </button>
             </div>
 
-            <!-- Lista de Serviços -->
-            <section class="rounded-[2.5rem] bg-white dark:bg-slate-900/60 shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden backdrop-blur-md">
-                <div id="servicosContainer" class="p-2 sm:p-4 divide-y divide-slate-100 dark:divide-slate-800/60">
-                    <!-- Preenchido via JS -->
-                </div>
-            </section>
+            <!-- Grid de Serviços -->
+            <div id="servicosContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Preenchido via Supabase -->
+            </div>
 
         </div>
     </main>
 
-    <!-- Menu Inferior Mobile -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/90 pb-safe-bottom backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#020617]/90 md:hidden">
+    <!-- MENU INFERIOR MOBILE ULTRA-PREMIUM -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/90 pb-safe-bottom backdrop-blur-2xl dark:border-slate-800/80 dark:bg-[#020617]/95 md:hidden shadow-2xl">
         <div class="flex h-16 items-center justify-around px-2">
-            <a href="./dashboard.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                <i data-lucide="calendar" class="h-5 w-5"></i>
-                <span class="text-[10px]">Agenda</span>
+            <a href="./dashboard.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                <span class="text-[10px] tracking-wide">Agenda</span>
             </a>
-            <a href="./clientes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                <i data-lucide="users" class="h-5 w-5"></i>
-                <span class="text-[10px]">Clientes</span>
+            <a href="./clientes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span class="text-[10px] tracking-wide">Clientes</span>
             </a>
-            <a href="./servicos.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-blue-600 dark:text-blue-400 font-bold">
-                <i data-lucide="scissors" class="h-5 w-5"></i>
-                <span class="text-[10px]">Serviços</span>
+            <a href="./servicos.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-blue-600 dark:text-blue-400 font-extrabold bg-blue-500/10 border border-blue-500/20 shadow-sm transition-all scale-105">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg>
+                <span class="text-[10px] tracking-wide">Serviços</span>
             </a>
-            <a href="./configuracoes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                <i data-lucide="clock" class="h-5 w-5"></i>
-                <span class="text-[10px]">Horários</span>
+            <a href="./configuracoes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span class="text-[10px] tracking-wide">Horários</span>
             </a>
         </div>
     </nav>
 
-    <!-- Modal Novo Serviço -->
+    <!-- MODAL DE SERVIÇO -->
     <div id="modalServico" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden p-0 sm:p-4 overflow-y-auto">
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-lg p-6 sm:p-8 shadow-2xl space-y-5 my-0 sm:my-auto">
-            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
-                <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <i data-lucide="scissors" class="h-5 w-5 text-blue-500"></i>
-                    Cadastrar Novo Serviço
-                </h3>
-                <button id="btnCloseServicoModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                    <i data-lucide="x" class="h-5 w-5"></i>
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-4">
+                <h3 id="modalServicoTitle" class="text-lg font-bold text-slate-900 dark:text-white">Novo Serviço</h3>
+                <button id="btnCloseModalServico" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
                 </button>
             </div>
 
-            <form id="formNovoServico" class="space-y-4">
+            <form id="formServico" class="space-y-4">
+                <input type="hidden" id="servicoId">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nome do Serviço</label>
-                    <input type="text" id="servicoNome" required placeholder="Ex: Corte Masculino Premium" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nome do Serviço</label>
+                    <input type="text" id="inputNomeServico" required placeholder="Ex: Corte Masculino" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Descrição</label>
-                    <textarea id="servicoDescricao" rows="2" placeholder="Ex: Inclui lavagem, corte e finalização..." class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Preço (R$)</label>
+                    <input type="number" step="0.01" id="inputPrecoServico" required placeholder="50.00" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Duração (Minutos)</label>
-                        <input type="number" id="servicoDuracao" required min="5" max="480" value="30" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Preço (R$)</label>
-                        <input type="number" id="servicoValor" required step="0.01" min="0" placeholder="50.00" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                </div>
-
-                <div class="flex justify-end gap-2 pt-3">
-                    <button type="button" id="btnCancelServicoModal" class="px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
-                    <button type="submit" class="px-6 py-2.5 rounded-full text-xs font-extrabold bg-blue-600 text-white hover:bg-blue-500 shadow-md">Salvar Serviço</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal Editar Serviço -->
-    <div id="modalEditServico" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden p-0 sm:p-4 overflow-y-auto">
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-lg p-6 sm:p-8 shadow-2xl space-y-5 my-0 sm:my-auto">
-            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
-                <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <i data-lucide="edit-3" class="h-5 w-5 text-blue-500"></i>
-                    Editar Serviço
-                </h3>
-                <button id="btnCloseEditServicoModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                    <i data-lucide="x" class="h-5 w-5"></i>
-                </button>
-            </div>
-
-            <form id="formEditServico" class="space-y-4">
-                <input type="hidden" id="editServicoId">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nome do Serviço</label>
-                    <input type="text" id="editServicoNome" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Duração (Minutos)</label>
+                    <input type="number" id="inputDuracaoServico" required value="30" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Descrição</label>
-                    <textarea id="editServicoDescricao" rows="2" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Descrição</label>
+                    <textarea id="inputDescricaoServico" rows="2" placeholder="Breve descrição do serviço..." class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Duração (Minutos)</label>
-                        <input type="number" id="editServicoDuracao" required min="5" max="480" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Preço (R$)</label>
-                        <input type="number" id="editServicoValor" required step="0.01" min="0" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                </div>
-
-                <div class="flex justify-end gap-2 pt-3">
-                    <button type="button" id="btnCancelEditServicoModal" class="px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
-                    <button type="submit" class="px-6 py-2.5 rounded-full text-xs font-extrabold bg-blue-600 text-white hover:bg-blue-500 shadow-md">Salvar Alterações</button>
+                <div class="flex justify-end gap-3 pt-3">
+                    <button type="button" id="btnCancelModalServico" class="px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
+                    <button type="submit" class="px-6 py-2.5 rounded-full text-xs font-extrabold bg-blue-600 text-white hover:bg-blue-500 shadow-md">Salvar</button>
                 </div>
             </form>
         </div>
@@ -207,136 +156,149 @@
 
     <!-- Scripts -->
     <script type="module">
-        import { initTheme, showToast, showConfirmModal, fetchServicosAtivos, updateServico, deleteServico } from './js/app.js';
+        import { 
+            initTheme, 
+            showToast, 
+            showConfirmModal,
+            fetchServicosAtivos,
+            updateServico,
+            deleteServico,
+            escapeHtml
+        } from './js/app.js';
         import { supabase } from './js/supabase.js';
 
         initTheme();
 
-        const container = document.getElementById('servicosContainer');
-        const modalNew = document.getElementById('modalServico');
-        const openBtn = document.getElementById('btnOpenServicoModal');
-        const closeBtn = document.getElementById('btnCloseServicoModal');
-        const cancelBtn = document.getElementById('btnCancelServicoModal');
-        const formNew = document.getElementById('formNovoServico');
-
-        const modalEdit = document.getElementById('modalEditServico');
-        const closeEditBtn = document.getElementById('btnCloseEditServicoModal');
-        const cancelEditBtn = document.getElementById('btnCancelEditServicoModal');
-        const formEdit = document.getElementById('formEditServico');
-
-        openBtn?.addEventListener('click', () => modalNew.classList.remove('hidden'));
-        const closeModalNew = () => modalNew.classList.add('hidden');
-        closeBtn?.addEventListener('click', closeModalNew);
-        cancelBtn?.addEventListener('click', closeModalNew);
+        const modal = document.getElementById('modalServico');
+        const openModalBtn = document.getElementById('btnOpenModalServico');
+        const closeModalBtn = document.getElementById('btnCloseModalServico');
+        const cancelModalBtn = document.getElementById('btnCancelModalServico');
+        const form = document.getElementById('formServico');
 
         async function renderServicos() {
+            const container = document.getElementById('servicosContainer');
+            if (!container) return;
+
             container.innerHTML = `
-                <div class="flex items-center justify-center py-12">
+                <div class="col-span-full flex items-center justify-center py-12">
                     <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                 </div>
             `;
 
             try {
                 const servicos = await fetchServicosAtivos();
-                
                 if (!servicos || servicos.length === 0) {
-                    container.innerHTML = `<p class="text-center py-8 text-sm text-slate-500">Nenhum serviço cadastrado.</p>`;
+                    container.innerHTML = `
+                        <div class="col-span-full flex flex-col items-center justify-center py-14 px-4 text-center">
+                            <div class="h-14 w-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-4 dark:bg-slate-800/80 dark:text-slate-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg>
+                            </div>
+                            <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200">Nenhum serviço cadastrado</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">Clique no botão acima para adicionar um novo serviço ao seu catálogo.</p>
+                        </div>
+                    `;
                     return;
                 }
 
                 container.innerHTML = '';
                 servicos.forEach(servico => {
-                    const rawValor = servico.tabela_precos && servico.tabela_precos[0] ? servico.tabela_precos[0].valor : 0;
-                    const valorFormatado = servico.tabela_precos && servico.tabela_precos[0] 
-                        ? `R$ ${parseFloat(rawValor).toFixed(2)}`
-                        : 'A consultar';
+                    const precoVal = servico.tabela_precos && servico.tabela_precos[0] ? parseFloat(servico.tabela_precos[0].valor) : 0;
+                    const preco = `R$ ${precoVal.toFixed(2)}`;
 
                     const card = document.createElement('div');
-                    card.className = 'p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors rounded-2xl';
-                    
+                    card.className = 'bg-white dark:bg-slate-900/60 p-5 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md flex flex-col justify-between gap-4';
                     card.innerHTML = `
-                        <div class="flex items-start gap-3 min-w-0 flex-1">
-                            <div class="h-10 w-10 shrink-0 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold flex items-center justify-center text-sm">
-                                <i data-lucide="scissors" class="h-5 w-5"></i>
+                        <div class="space-y-2">
+                            <div class="flex items-start justify-between gap-2">
+                                <h3 class="font-extrabold text-slate-900 dark:text-white text-base truncate">${escapeHtml(servico.nome)}</h3>
+                                <span class="font-black text-emerald-600 dark:text-emerald-400 text-base shrink-0">${preco}</span>
                             </div>
-                            <div class="min-w-0 space-y-0.5">
-                                <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">${servico.nome}</h4>
-                                <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">${servico.descricao || 'Sem descrição'}</p>
-                                <span class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 pt-1">
-                                    <i data-lucide="clock" class="h-3 w-3"></i> ${servico.duracao_minutos} minutos
-                                </span>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed min-h-[36px]">${escapeHtml(servico.descricao || 'Sem descrição')}</p>
+                            <div class="flex items-center gap-1.5 text-xs text-slate-400 font-semibold pt-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                <span>${servico.duracao_minutos} minutos de atendimento</span>
                             </div>
                         </div>
 
-                        <!-- PREÇO E BOTÕES HORIZONTAIS -->
-                        <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/40">
-                            <span class="text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400">${valorFormatado}</span>
-                            
-                            <div class="flex flex-row items-center gap-1.5 shrink-0">
-                                <button class="btn-edit-servico flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors" data-servico='${JSON.stringify({...servico, rawValor})}' title="Editar Serviço">
-                                    <i data-lucide="edit-3" class="h-4 w-4"></i>
-                                </button>
-                                <button class="btn-delete-servico flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors" data-id="${servico.id}" title="Excluir Serviço">
-                                    <i data-lucide="trash-2" class="h-4 w-4"></i>
-                                </button>
-                            </div>
+                        <!-- BOTÕES NA HORIZONTAL -->
+                        <div class="flex flex-row items-center justify-end gap-1.5 pt-3 border-t border-slate-100 dark:border-slate-800/60">
+                            <button class="btn-edit-servico flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors" data-servico='${JSON.stringify(servico)}' data-preco="${precoVal}" title="Editar Serviço">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            </button>
+                            <button class="btn-delete-servico flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors" data-id="${servico.id}" title="Excluir Serviço">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            </button>
                         </div>
                     `;
                     container.appendChild(card);
                 });
-
-                if (window.lucide) window.lucide.createIcons();
             } catch (err) {
-                container.innerHTML = `<p class="text-center py-8 text-sm text-rose-500">Erro ao carregar serviços do Supabase.</p>`;
+                container.innerHTML = `<div class="col-span-full p-4 text-xs text-rose-500 text-center font-medium">Erro ao carregar serviços: ${err.message}</div>`;
             }
         }
 
-        formNew?.addEventListener('submit', async (e) => {
+        openModalBtn?.addEventListener('click', () => {
+            document.getElementById('servicoId').value = '';
+            document.getElementById('modalServicoTitle').textContent = 'Novo Serviço';
+            form.reset();
+            modal.classList.remove('hidden');
+        });
+
+        const closeModal = () => modal.classList.add('hidden');
+        closeModalBtn?.addEventListener('click', closeModal);
+        cancelModalBtn?.addEventListener('click', closeModal);
+
+        form?.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const nome = document.getElementById('servicoNome').value.trim();
-            const descricao = document.getElementById('servicoDescricao').value.trim();
-            const duracao_minutos = parseInt(document.getElementById('servicoDuracao').value);
-            const valor = parseFloat(document.getElementById('servicoValor').value);
+            const id = document.getElementById('servicoId').value;
+            const nome = document.getElementById('inputNomeServico').value.trim();
+            const preco = parseFloat(document.getElementById('inputPrecoServico').value);
+            const duracao_minutos = parseInt(document.getElementById('inputDuracaoServico').value);
+            const descricao = document.getElementById('inputDescricaoServico').value.trim();
 
             try {
-                const { data: servicoData, error: sErr } = await supabase
-                    .from('servicos')
-                    .insert([{ nome, descricao, duracao_minutos, ativo: true }])
-                    .select()
-                    .single();
+                if (id) {
+                    await updateServico(id, { nome, descricao, duracao_minutos, ativo: true }, preco);
+                    showToast('Serviço atualizado!', 'success');
+                } else {
+                    const { data: newS, error: sErr } = await supabase
+                        .from('servicos')
+                        .insert([{ nome, descricao, duracao_minutos, ativo: true }])
+                        .select()
+                        .single();
 
-                if (sErr) throw sErr;
+                    if (sErr) throw sErr;
 
-                if (servicoData?.id && !isNaN(valor)) {
-                    await supabase.from('tabela_precos').insert([{ servico_id: servicoData.id, valor }]);
+                    await supabase
+                        .from('tabela_precos')
+                        .insert([{ servico_id: newS.id, valor: preco }]);
+
+                    showToast('Serviço cadastrado!', 'success');
                 }
-
-                showToast('Serviço cadastrado com sucesso!', 'success');
-                closeModalNew();
-                formNew.reset();
-                await renderServicos();
+                closeModal();
+                renderServicos();
             } catch (err) {
-                showToast('Erro ao cadastrar serviço: ' + err.message, 'error');
+                showToast('Erro: ' + err.message, 'error');
             }
         });
 
-        // Eventos Editar / Excluir Serviço com Modal Bonito
-        container?.addEventListener('click', (e) => {
+        const container = document.getElementById('servicosContainer');
+        container?.addEventListener('click', async (e) => {
             const btnDelete = e.target.closest('.btn-delete-servico');
             if (btnDelete) {
                 const id = btnDelete.dataset.id;
                 showConfirmModal({
                     title: 'Excluir Serviço',
-                    message: 'Deseja realmente apagar este serviço do seu catálogo?',
-                    confirmText: 'Apagar Serviço',
+                    message: 'Deseja realmente remover este serviço do catálogo?',
+                    confirmText: 'Apagar',
                     type: 'danger',
                     onConfirm: async () => {
                         try {
                             await deleteServico(id);
-                            showToast('Serviço excluído com sucesso!', 'success');
-                            await renderServicos();
+                            showToast('Serviço removido!', 'success');
+                            renderServicos();
                         } catch (err) {
-                            showToast('Erro ao excluir serviço: ' + err.message, 'error');
+                            showToast('Erro ao remover: ' + err.message, 'error');
                         }
                     }
                 });
@@ -345,39 +307,19 @@
 
             const btnEdit = e.target.closest('.btn-edit-servico');
             if (btnEdit) {
-                const s = JSON.parse(btnEdit.dataset.servico);
-                document.getElementById('editServicoId').value = s.id;
-                document.getElementById('editServicoNome').value = s.nome;
-                document.getElementById('editServicoDescricao').value = s.descricao || '';
-                document.getElementById('editServicoDuracao').value = s.duracao_minutos;
-                document.getElementById('editServicoValor').value = s.rawValor || 0;
-                modalEdit.classList.remove('hidden');
+                const servico = JSON.parse(btnEdit.dataset.servico);
+                const preco = btnEdit.dataset.preco;
+                document.getElementById('servicoId').value = servico.id;
+                document.getElementById('inputNomeServico').value = servico.nome;
+                document.getElementById('inputPrecoServico').value = preco;
+                document.getElementById('inputDuracaoServico').value = servico.duracao_minutos;
+                document.getElementById('inputDescricaoServico').value = servico.descricao || '';
+                document.getElementById('modalServicoTitle').textContent = 'Editar Serviço';
+                modal.classList.remove('hidden');
             }
         });
 
-        const closeModalEdit = () => modalEdit.classList.add('hidden');
-        closeEditBtn?.addEventListener('click', closeModalEdit);
-        cancelEditBtn?.addEventListener('click', closeModalEdit);
-
-        formEdit?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('editServicoId').value;
-            const nome = document.getElementById('editServicoNome').value.trim();
-            const descricao = document.getElementById('editServicoDescricao').value.trim();
-            const duracao_minutos = parseInt(document.getElementById('editServicoDuracao').value);
-            const valor = parseFloat(document.getElementById('editServicoValor').value);
-
-            try {
-                await updateServico(id, { nome, descricao, duracao_minutos, ativo: true }, valor);
-                showToast('Serviço atualizado com sucesso!', 'success');
-                closeModalEdit();
-                await renderServicos();
-            } catch (err) {
-                showToast('Erro ao atualizar serviço: ' + err.message, 'error');
-            }
-        });
-
-        await renderServicos();
+        renderServicos();
         if (window.lucide) window.lucide.createIcons();
     </script>
 </body>

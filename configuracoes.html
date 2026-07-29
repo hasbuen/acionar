@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Acionar - Configurações & Parâmetros</title>
+    <title>Acionar - Configuração de Horários & WhatsApp</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,7 +35,7 @@
     <style>
         * { -webkit-tap-highlight-color: transparent; }
         ::-webkit-scrollbar { width: 0px; background: transparent; }
-        input[type="time"] { min-height: 44px; }
+        input[type="time"] { min-height: 40px; -webkit-appearance: none; }
     </style>
 </head>
 <body class="min-h-[100dvh] bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
@@ -49,7 +49,7 @@
                 </div>
                 <div class="flex flex-col">
                     <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Parâmetros</span>
-                    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Configurações do Sistema</h1>
+                    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Configurações Gerais</h1>
                 </div>
             </div>
 
@@ -59,12 +59,12 @@
                     <a href="./dashboard.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Agenda</a>
                     <a href="./clientes.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Clientes</a>
                     <a href="./servicos.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Serviços</a>
-                    <a href="./configuracoes.html" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm">Horários & Mensagem</a>
+                    <a href="./configuracoes.html" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm">Horários</a>
                 </nav>
 
                 <button id="theme-toggle" aria-label="Alternar Tema" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 shadow-sm">
-                    <i id="theme-toggle-dark-icon" data-lucide="moon" class="hidden h-5 w-5"></i>
-                    <i id="theme-toggle-light-icon" data-lucide="sun" class="hidden h-5 w-5"></i>
+                    <svg id="theme-toggle-dark-icon" xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    <svg id="theme-toggle-light-icon" xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
                 </button>
             </div>
         </div>
@@ -74,116 +74,133 @@
     <main class="flex-1 overflow-y-auto pb-28 md:pb-10">
         <div class="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-            <!-- Banner do Módulo -->
+            <!-- Banner Principal -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md">
                 <div>
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Personalização</span>
-                    <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Parâmetros & Mensagens</h2>
-                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Configure horários por dia, endereço do espaço e mensagem do WhatsApp.</p>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Flexibilidade Total</span>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Horários de Atendimento & Mensagens</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Cadastre múltiplos turnos no mesmo dia e escolha a mensagem do WhatsApp.</p>
                 </div>
-
-                <button id="btnReplicarSegunda" type="button" class="flex items-center justify-center gap-2 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-blue-500 hover:text-white dark:hover:bg-blue-600 px-4 py-3 text-xs font-bold transition-all border border-slate-200 dark:border-slate-700">
-                    <i data-lucide="copy" class="h-4 w-4"></i>
-                    <span>Copiar Segunda (Seg-Sex)</span>
-                </button>
             </div>
 
-            <!-- Form de Configurações -->
-            <form id="formConfiguracoes" class="space-y-6">
-                
-                <!-- CARD 1: MENSAGEM DO WHATSAPP & ENDEREÇO -->
-                <div class="bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-4">
-                    <div class="flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-800/80 pb-3">
-                        <div class="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-                            <i data-lucide="message-square" class="h-5 w-5"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Mensagem no WhatsApp & Endereço</h3>
-                            <p class="text-xs text-slate-500 dark:text-slate-400">Personalize o texto automático enviado ao aceitar agendamentos.</p>
-                        </div>
+            <!-- CONFIGURAÇÃO 1: MENSAGEM DO WHATSAPP & ENDEREÇO -->
+            <section class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-6 backdrop-blur-md">
+                <div class="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                    <div class="h-10 w-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
                     </div>
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Mensagem no WhatsApp & Endereço</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Personalize o texto enviado ao aceitar e confirmar agendamentos</p>
+                    </div>
+                </div>
 
+                <form id="formWhatsAppConfig" class="space-y-4">
                     <div>
                         <label for="inputEndereco" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Endereço do Estabelecimento</label>
-                        <input type="text" id="inputEndereco" placeholder="Ex: Rua das Flores, 123 - Centro, São Paulo - SP" 
-                            class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="inputEndereco" required placeholder="Ex: Rua Principal, 123 - Centro, São Paulo" 
+                            class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     </div>
 
-                    <div>
-                        <div class="flex items-center justify-between gap-2 mb-1">
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
                             <label for="inputMensagemWa" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Modelo da Mensagem</label>
-                            <button type="button" id="btnRestaurarPadrao" class="text-[11px] font-bold text-blue-500 hover:underline">Restaurar Padrão</button>
+                            <button type="button" id="btnRestaurarMensagemPadrao" class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
+                                Restaurar Padrão
+                            </button>
                         </div>
-                        <textarea id="inputMensagemWa" rows="6" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed font-mono text-xs"></textarea>
+                        <textarea id="inputMensagemWa" rows="7" required
+                            class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 p-4 text-xs sm:text-sm text-slate-900 dark:text-white font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
                     </div>
 
-                    <!-- Tags Inteligentes -->
+                    <!-- Tags Inseridoras Rápidas -->
                     <div class="space-y-1.5 pt-1">
-                        <span class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Clique para inserir variáveis automáticas:</span>
+                        <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Toque para Inserir Variáveis:</span>
                         <div class="flex flex-wrap gap-1.5">
-                            <button type="button" class="btn-tag-var px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-extrabold hover:bg-blue-500 hover:text-white transition-colors" data-tag="{cliente}">+{cliente}</button>
-                            <button type="button" class="btn-tag-var px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-extrabold hover:bg-blue-500 hover:text-white transition-colors" data-tag="{servico}">+{servico}</button>
-                            <button type="button" class="btn-tag-var px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-extrabold hover:bg-blue-500 hover:text-white transition-colors" data-tag="{data}">+{data}</button>
-                            <button type="button" class="btn-tag-var px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-extrabold hover:bg-blue-500 hover:text-white transition-colors" data-tag="{hora}">+{hora}</button>
-                            <button type="button" class="btn-tag-var px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-extrabold hover:bg-blue-500 hover:text-white transition-colors" data-tag="{endereco}">+{endereco}</button>
+                            <button type="button" class="btn-insert-tag px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-bold hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors" data-tag="{cliente}">+{cliente}</button>
+                            <button type="button" class="btn-insert-tag px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-bold hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors" data-tag="{servico}">+{servico}</button>
+                            <button type="button" class="btn-insert-tag px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-bold hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors" data-tag="{data}">+{data}</button>
+                            <button type="button" class="btn-insert-tag px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-bold hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors" data-tag="{hora}">+{hora}</button>
+                            <button type="button" class="btn-insert-tag px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-bold hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors" data-tag="{endereco}">+{endereco}</button>
                         </div>
                     </div>
-                </div>
 
-                <!-- CARD 2: INTERVALO ENTRE AGENDAMENTOS -->
-                <div class="bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-3">
-                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Intervalo Padrão entre Agendamentos</label>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        <label class="flex items-center justify-center p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600 transition-all">
-                            <input type="radio" name="intervalo" value="15" class="sr-only"> 15 minutos
-                        </label>
-                        <label class="flex items-center justify-center p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600 transition-all">
-                            <input type="radio" name="intervalo" value="30" class="sr-only" checked> 30 minutos
-                        </label>
-                        <label class="flex items-center justify-center p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600 transition-all">
-                            <input type="radio" name="intervalo" value="45" class="sr-only"> 45 minutos
-                        </label>
-                        <label class="flex items-center justify-center p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600 transition-all">
-                            <input type="radio" name="intervalo" value="60" class="sr-only"> 60 minutos
-                        </label>
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" id="btnSaveWhatsApp" class="flex items-center justify-center gap-2 px-6 py-3 rounded-full text-xs font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 transition-all active:scale-95">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Salvar Mensagem do WhatsApp</span>
+                        </button>
                     </div>
-                </div>
+                </form>
+            </section>
 
-                <!-- CARD 3: TURNOS DOS DIAS DA SEMANA -->
-                <div id="diasSemanaContainer" class="space-y-4">
-                    <!-- Preenchido via JS para Segunda a Domingo -->
-                </div>
+            <!-- CONFIGURAÇÃO 2: HORÁRIOS DE ATENDIMENTO E TURNOS -->
+            <section class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-6 backdrop-blur-md">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Horário de Funcionamento</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Gerencie expediente por dia e adicione múltiplos turnos</p>
+                        </div>
+                    </div>
 
-                <!-- Botão de Salvar -->
-                <div class="flex justify-end pt-4">
-                    <button type="submit" id="btnSaveConfig" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-8 py-4 text-sm font-extrabold text-white shadow-xl shadow-blue-500/25 transition-transform active:scale-95">
-                        <i data-lucide="save" class="h-5 w-5"></i>
-                        <span>Salvar Todas as Configurações</span>
+                    <button type="button" id="btnSaveHorariosTop" class="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-extrabold bg-blue-600 text-white hover:bg-blue-500 shadow-md transition-all active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span class="hidden sm:inline">Salvar Expediente</span>
                     </button>
                 </div>
-            </form>
+
+                <!-- Intervalo dos Encaixes -->
+                <div class="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <span class="block text-xs font-extrabold text-slate-900 dark:text-white">Intervalo entre Horários na Agenda</span>
+                        <span class="block text-[11px] text-slate-500 dark:text-slate-400">Passo de minutos para exibição dos encaixes na tela do cliente</span>
+                    </div>
+                    <select id="selectIntervalo" class="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="15">A cada 15 minutos</option>
+                        <option value="30" selected>A cada 30 minutos</option>
+                        <option value="45">A cada 45 minutos</option>
+                        <option value="60">A cada 1 hora</option>
+                    </select>
+                </div>
+
+                <!-- Lista de Dias da Semana com Suporte a Multi-Turnos -->
+                <div id="diasSemanaContainer" class="space-y-4">
+                    <!-- Preenchido via JS -->
+                </div>
+
+                <div class="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" id="btnSaveHorariosBottom" class="flex items-center justify-center gap-2 px-8 py-3.5 rounded-full text-xs font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span>Salvar Todas as Alterações de Horário</span>
+                    </button>
+                </div>
+            </section>
 
         </div>
     </main>
 
-    <!-- Menu Inferior Mobile -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/90 pb-safe-bottom backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#020617]/90 md:hidden">
+    <!-- MENU INFERIOR MOBILE ULTRA-PREMIUM -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/90 pb-safe-bottom backdrop-blur-2xl dark:border-slate-800/80 dark:bg-[#020617]/95 md:hidden shadow-2xl">
         <div class="flex h-16 items-center justify-around px-2">
-            <a href="./dashboard.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                <i data-lucide="calendar" class="h-5 w-5"></i>
-                <span class="text-[10px]">Agenda</span>
+            <a href="./dashboard.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                <span class="text-[10px] tracking-wide">Agenda</span>
             </a>
-            <a href="./clientes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                <i data-lucide="users" class="h-5 w-5"></i>
-                <span class="text-[10px]">Clientes</span>
+            <a href="./clientes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span class="text-[10px] tracking-wide">Clientes</span>
             </a>
-            <a href="./servicos.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                <i data-lucide="scissors" class="h-5 w-5"></i>
-                <span class="text-[10px]">Serviços</span>
+            <a href="./servicos.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg>
+                <span class="text-[10px] tracking-wide">Serviços</span>
             </a>
-            <a href="./configuracoes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-blue-600 dark:text-blue-400 font-bold">
-                <i data-lucide="clock" class="h-5 w-5"></i>
-                <span class="text-[10px]">Horários</span>
+            <a href="./configuracoes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-blue-600 dark:text-blue-400 font-extrabold bg-blue-500/10 border border-blue-500/20 shadow-sm transition-all scale-105">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span class="text-[10px] tracking-wide">Horários</span>
             </a>
         </div>
     </nav>
@@ -202,233 +219,212 @@
 
         initTheme();
 
-        const NORM_DIAS = [
-            { key: "1", label: "Segunda-feira" },
-            { key: "2", label: "Terça-feira" },
-            { key: "3", label: "Quarta-feira" },
-            { key: "4", label: "Quinta-feira" },
-            { key: "5", label: "Sexta-feira" },
-            { key: "6", label: "Sábado" },
-            { key: "0", label: "Domingo" }
-        ];
+        const NOMES_DIAS = {
+            "1": "Segunda-feira",
+            "2": "Terça-feira",
+            "3": "Quarta-feira",
+            "4": "Quinta-feira",
+            "5": "Sexta-feira",
+            "6": "Sábado",
+            "0": "Domingo"
+        };
 
-        const container = document.getElementById('diasSemanaContainer');
-        const form = document.getElementById('formConfiguracoes');
-        const inputEndereco = document.getElementById('inputEndereco');
-        const inputMensagemWa = document.getElementById('inputMensagemWa');
-        const btnRestaurarPadrao = document.getElementById('btnRestaurarPadrao');
+        const ORDEM_DIAS = ["1", "2", "3", "4", "5", "6", "0"];
 
-        let currentConfigHorarios = null;
-        let currentConfigWa = null;
+        let currentConfig = null;
 
-        function createTurnoRow(dayKey, turnoData = { inicio: "08:00", fim: "18:00" }, index = 0) {
-            const row = document.createElement('div');
-            row.className = 'turno-row flex items-center gap-2 flex-wrap sm:flex-nowrap pt-2';
-            row.innerHTML = `
-                <div class="flex items-center gap-2 flex-1 min-w-[240px]">
-                    <div class="flex-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">Início</span>
-                        <input type="time" class="turno-inicio w-full rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-extrabold text-slate-900 dark:text-white" value="${turnoData.inicio || '08:00'}" required>
-                    </div>
-                    <span class="text-xs text-slate-400 pt-3">até</span>
-                    <div class="flex-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">Fim</span>
-                        <input type="time" class="turno-fim w-full rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-extrabold text-slate-900 dark:text-white" value="${turnoData.fim || '18:00'}" required>
-                    </div>
+        // --- CARREGAR CONFIGURAÇÃO DE MENSAGEM WHATSAPP ---
+        async function loadWhatsAppConfig() {
+            const config = await fetchConfiguracaoMensagemWhatsApp();
+            document.getElementById('inputEndereco').value = config.endereco || "Rua Principal, 123 - Centro";
+            document.getElementById('inputMensagemWa').value = config.mensagem || MENSAGEM_WHATSAPP_PADRAO;
+        }
+
+        // Form WhatsApp Submit
+        document.getElementById('formWhatsAppConfig')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const endereco = document.getElementById('inputEndereco').value.trim();
+            const mensagem = document.getElementById('inputMensagemWa').value.trim();
+            const btn = document.getElementById('btnSaveWhatsApp');
+
+            btn.disabled = true;
+            try {
+                await saveConfiguracaoMensagemWhatsApp({ endereco, mensagem });
+                showToast('Mensagem do WhatsApp e endereço salvos com sucesso!', 'success');
+            } catch (err) {
+                showToast('Erro ao salvar mensagem: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        // Restaurar padrão
+        document.getElementById('btnRestaurarMensagemPadrao')?.addEventListener('click', () => {
+            document.getElementById('inputMensagemWa').value = MENSAGEM_WHATSAPP_PADRAO;
+            showToast('Modelo padrão restaurado na caixa de texto.', 'info');
+        });
+
+        // Inserir Tag na posição do cursor
+        document.querySelectorAll('.btn-insert-tag').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tag = btn.dataset.tag;
+                const textarea = document.getElementById('inputMensagemWa');
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const val = textarea.value;
+
+                textarea.value = val.substring(0, start) + tag + val.substring(end);
+                textarea.focus();
+                textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+            });
+        });
+
+        // --- CARREGAR E RENDERIZAR HORÁRIOS DA SEMANA ---
+        async function loadHorariosConfig() {
+            const container = document.getElementById('diasSemanaContainer');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="flex items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                 </div>
-                <button type="button" class="btn-remove-turno self-end mb-0.5 flex items-center justify-center h-9 w-9 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-colors" title="Remover Turno">
-                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+            `;
+
+            currentConfig = await fetchConfiguracaoHorarios();
+
+            document.getElementById('selectIntervalo').value = currentConfig.intervalo_minutos || 30;
+
+            container.innerHTML = '';
+
+            ORDEM_DIAS.forEach(dayKey => {
+                const dayData = currentConfig.dias && currentConfig.dias[dayKey] 
+                    ? currentConfig.dias[dayKey] 
+                    : { ativo: dayKey !== "0", turnos: [{ inicio: "08:00", fim: "18:00" }] };
+
+                const card = document.createElement('div');
+                card.className = 'day-card p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800/80 space-y-3';
+                card.dataset.day = dayKey;
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="chk-day-active sr-only peer" ${dayData.ativo ? 'checked' : ''}>
+                                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-slate-600 peer-checked:bg-blue-600"></div>
+                            </label>
+                            <span class="font-extrabold text-sm text-slate-900 dark:text-white">${NOMES_DIAS[dayKey]}</span>
+                        </div>
+                        <button type="button" class="btn-add-turno flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline ${dayData.ativo ? '' : 'hidden'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
+                            <span>Adicionar Horário</span>
+                        </button>
+                    </div>
+
+                    <div class="turnos-wrapper space-y-2 ${dayData.ativo ? '' : 'hidden'}">
+                        <!-- Turnos adicionados via JS -->
+                    </div>
+                `;
+
+                container.appendChild(card);
+
+                const turnosWrapper = card.querySelector('.turnos-wrapper');
+                const chkActive = card.querySelector('.chk-day-active');
+                const btnAdd = card.querySelector('.btn-add-turno');
+
+                // Renderiza turnos existentes
+                const turnos = dayData.turnos && dayData.turnos.length > 0 
+                    ? dayData.turnos 
+                    : [{ inicio: "08:00", fim: "18:00" }];
+
+                turnos.forEach(t => renderTurnoRow(turnosWrapper, t.inicio, t.fim));
+
+                chkActive.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        turnosWrapper.classList.remove('hidden');
+                        btnAdd.classList.remove('hidden');
+                    } else {
+                        turnosWrapper.classList.add('hidden');
+                        btnAdd.classList.add('hidden');
+                    }
+                });
+
+                btnAdd.addEventListener('click', () => {
+                    renderTurnoRow(turnosWrapper, "14:00", "18:00");
+                });
+            });
+
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function renderTurnoRow(container, inicio = "08:00", fim = "12:00") {
+            const row = document.createElement('div');
+            row.className = 'turno-row flex items-center gap-2 sm:gap-3 bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800';
+            row.innerHTML = `
+                <div class="flex items-center gap-1.5 flex-1 min-w-0">
+                    <span class="text-[11px] font-bold uppercase text-slate-400">Das</span>
+                    <input type="time" class="input-hora-inicio rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs font-bold text-slate-900 dark:text-white" value="${inicio}">
+                </div>
+                <div class="flex items-center gap-1.5 flex-1 min-w-0">
+                    <span class="text-[11px] font-bold uppercase text-slate-400">Até</span>
+                    <input type="time" class="input-hora-fim rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs font-bold text-slate-900 dark:text-white" value="${fim}">
+                </div>
+                <button type="button" class="btn-remove-turno p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors" title="Remover Turno">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                 </button>
             `;
 
             row.querySelector('.btn-remove-turno').addEventListener('click', () => {
-                const turnosList = row.parentElement;
-                if (turnosList.children.length > 1) {
+                if (container.querySelectorAll('.turno-row').length > 1) {
                     row.remove();
                 } else {
-                    showToast('O dia precisa ter ao menos um turno configurado.', 'info');
+                    showToast('É necessário manter pelo menos um turno configurado para o dia ativo.', 'info');
                 }
             });
 
-            return row;
+            container.appendChild(row);
         }
 
-        async function loadConfigUI() {
-            currentConfigHorarios = await fetchConfiguracaoHorarios();
-            currentConfigWa = await fetchConfiguracaoMensagemWhatsApp();
+        async function saveAllHorarios() {
+            const configPayload = {
+                intervalo_minutos: parseInt(document.getElementById('selectIntervalo').value || 30),
+                dias: {}
+            };
 
-            // Carrega Endereço e Mensagem
-            inputEndereco.value = currentConfigWa.endereco || '';
-            inputMensagemWa.value = currentConfigWa.mensagem || MENSAGEM_WHATSAPP_PADRAO;
-
-            // Carrega intervalo
-            const intervalVal = (currentConfigHorarios.intervalo_minutos || 30).toString();
-            const radioEl = form.querySelector(`input[name="intervalo"][value="${intervalVal}"]`);
-            if (radioEl) radioEl.checked = true;
-
-            container.innerHTML = '';
-
-            NORM_DIAS.forEach(d => {
-                const dayData = (currentConfigHorarios.dias && currentConfigHorarios.dias[d.key]) 
-                    ? currentConfigHorarios.dias[d.key]
-                    : {
-                        ativo: (currentConfigHorarios.dias_semana || [1,2,3,4,5,6]).includes(parseInt(d.key)),
-                        turnos: [{ inicio: currentConfigHorarios.hora_inicio || "08:00", fim: currentConfigHorarios.hora_fim || "18:00" }]
-                    };
-
-                const card = document.createElement('div');
-                card.className = 'dia-card bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-3';
-                card.dataset.dayKey = d.key;
-
-                card.innerHTML = `
-                    <div class="flex items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/60 pb-3">
-                        <div class="flex items-center gap-3">
-                            <input type="checkbox" class="chk-dia h-5 w-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" ${dayData.ativo ? 'checked' : ''}>
-                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">${d.label}</h3>
-                        </div>
-                        <span class="badge-status-dia text-xs font-bold px-2.5 py-1 rounded-full ${dayData.ativo ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}">
-                            ${dayData.ativo ? 'Atendimento Ativo' : 'Fechado'}
-                        </span>
-                    </div>
-
-                    <div class="turnos-wrapper space-y-2 ${dayData.ativo ? '' : 'opacity-40 pointer-events-none'}">
-                        <div class="turnos-list space-y-2"></div>
-                        <button type="button" class="btn-add-turno flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-xs hover:bg-blue-500/20 transition-colors mt-2">
-                            <i data-lucide="plus" class="h-3.5 w-3.5"></i>
-                            <span>Adicionar Turno de Atendimento</span>
-                        </button>
-                    </div>
-                `;
-
-                const chk = card.querySelector('.chk-dia');
-                const wrapper = card.querySelector('.turnos-wrapper');
-                const badge = card.querySelector('.badge-status-dia');
-                const turnosList = card.querySelector('.turnos-list');
-                const btnAddTurno = card.querySelector('.btn-add-turno');
-
-                chk.addEventListener('change', (e) => {
-                    if (e.target.checked) {
-                        wrapper.classList.remove('opacity-40', 'pointer-events-none');
-                        badge.className = 'badge-status-dia text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
-                        badge.textContent = 'Atendimento Ativo';
-                    } else {
-                        wrapper.classList.add('opacity-40', 'pointer-events-none');
-                        badge.className = 'badge-status-dia text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400';
-                        badge.textContent = 'Fechado';
-                    }
-                });
-
-                const turnos = (dayData.turnos && dayData.turnos.length > 0) 
-                    ? dayData.turnos 
-                    : [{ inicio: "08:00", fim: "18:00" }];
-
-                turnos.forEach((t, idx) => {
-                    turnosList.appendChild(createTurnoRow(d.key, t, idx));
-                });
-
-                btnAddTurno.addEventListener('click', () => {
-                    turnosList.appendChild(createTurnoRow(d.key, { inicio: "14:00", fim: "18:00" }));
-                    if (window.lucide) window.lucide.createIcons();
-                });
-
-                container.appendChild(card);
-            });
-
-            if (window.lucide) window.lucide.createIcons();
-        }
-
-        // Inserção de Tags na Mensagem
-        document.querySelectorAll('.btn-tag-var').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tag = btn.dataset.tag;
-                const start = inputMensagemWa.selectionStart;
-                const end = inputMensagemWa.selectionEnd;
-                const text = inputMensagemWa.value;
-                inputMensagemWa.value = text.substring(0, start) + tag + text.substring(end);
-                inputMensagemWa.focus();
-                inputMensagemWa.selectionStart = inputMensagemWa.selectionEnd = start + tag.length;
-            });
-        });
-
-        // Restaurar Mensagem Padrão
-        btnRestaurarPadrao?.addEventListener('click', () => {
-            inputMensagemWa.value = MENSAGEM_WHATSAPP_PADRAO;
-            showToast('Modelo padrão restaurado!', 'info');
-        });
-
-        // Replicar Segunda para Terça a Sexta
-        document.getElementById('btnReplicarSegunda')?.addEventListener('click', () => {
-            const mondayCard = container.querySelector('[data-day-key="1"]');
-            if (!mondayCard) return;
-
-            const isMondayChecked = mondayCard.querySelector('.chk-dia').checked;
-            const mondayTurnos = [];
-            mondayCard.querySelectorAll('.turno-row').forEach(row => {
-                mondayTurnos.push({
-                    inicio: row.querySelector('.turno-inicio').value,
-                    fim: row.querySelector('.turno-fim').value
-                });
-            });
-
-            ["2", "3", "4", "5"].forEach(dayKey => {
-                const card = container.querySelector(`[data-day-key="${dayKey}"]`);
-                if (card) {
-                    const chk = card.querySelector('.chk-dia');
-                    chk.checked = isMondayChecked;
-                    chk.dispatchEvent(new Event('change'));
-
-                    const turnosList = card.querySelector('.turnos-list');
-                    turnosList.innerHTML = '';
-                    mondayTurnos.forEach(t => turnosList.appendChild(createTurnoRow(dayKey, t)));
-                }
-            });
-
-            if (window.lucide) window.lucide.createIcons();
-            showToast('Horário da Segunda-feira replicado para Terça a Sexta!', 'info');
-        });
-
-        // Salvar Todas as Configurações
-        form?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const endereco = inputEndereco.value.trim();
-            const mensagem = inputMensagemWa.value.trim();
-
-            const intervalo_minutos = parseInt(form.querySelector('input[name="intervalo"]:checked').value);
-            const diasConfig = {};
-
-            container.querySelectorAll('.dia-card').forEach(card => {
-                const key = card.dataset.dayKey;
-                const ativo = card.querySelector('.chk-dia').checked;
+            document.querySelectorAll('.day-card').forEach(card => {
+                const dayKey = card.dataset.day;
+                const isAtivo = card.querySelector('.chk-day-active').checked;
                 const turnos = [];
 
-                card.querySelectorAll('.turno-row').forEach(row => {
-                    const inicio = row.querySelector('.turno-inicio').value;
-                    const fim = row.querySelector('.turno-fim').value;
-                    if (inicio && fim) {
-                        turnos.push({ inicio, fim });
-                    }
-                });
+                if (isAtivo) {
+                    card.querySelectorAll('.turno-row').forEach(row => {
+                        const inicio = row.querySelector('.input-hora-inicio').value;
+                        const fim = row.querySelector('.input-hora-fim').value;
+                        if (inicio && fim) {
+                            turnos.push({ inicio, fim });
+                        }
+                    });
+                }
 
-                diasConfig[key] = { ativo, turnos };
+                configPayload.dias[dayKey] = {
+                    ativo: isAtivo,
+                    turnos: turnos.length > 0 ? turnos : [{ inicio: "08:00", fim: "18:00" }]
+                };
             });
 
-            const submitBtn = document.getElementById('btnSaveConfig');
-            submitBtn.disabled = true;
-
             try {
-                await saveConfiguracaoHorarios({ intervalo_minutos, dias: diasConfig });
-                await saveConfiguracaoMensagemWhatsApp({ mensagem, endereco });
-
-                showToast('Todas as configurações salvas com sucesso!', 'success');
+                await saveConfiguracaoHorarios(configPayload);
+                showToast('Configurações de horários salvas com sucesso!', 'success');
             } catch (err) {
-                showToast('Erro ao salvar configurações: ' + err.message, 'error');
-            } finally {
-                submitBtn.disabled = false;
+                showToast('Erro ao salvar horários: ' + err.message, 'error');
             }
-        });
+        }
 
-        await loadConfigUI();
+        document.getElementById('btnSaveHorariosTop')?.addEventListener('click', saveAllHorarios);
+        document.getElementById('btnSaveHorariosBottom')?.addEventListener('click', saveAllHorarios);
+
+        loadWhatsAppConfig();
+        loadHorariosConfig();
+        if (window.lucide) window.lucide.createIcons();
     </script>
 </body>
 </html>
