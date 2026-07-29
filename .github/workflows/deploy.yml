@@ -1,0 +1,28 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Inject Supabase Environment Variables
+        run: |
+          sed -i 's|__SUPABASE_URL__|${{ secrets.SUPABASE_URL }}|g' index.html
+          sed -i 's|__SUPABASE_ANON_KEY__|${{ secrets.SUPABASE_ANON_KEY }}|g' index.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
