@@ -1,0 +1,16 @@
+<script type="module">
+  // Carrega o cliente do Supabase (ajuste o caminho do CDN se necessário)
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+  const SUPABASE_URL = '__SUPABASE_URL__'; // O GitHub Actions injeta aqui também se você usar o mesmo script, ou coloque a URL pública direto
+  const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
+  
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Verifica se o usuário tem uma sessão ativa
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    // Se não estiver logado, expulsa de volta para o login
+    window.location.href = './index.html';
+  }
+</script>
