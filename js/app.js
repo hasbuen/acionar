@@ -44,7 +44,108 @@ function updateThemeIcons() {
     }
 }
 
-// --- SUPABASE REALTIME (TEMPO REAL AUTOMÁTICO) ---
+// --- SOM DE ALARME E NOTIFICAÇÃO NATIVA DO CELULAR (WEB AUDIO + NOTIFICATIONS API) ---
+let audioCtx = null;
+
+export function initAudioContext() {
+    if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+        }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+export function playNotificationSound() {
+    try {
+        initAudioContext();
+        if (!audioCtx) return;
+
+        const now = audioCtx.currentTime;
+
+        // Tom 1 (E5 - 659.25Hz)
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(659.25, now);
+        gain1.gain.setValueAtTime(0.4, now);
+        gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.35);
+
+        // Tom 2 (A5 - 880Hz) - Som nítido e agradável de alarme de agendamento
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(880, now + 0.18);
+        gain2.gain.setValueAtTime(0.5, now + 0.18);
+        gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.65);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.18);
+        osc2.stop(now + 0.65);
+
+        // Vibrar o celular se suportado pelo aparelho
+        if ('vibrate' in navigator) {
+            navigator.vibrate([250, 120, 250]);
+        }
+    } catch (err) {
+        console.warn("Erro ao reproduzir som de notificação:", err);
+    }
+}
+
+export async function requestNotificationPermission() {
+    initAudioContext();
+
+    if (!('Notification' in window)) {
+        showToast('Navegador não suporta notificações de sistema.', 'info');
+        return false;
+    }
+
+    if (Notification.permission === 'granted') {
+        playNotificationSound();
+        showToast('Notificações sonoras e alertas estão ativos!', 'success');
+        return true;
+    }
+
+    if (Notification.permission !== 'denied') {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            playNotificationSound();
+            showToast('Notificações e alarme ativados com sucesso!', 'success');
+            return true;
+        }
+    }
+
+    showToast('Permissão de notificação negada no navegador.', 'info');
+    return false;
+}
+
+export function triggerSystemNotification(title, body) {
+    playNotificationSound();
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            const notif = new Notification(title, {
+                body,
+                tag: 'novo-agendamento',
+                renotify: true
+            });
+            notif.onclick = () => {
+                window.focus();
+            };
+        } catch (e) {
+            console.warn("Erro ao emitir notificação nativa:", e);
+        }
+    }
+}
+
+// --- SUPABASE REALTIME COM ALERTA SONORO ---
 export function subscribeToAgendamentos(callback) {
     try {
         const channel = supabase
@@ -54,6 +155,15 @@ export function subscribeToAgendamentos(callback) {
                 { event: '*', schema: 'public', table: 'agendamentos' },
                 (payload) => {
                     console.log('⚡ Atualização em tempo real detectada:', payload);
+
+                    // Se for um NOVO agendamento recebido (INSERT)
+                    if (payload.eventType === 'INSERT') {
+                        triggerSystemNotification(
+                            '🔔 NOVO AGENDAMENTO RECEBIDO!',
+                            'Um novo cliente acabou de solicitar um horário na sua agenda!'
+                        );
+                    }
+
                     if (callback) callback(payload);
                 }
             )
@@ -130,7 +240,7 @@ export async function generateWhatsAppConfirmMessage({ clienteNome, servicoNome,
     return encodeURIComponent(template);
 }
 
-// --- MODAL DE ALTERAÇÃO DE STATUS (SEM CORTAR LAYOUT NO MOBILE) ---
+// --- MODAL DE ALTERAÇÃO DE STATUS ---
 export function showChangeStatusModal({ id, currentStatus, clienteNome, servicoNome, onSelect }) {
     let modal = document.getElementById('global-status-modal');
     if (!modal) {

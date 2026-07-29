@@ -108,10 +108,18 @@
                     <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Aceite agendamentos recebidos e gerencie cada atendimento.</p>
                 </div>
 
-                <button id="btnOpenModalAgendamento" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95">
-                    <i data-lucide="plus-circle" class="h-5 w-5"></i>
-                    <span>Novo Agendamento</span>
-                </button>
+                <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <!-- BOTÃO PARA ATIVAR SOM DE ALARME NO CELULAR -->
+                    <button id="btnEnableNotifications" type="button" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-3.5 text-xs font-extrabold transition-all border border-slate-200 dark:border-slate-700">
+                        <i data-lucide="bell" class="h-4 w-4 text-amber-500"></i>
+                        <span id="btnEnableNotificationsText">Ativar Som de Alarme</span>
+                    </button>
+
+                    <button id="btnOpenModalAgendamento" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95 shrink-0">
+                        <i data-lucide="plus-circle" class="h-5 w-5"></i>
+                        <span>Novo Agendamento</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Filtros de Data e Status -->
@@ -319,6 +327,8 @@
             showToast, 
             showConfirmModal,
             showChangeStatusModal,
+            requestNotificationPermission,
+            initAudioContext,
             applyPhoneMask, 
             populateServicosDropdown, 
             fetchAndRenderAgendamentos,
@@ -343,6 +353,9 @@
         const inputData = document.getElementById('inputData');
         const hiddenSelectHora = document.getElementById('selectHora');
         const hiddenSelectServico = document.getElementById('selectServico');
+
+        const btnEnableNotifications = document.getElementById('btnEnableNotifications');
+        const btnEnableNotificationsText = document.getElementById('btnEnableNotificationsText');
 
         // Combobox Serviço
         const btnComboboxServico = document.getElementById('btnComboboxServico');
@@ -379,6 +392,21 @@
         setInterval(() => {
             refreshAgenda(true);
         }, 10000);
+
+        // Ativar Notificações e Som de Alarme
+        if ('Notification' in window && Notification.permission === 'granted') {
+            if (btnEnableNotificationsText) btnEnableNotificationsText.textContent = 'Alarme Ativado 🔔';
+            if (btnEnableNotifications) btnEnableNotifications.className = 'w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-4 py-3.5 text-xs font-extrabold';
+        }
+
+        btnEnableNotifications?.addEventListener('click', async () => {
+            initAudioContext();
+            const granted = await requestNotificationPermission();
+            if (granted) {
+                btnEnableNotificationsText.textContent = 'Alarme Ativado 🔔';
+                btnEnableNotifications.className = 'w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-4 py-3.5 text-xs font-extrabold';
+            }
+        });
 
         // Combobox Serviços
         btnComboboxServico?.addEventListener('click', (e) => {
@@ -581,7 +609,7 @@
                 return;
             }
 
-            // ABRIR MODAL ELEGANTE DE ALTERAÇÃO DE STATUS (EVITA CORTAR O LAYOUT)
+            // ABRIR MODAL ELEGANTE DE ALTERAÇÃO DE STATUS
             const btnOpenStatusModal = e.target.closest('.btn-open-status-modal');
             if (btnOpenStatusModal) {
                 const id = btnOpenStatusModal.dataset.id;
