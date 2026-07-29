@@ -556,7 +556,7 @@ export async function deleteAgendamento(id) {
     return true;
 }
 
-// --- RENDERIZAÇÃO DE AGENDAMENTOS COM ACEITE/RECUSA E WHATSAPP ---
+// --- RENDERIZAÇÃO DE AGENDAMENTOS COM CICLO DE VIDA RIGOROSO DE STATUS ---
 export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null, silent = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -654,7 +654,6 @@ function renderAgendamentosList(container, agendamentos) {
         }
 
         const statusLower = (ag.status || 'aguardando_confirmacao').toLowerCase();
-        
         const isSolicitacao = statusLower === 'aguardando_confirmacao' || statusLower === 'solicitado';
 
         const statusClass = isSolicitacao
@@ -676,6 +675,58 @@ function renderAgendamentosList(container, agendamentos) {
             : statusLower === 'concluido' || statusLower === 'atendido'
             ? 'JÁ ATENDIDO' 
             : statusLower.toUpperCase();
+
+        // Monta o menu de status baseado no estado atual (Ciclo de Vida Rigoroso)
+        let statusMenuHtml = '';
+        if (statusLower === 'pendente') {
+            statusMenuHtml = `
+                <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors" data-id="${ag.id}" data-status="em_atendimento">
+                    <span class="h-2 w-2 rounded-full bg-sky-500"></span>
+                    <span>Iniciar (Em Atendimento)</span>
+                </button>
+                <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors" data-id="${ag.id}" data-status="concluido">
+                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                    <span>Finalizar (Já Atendido)</span>
+                </button>
+                <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors" data-id="${ag.id}" data-status="cancelado">
+                    <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+                    <span>Cancelar Agendamento</span>
+                </button>
+            `;
+        } else if (statusLower === 'em_atendimento') {
+            statusMenuHtml = `
+                <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors" data-id="${ag.id}" data-status="concluido">
+                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                    <span>Finalizar (Já Atendido)</span>
+                </button>
+                <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-colors" data-id="${ag.id}" data-status="pendente">
+                    <span class="h-2 w-2 rounded-full bg-blue-500"></span>
+                    <span>Voltar p/ Confirmado</span>
+                </button>
+                <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors" data-id="${ag.id}" data-status="cancelado">
+                    <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+                    <span>Cancelar Agendamento</span>
+                </button>
+            `;
+        } else if (statusLower === 'concluido' || statusLower === 'atendido') {
+            statusMenuHtml = `
+                <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-colors" data-id="${ag.id}" data-status="pendente">
+                    <span class="h-2 w-2 rounded-full bg-blue-500"></span>
+                    <span>Reabrir (Confirmado)</span>
+                </button>
+                <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors" data-id="${ag.id}" data-status="cancelado">
+                    <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+                    <span>Marcar como Cancelado</span>
+                </button>
+            `;
+        } else if (statusLower === 'cancelado') {
+            statusMenuHtml = `
+                <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors" data-id="${ag.id}" data-status="pendente">
+                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                    <span>Reativar (Confirmar)</span>
+                </button>
+            `;
+        }
 
         const item = document.createElement('div');
         item.className = 'group p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors rounded-2xl';
@@ -711,7 +762,7 @@ function renderAgendamentosList(container, agendamentos) {
                 </div>
             </div>
 
-            <!-- SELETOR DE STATUS / BOTÕES DE ACEITE & RECUSA -->
+            <!-- CONTROLE REFINADO DE STATUS / BOTÕES -->
             <div class="flex flex-row items-center gap-2 shrink-0 self-end lg:self-center pt-2 lg:pt-0">
                 ${isSolicitacao ? `
                     <div class="flex items-center gap-2">
@@ -723,7 +774,7 @@ function renderAgendamentosList(container, agendamentos) {
                             data-data-formatada="${dataFormatada}"
                             data-hora-inicio="${horaInicio}">
                             <i data-lucide="check-circle" class="h-4 w-4"></i>
-                            <span>Aceitar</span>
+                            <span>Aceitar Agendamento</span>
                         </button>
                         <button type="button" class="btn-recusar-agendamento flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 font-extrabold text-xs border border-rose-500/20 transition-all" 
                             data-id="${ag.id}">
@@ -738,23 +789,8 @@ function renderAgendamentosList(container, agendamentos) {
                             <i data-lucide="chevron-down" class="h-3.5 w-3.5 opacity-60"></i>
                         </button>
 
-                        <div class="status-menu absolute right-0 top-full mt-1.5 z-30 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 hidden w-44 space-y-1">
-                            <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-colors" data-id="${ag.id}" data-status="pendente">
-                                <span class="h-2 w-2 rounded-full bg-blue-500"></span>
-                                <span>Confirmado / Pendente</span>
-                            </button>
-                            <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors" data-id="${ag.id}" data-status="em_atendimento">
-                                <span class="h-2 w-2 rounded-full bg-sky-500"></span>
-                                <span>Em Atendimento</span>
-                            </button>
-                            <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors" data-id="${ag.id}" data-status="concluido">
-                                <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-                                <span>Já Atendido</span>
-                            </button>
-                            <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors" data-id="${ag.id}" data-status="cancelado">
-                                <span class="h-2 w-2 rounded-full bg-rose-500"></span>
-                                <span>Cancelado / Recusado</span>
-                            </button>
+                        <div class="status-menu absolute right-0 top-full mt-1.5 z-30 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 hidden w-48 space-y-1">
+                            ${statusMenuHtml}
                         </div>
                     </div>
                 `}

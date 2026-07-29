@@ -105,7 +105,7 @@
                 <div>
                     <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Gestão Inteligente</span>
                     <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Próximos Compromissos</h2>
-                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Aceite agendamentos recebidos e envie mensagem no WhatsApp em 1 clique.</p>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Aceite agendamentos recebidos e gerencie cada atendimento.</p>
                 </div>
 
                 <button id="btnOpenModalAgendamento" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95">
@@ -133,6 +133,9 @@
                 </button>
                 <button id="filterConcluido" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 border border-slate-200 dark:border-slate-800 shrink-0">
                     Atendidos
+                </button>
+                <button id="filterCancelado" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 border border-slate-200 dark:border-slate-800 shrink-0">
+                    Cancelados
                 </button>
             </div>
 
@@ -543,10 +546,10 @@
                 try {
                     await updateAgendamentoStatus(id, 'pendente');
                     
-                    showToast('Agendamento ACEITO com sucesso! Abrindo WhatsApp...', 'success');
+                    showToast('Agendamento CONFIRMADO com sucesso! Abrindo WhatsApp...', 'success');
                     
                     if (whatsapp) {
-                        const msgEncoded = generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio });
+                        const msgEncoded = await generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio });
                         const waUrl = `https://wa.me/55${whatsapp}?text=${msgEncoded}`;
                         window.open(waUrl, '_blank');
                     }
@@ -570,7 +573,7 @@
                     onConfirm: async () => {
                         try {
                             await updateAgendamentoStatus(id, 'cancelado');
-                            showToast('Agendamento recusado com sucesso.', 'info');
+                            showToast('Agendamento recusado.', 'info');
                             refreshAgenda(true);
                         } catch (err) {
                             showToast('Erro ao recusar: ' + err.message, 'error');
@@ -678,36 +681,55 @@
         });
 
         // Filtros
-        document.getElementById('filterAll')?.addEventListener('click', () => {
+        document.getElementById('filterAll')?.addEventListener('click', (e) => {
+            setActiveFilterBtn(e.target);
             activeFilterDate = null;
             activeFilterStatus = null;
             refreshAgenda();
         });
-        document.getElementById('filterToday')?.addEventListener('click', () => {
+        document.getElementById('filterToday')?.addEventListener('click', (e) => {
+            setActiveFilterBtn(e.target);
             activeFilterDate = todayISO;
             activeFilterStatus = null;
             refreshAgenda();
         });
-        document.getElementById('filterAguardando')?.addEventListener('click', () => {
+        document.getElementById('filterAguardando')?.addEventListener('click', (e) => {
+            setActiveFilterBtn(e.target);
             activeFilterDate = null;
             activeFilterStatus = 'aguardando_confirmacao';
             refreshAgenda();
         });
-        document.getElementById('filterPendente')?.addEventListener('click', () => {
+        document.getElementById('filterPendente')?.addEventListener('click', (e) => {
+            setActiveFilterBtn(e.target);
             activeFilterDate = null;
             activeFilterStatus = 'pendente';
             refreshAgenda();
         });
-        document.getElementById('filterEmAtendimento')?.addEventListener('click', () => {
+        document.getElementById('filterEmAtendimento')?.addEventListener('click', (e) => {
+            setActiveFilterBtn(e.target);
             activeFilterDate = null;
             activeFilterStatus = 'em_atendimento';
             refreshAgenda();
         });
-        document.getElementById('filterConcluido')?.addEventListener('click', () => {
+        document.getElementById('filterConcluido')?.addEventListener('click', (e) => {
+            setActiveFilterBtn(e.target);
             activeFilterDate = null;
             activeFilterStatus = 'concluido';
             refreshAgenda();
         });
+        document.getElementById('filterCancelado')?.addEventListener('click', (e) => {
+            setActiveFilterBtn(e.target);
+            activeFilterDate = null;
+            activeFilterStatus = 'cancelado';
+            refreshAgenda();
+        });
+
+        function setActiveFilterBtn(targetBtn) {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.className = 'filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 shrink-0';
+            });
+            targetBtn.className = 'filter-btn active px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm shrink-0';
+        }
 
         // Autenticação
         try {
