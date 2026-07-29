@@ -1,6 +1,27 @@
 // Lógica da Aplicação Principal - Acionar Agendamentos
 import { supabase } from './supabase.js';
 
+// --- REGISTRO DE SERVICE WORKER PARA NOTIFICAÇÕES EM SEGUNDO PLANO (ANDROID & IOS PWA) ---
+export async function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        try {
+            const reg = await navigator.serviceWorker.register('./sw.js');
+            console.log('✅ Service Worker registrado com sucesso:', reg);
+            return reg;
+        } catch (e) {
+            console.warn('⚠️ Falha ao registrar Service Worker:', e);
+        }
+    }
+    return null;
+}
+
+// Inicializa o SW assim que o app carrega
+if (typeof window !== 'undefined') {
+    window.addEventListener('load', () => {
+        registerServiceWorker();
+    });
+}
+
 // --- GERENCIAMENTO DE TEMA (DARK MODE) ---
 export function initTheme() {
     const isDark = localStorage.getItem('color-theme') === 'dark' || 
@@ -44,8 +65,18 @@ function updateThemeIcons() {
     }
 }
 
-// --- SOM DE ALARME E NOTIFICAÇÃO NATIVA DO CELULAR ---
+// --- SISTEMA DE ALARME SONORO E NOTIFICAÇÃO (COM DESATIVAÇÃO / LOCALSTORAGE) ---
 let audioCtx = null;
+let knownAgendamentoIds = new Set();
+let isInitialLoadDone = false;
+
+export function isAlarmEnabled() {
+    return localStorage.getItem('alarm-enabled') !== 'false';
+}
+
+export function setAlarmEnabled(enabled) {
+    localStorage.setItem('alarm-enabled', enabled ? 'true' : 'false');
+}
 
 export function initAudioContext() {
     try {
@@ -63,7 +94,20 @@ export function initAudioContext() {
     }
 }
 
+// Desbloquear AudioContext no primeiro toque em qualquer parte da tela
+if (typeof window !== 'undefined') {
+    const unlockAudio = () => {
+        initAudioContext();
+        window.removeEventListener('click', unlockAudio);
+        window.removeEventListener('touchstart', unlockAudio);
+    };
+    window.addEventListener('click', unlockAudio, { once: true });
+    window.addEventListener('touchstart', unlockAudio, { once: true });
+}
+
 export function playNotificationSound() {
+    if (!isAlarmEnabled()) return;
+
     try {
         initAudioContext();
         if (!audioCtx) return;
@@ -82,7 +126,7 @@ export function playNotificationSound() {
         osc1.start(now);
         osc1.stop(now + 0.35);
 
-        // Tom 2 (A5 - 880Hz) - Som nítido e agradável de alarme
+        // Tom 2 (A5 - 880Hz)
         const osc2 = audioCtx.createOscillator();
         const gain2 = audioCtx.createGain();
         osc2.type = 'sine';
@@ -103,58 +147,51 @@ export function playNotificationSound() {
     }
 }
 
-// SOLICITAÇÃO DIRETA E SINCRONA DE PERMISSÃO PARA MOBILE
+export function toggleAlarmState(callback) {
+    initAudioContext();
+    const currentState = isAlarmEnabled();
+    const newState = !currentState;
+    setAlarmEnabled(newState);
+
+    if (newState) {
+        requestNotificationPermission((granted) => {
+            playNotificationSound();
+            showToast('Alarme sonoro ATIVADO com sucesso!', 'success');
+            if (callback) callback(true);
+        });
+    } else {
+        showToast('Alarme sonoro DESATIVADO.', 'info');
+        if (callback) callback(false);
+    }
+}
+
 export function requestNotificationPermission(callback) {
     initAudioContext();
+    registerServiceWorker();
 
     if (!('Notification' in window)) {
-        showToast('Navegador não suporta notificações de sistema. Alarme sonoro ativado!', 'info');
-        playNotificationSound();
         if (callback) callback(true);
         return;
     }
 
     if (Notification.permission === 'granted') {
-        playNotificationSound();
-        showToast('Alarme sonoro e notificações já estão ativos!', 'success');
         if (callback) callback(true);
         return;
     }
 
-    // Executa a solicitação direta para evitar bloqueio pelo navegador do celular
     try {
         const req = Notification.requestPermission((permission) => {
-            if (permission === 'granted') {
-                playNotificationSound();
-                showToast('Notificações e alarme ativados com sucesso!', 'success');
-                if (callback) callback(true);
-            } else {
-                showToast('Permissão negada. O alarme sonoro interno continuará ativo!', 'info');
-                playNotificationSound();
-                if (callback) callback(false);
-            }
+            if (callback) callback(permission === 'granted');
         });
 
-        // Para navegadores modernos que retornam Promise
         if (req && typeof req.then === 'function') {
             req.then((permission) => {
-                if (permission === 'granted') {
-                    playNotificationSound();
-                    showToast('Notificações e alarme ativados com sucesso!', 'success');
-                    if (callback) callback(true);
-                } else {
-                    showToast('Permissão negada. O alarme sonoro interno continuará ativo!', 'info');
-                    playNotificationSound();
-                    if (callback) callback(false);
-                }
+                if (callback) callback(permission === 'granted');
             }).catch(() => {
-                playNotificationSound();
                 if (callback) callback(false);
             });
         }
     } catch (e) {
-        console.warn("Erro ao solicitar permissão de notificação:", e);
-        playNotificationSound();
         if (callback) callback(false);
     }
 }
@@ -162,16 +199,31 @@ export function requestNotificationPermission(callback) {
 export function triggerSystemNotification(title, body) {
     playNotificationSound();
 
-    if ('Notification' in window && Notification.permission === 'granted') {
+    if ('Notification' in window && Notification.permission === 'granted' && isAlarmEnabled()) {
         try {
-            const notif = new Notification(title, {
-                body,
-                tag: 'novo-agendamento',
-                renotify: true
-            });
-            notif.onclick = () => {
-                window.focus();
-            };
+            // Emite notificação nativa através do Service Worker (compatível com Android e iOS PWA em segundo plano)
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title,
+                    body
+                });
+            } else if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then((reg) => {
+                    reg.showNotification(title, {
+                        body,
+                        icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f514.png',
+                        badge: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f514.png',
+                        vibrate: [300, 100, 300],
+                        tag: 'novo-agendamento',
+                        renotify: true
+                    });
+                }).catch(() => {
+                    new Notification(title, { body });
+                });
+            } else {
+                new Notification(title, { body });
+            }
         } catch (e) {
             console.warn("Erro ao emitir notificação nativa:", e);
         }
@@ -287,7 +339,7 @@ export function showChangeStatusModal({ id, currentStatus, clienteNome, servicoN
                         <p id="global-status-subtitle" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[240px]"></p>
                     </div>
                     <button id="global-status-close" class="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200">
-                        <i data-lucide="x" class="h-4 w-4"></i>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
                     </button>
                 </div>
 
@@ -464,7 +516,7 @@ export function showToast(message, type = 'success') {
             <span>${escapeHtml(message)}</span>
         </div>
         <button class="shrink-0 p-1 text-slate-300 hover:text-white" onclick="this.parentElement.remove()">
-            <i data-lucide="x" class="h-4 w-4"></i>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
         </button>
     `;
 
@@ -511,7 +563,7 @@ export function cleanPhone(formatted) {
     return (formatted || '').replace(/\D/g, '');
 }
 
-// --- GESTÃO DE CONFIGURAÇÕES DE HORÁRIO DE FUNCIONAMENTO (MULTIMODAL POR DIA) ---
+// --- GESTÃO DE CONFIGURAÇÕES DE HORÁRIO DE FUNCIONAMENTO ---
 export async function fetchConfiguracaoHorarios() {
     try {
         const { data, error } = await supabase
@@ -780,7 +832,7 @@ export async function deleteAgendamento(id) {
     return true;
 }
 
-// --- RENDERIZAÇÃO DE AGENDAMENTOS ---
+// --- RENDERIZAÇÃO DE AGENDAMENTOS E DETECÇÃO GARANTIDA DE NOVOS ITENS PARA ALARME ---
 export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null, silent = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -821,6 +873,21 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
         if (error) throw error;
 
         let agendamentos = data || [];
+
+        // DETECÇÃO DE NOVO AGENDAMENTO PARA DISPARAR SOM DE ALARME GARANTIDO
+        if (isInitialLoadDone) {
+            const hasNewBooking = agendamentos.some(ag => !knownAgendamentoIds.has(ag.id));
+            if (hasNewBooking) {
+                triggerSystemNotification(
+                    '🔔 NOVO AGENDAMENTO RECEBIDO!',
+                    'Um novo agendamento acabou de entrar no seu sistema!'
+                );
+            }
+        }
+
+        // Atualiza o Set de IDs conhecidos
+        knownAgendamentoIds = new Set(agendamentos.map(a => a.id));
+        isInitialLoadDone = true;
 
         if (filterDate) {
             agendamentos = agendamentos.filter(a => a.data_hora_inicio && a.data_hora_inicio.startsWith(filterDate));

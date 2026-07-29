@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="./manifest.json">
     <title>Acionar - Agenda de Compromissos</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -85,7 +87,7 @@
                 <span id="userLabelDesktop" class="hidden lg:inline-block text-xs font-medium text-slate-500 dark:text-slate-400 px-2 truncate max-w-[150px]"></span>
 
                 <button id="theme-toggle" aria-label="Alternar Tema" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 shadow-sm transition-transform active:scale-95">
-                    <svg id="theme-toggle-dark-icon" xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    <svg id="theme-toggle-dark-icon" xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 0 1 1-9-9Z"/></svg>
                     <svg id="theme-toggle-light-icon" xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
                 </button>
 
@@ -109,10 +111,10 @@
                 </div>
 
                 <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                    <!-- BOTÃO PARA ATIVAR SOM DE ALARME -->
-                    <button id="btnEnableNotifications" type="button" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-3.5 text-xs font-extrabold transition-all border border-slate-200 dark:border-slate-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                        <span id="btnEnableNotificationsText">Ativar Som de Alarme</span>
+                    <!-- BOTÃO ALTERNÁVEL (TOGGLE) DE ALARME SONORO -->
+                    <button id="btnEnableNotifications" type="button" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-xs font-extrabold transition-all">
+                        <svg id="iconAlarm" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                        <span id="btnEnableNotificationsText">Alarme Sonoro</span>
                     </button>
 
                     <button id="btnOpenModalAgendamento" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95 shrink-0">
@@ -120,6 +122,22 @@
                         <span>Novo Agendamento</span>
                     </button>
                 </div>
+            </div>
+
+            <!-- CARD INFORMATIVO DICA PWA PARA IPHONE (IOS) & ANDROID EM SEGUNDO PLANO -->
+            <div id="pwaNoticeCard" class="p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 border border-blue-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                <div class="flex items-center gap-3">
+                    <div class="h-8 w-8 rounded-xl bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+                    </div>
+                    <div>
+                        <span class="font-extrabold text-slate-900 dark:text-white block">Notificações com Navegador Fechado (Android & iPhone)</span>
+                        <span class="text-slate-500 dark:text-slate-400 font-medium">No <strong>Android</strong> ative o alarme acima. No <strong>iPhone (iOS)</strong>, toque no botão 📤 do Safari e selecione <em>"Adicionar à Tela de Início"</em>.</span>
+                    </div>
+                </div>
+                <button type="button" onclick="document.getElementById('pwaNoticeCard').remove()" class="text-slate-400 hover:text-slate-200 text-xs font-bold shrink-0 self-end sm:self-center">
+                    Entendido ✕
+                </button>
             </div>
 
             <!-- Filtros de Data e Status -->
@@ -327,8 +345,9 @@
             showToast, 
             showConfirmModal,
             showChangeStatusModal,
-            requestNotificationPermission,
-            initAudioContext,
+            isAlarmEnabled,
+            toggleAlarmState,
+            registerServiceWorker,
             applyPhoneMask, 
             populateServicosDropdown, 
             fetchAndRenderAgendamentos,
@@ -343,6 +362,7 @@
         import { supabase } from './js/supabase.js';
 
         initTheme();
+        registerServiceWorker();
 
         const modal = document.getElementById('modalAgendamento');
         const openModalBtn = document.getElementById('btnOpenModalAgendamento');
@@ -356,6 +376,7 @@
 
         const btnEnableNotifications = document.getElementById('btnEnableNotifications');
         const btnEnableNotificationsText = document.getElementById('btnEnableNotificationsText');
+        const iconAlarm = document.getElementById('iconAlarm');
 
         // Combobox Serviço
         const btnComboboxServico = document.getElementById('btnComboboxServico');
@@ -383,29 +404,37 @@
             fetchAndRenderAgendamentos('agendamentosContainer', activeFilterDate, activeFilterStatus, silent);
         };
 
-        // --- REALTIME SUPABASE & AUTO-POLLING ---
+        // --- REALTIME SUPABASE & AUTO-POLLING DE BUSCA ---
         subscribeToAgendamentos((payload) => {
-            showToast('Nova solicitação ou atualização de agenda!', 'info');
             refreshAgenda(true);
         });
 
         setInterval(() => {
             refreshAgenda(true);
-        }, 10000);
+        }, 8000);
 
-        // Checagem Notificações
-        if ('Notification' in window && Notification.permission === 'granted') {
-            if (btnEnableNotificationsText) btnEnableNotificationsText.textContent = 'Alarme Ativado 🔔';
-            if (btnEnableNotifications) btnEnableNotifications.className = 'w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-4 py-3.5 text-xs font-extrabold';
+        // Atualizar visual do botão de alarme (ATIVADO vs DESATIVADO)
+        function updateAlarmButtonUI() {
+            const enabled = isAlarmEnabled();
+            if (btnEnableNotificationsText) {
+                btnEnableNotificationsText.textContent = enabled ? 'Alarme Ativado 🔔' : 'Alarme Desativado 🔕';
+            }
+            if (btnEnableNotifications) {
+                btnEnableNotifications.className = enabled
+                    ? 'w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-4 py-3.5 text-xs font-extrabold transition-all shadow-sm'
+                    : 'w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-xs font-extrabold transition-all opacity-80';
+            }
+            if (iconAlarm) {
+                iconAlarm.className = enabled ? 'h-4 w-4 text-emerald-500' : 'h-4 w-4 text-slate-400';
+            }
         }
 
-        // Clique Direto no Botão de Ativar Notificação
+        updateAlarmButtonUI();
+
+        // Alternar Alarme ao clicar (TOGGLE ON/OFF)
         btnEnableNotifications?.addEventListener('click', () => {
-            requestNotificationPermission((granted) => {
-                if (granted) {
-                    if (btnEnableNotificationsText) btnEnableNotificationsText.textContent = 'Alarme Ativado 🔔';
-                    if (btnEnableNotifications) btnEnableNotifications.className = 'w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-4 py-3.5 text-xs font-extrabold';
-                }
+            toggleAlarmState(() => {
+                updateAlarmButtonUI();
             });
         });
 
