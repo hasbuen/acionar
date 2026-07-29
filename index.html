@@ -3,136 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel - Agendamentos</title>
-    <!-- Tailwind CSS para um design limpo e moderno -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Ícones Lucide -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>Gerenciamento - Login</title>
+    <!-- Tailwind CSS para estilização rápida -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-950 text-slate-100 flex h-screen overflow-hidden">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center">
 
-    <!-- 1. MENU LATERAL (Sidebar) -->
-    <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between">
-        <div>
-            <!-- Logo / Título -->
-            <div class="h-16 flex items-center px-6 border-b border-slate-800">
-                <span class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">eStocking</span>
-            </div>
-            <!-- Links de Navegação -->
-            <nav class="p-4 space-y-1">
-                <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-indigo-600/10 text-indigo-400 font-medium transition">
-                    <i data-lucide="calendar" class="w-5 h-5"></i> Agendamentos
-                </a>
-                <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition">
-                    <i data-lucide="users" class="w-5 h-5"></i> Cadastros
-                </a>
-                <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition">
-                    <i data-lucide="sliders" class="w-5 h-5"></i> Parâmetros
-                </a>
-                <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition">
-                    <i data-lucide="settings" class="w-5 h-5"></i> Configurações
-                </a>
-            </nav>
+    <div class="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-700">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold tracking-tight text-white">Painel de Gerenciamento</h1>
+            <p class="text-sm text-slate-400 mt-1">Entre com suas credenciais para acessar</p>
         </div>
-        <!-- Botão Sair -->
-        <div class="p-4 border-t border-slate-800">
-            <button id="btnLogout" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-rose-400 hover:bg-rose-500/10 transition font-medium">
-                <i data-lucide="log-out" class="w-5 h-5"></i> Sair
+
+        <div id="error-message" class="hidden mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm text-center"></div>
+
+        <form id="login-form" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">E-mail</label>
+                <input type="email" id="email" required 
+                    class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-white placeholder-slate-500"
+                    placeholder="seu@email.com">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Senha</label>
+                <input type="password" id="password" required 
+                    class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-white placeholder-slate-500"
+                    placeholder="••••••••">
+            </div>
+
+            <button type="submit" id="submit-btn"
+                class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition duration-200 shadow-lg shadow-indigo-600/30 cursor-pointer">
+                Entrar
             </button>
-        </div>
-    </aside>
+        </form>
+    </div>
 
-    <!-- 2. CONTEÚDO PRINCIPAL -->
-    <main class="flex-1 flex flex-col overflow-y-auto">
-        <!-- Topbar -->
-        <header class="h-16 bg-slate-900/50 backdrop-blur border-b border-slate-800 flex items-center justify-between px-8 sticky top-0 z-10">
-            <h1 class="text-lg font-semibold text-slate-200">Painel de Agendamentos</h1>
-            <div class="flex items-center gap-4">
-                <button class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-lg shadow-indigo-600/20">
-                    <i data-lucide="plus" class="w-4 h-4"></i> Novo Agendamento
-                </button>
-            </div>
-        </header>
+    <script>
+        // Substitua pelas suas chaves do projeto Supabase (ou configure variáveis de ambiente se usar build tool)
+        const SUPABASE_URL = 'SUA_SUPABASE_URL_AQUI';
+        const SUPABASE_ANON_KEY = 'SUA_SUPABASE_ANON_KEY_AQUI';
 
-        <!-- Corpo da Página -->
-        <div class="p-8 space-y-6">
-            
-            <!-- Cards de Métricas / Marcadores -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-sm">
-                    <div class="flex items-center justify-between text-slate-400 mb-2">
-                        <span class="text-sm font-medium">Agendamentos Hoje</span>
-                        <i data-lucide="calendar-check" class="w-5 h-5 text-indigo-400"></i>
-                    </div>
-                    <div class="text-3xl font-bold text-slate-100" id="statToday">--</div>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-sm">
-                    <div class="flex items-center justify-between text-slate-400 mb-2">
-                        <span class="text-sm font-medium">Pendentes / Em Aberto</span>
-                        <i data-lucide="clock" class="w-5 h-5 text-amber-400"></i>
-                    </div>
-                    <div class="text-3xl font-bold text-slate-100" id="statPending">--</div>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-sm">
-                    <div class="flex items-center justify-between text-slate-400 mb-2">
-                        <span class="text-sm font-medium">Total no Mês</span>
-                        <i data-lucide="trending-up" class="w-5 h-5 text-emerald-400"></i>
-                    </div>
-                    <div class="text-3xl font-bold text-slate-100" id="statTotal">--</div>
-                </div>
-            </div>
+        // Inicializa o cliente do Supabase
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-            <!-- Seção de Listagem (Tabela Limpa) -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-                <div class="p-6 border-b border-slate-800 flex items-center justify-between">
-                    <h2 class="font-semibold text-slate-200">Próximos Agendamentos</h2>
-                    <div class="text-sm text-slate-400">Gerencie seus registros em tempo real</div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-slate-900/80 text-slate-400 border-b border-slate-800">
-                                <th class="p-4 font-medium">Cliente / Item</th>
-                                <th class="p-4 font-medium">Data e Hora</th>
-                                <th class="p-4 font-medium">Status</th>
-                                <th class="p-4 font-end text-right font-medium">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="agendamentosTableBody" class="divide-y divide-slate-800/50 text-slate-300">
-                            <!-- Os dados injetados do Supabase entrarão aqui via JS -->
-                            <tr>
-                                <td colspan="4" class="p-8 text-center text-slate-500">Carregando agendamentos...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-        </div>
-    </main>
-
-    <!-- Script de Proteção de Rota, Ícones e Lógica do Supabase -->
-    <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-        const SUPABASE_URL = '__SUPABASE_URL__';
-        const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        // 1. Validar Sessão
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            window.location.href = './index.html';
+        // Verifica se já existe uma sessão ativa
+        async function checkSession() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                // Redireciona para o painel interno (ex: dashboard.html) caso já esteja logado
+                window.location.href = './dashboard.html';
+            }
         }
+        checkSession();
 
-        // 2. Ação de Logout
-        document.getElementById('btnLogout').addEventListener('click', async () => {
-            await supabase.auth.signOut();
-            window.location.href = './index.html';
+        // Manipula o envio do formulário de login
+        const loginForm = document.getElementById('login-form');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const errorMessage = document.getElementById('error-message');
+        const submitBtn = document.getElementById('submit-btn');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMessage.classList.add('hidden');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Entrando...';
+
+            const email = emailInput.value;
+            const password = passwordInput.value;
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) {
+                errorMessage.textContent = 'Erro ao entrar: ' + error.message;
+                errorMessage.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Entrar';
+            } else {
+                // Login com sucesso, redireciona para a página interna
+                window.location.href = './dashboard.html';
+            }
         });
-
-        // Inicializa os ícones
-        lucide.createIcons();
     </script>
 </body>
 </html>
