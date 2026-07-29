@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Acionar - Configuração de Horários & Parâmetros</title>
+    <title>Acionar - Configurações de Horários</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,6 +35,7 @@
     <style>
         * { -webkit-tap-highlight-color: transparent; }
         ::-webkit-scrollbar { width: 0px; background: transparent; }
+        input[type="time"] { min-height: 44px; }
     </style>
 </head>
 <body class="min-h-[100dvh] bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
@@ -48,7 +49,7 @@
                 </div>
                 <div class="flex flex-col">
                     <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Parâmetros</span>
-                    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Dias & Horários de Atendimento</h1>
+                    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Horários de Atendimento</h1>
                 </div>
             </div>
 
@@ -73,80 +74,55 @@
     <main class="flex-1 overflow-y-auto pb-28 md:pb-10">
         <div class="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-            <div class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-6">
+            <!-- Banner do Módulo -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md">
                 <div>
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Expediente</span>
-                    <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Configurar Expediente de Atendimento</h2>
-                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Os dias e horários marcados aqui serão os únicos disponíveis para novos agendamentos.</p>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Expediente Semanal</span>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Turnos & Horários por Dia</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Defina múltiplos turnos de atendimento para cada dia da semana.</p>
                 </div>
 
-                <form id="formConfiguracoes" class="space-y-6">
-                    
-                    <!-- Dias da Semana -->
-                    <div class="space-y-3">
-                        <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Dias de Funcionamento</label>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <label class="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer">
-                                <input type="checkbox" name="dias" value="1" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                                <span class="text-xs font-semibold text-slate-900 dark:text-white">Segunda-feira</span>
-                            </label>
-                            <label class="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer">
-                                <input type="checkbox" name="dias" value="2" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                                <span class="text-xs font-semibold text-slate-900 dark:text-white">Terça-feira</span>
-                            </label>
-                            <label class="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer">
-                                <input type="checkbox" name="dias" value="3" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                                <span class="text-xs font-semibold text-slate-900 dark:text-white">Quarta-feira</span>
-                            </label>
-                            <label class="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer">
-                                <input type="checkbox" name="dias" value="4" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                                <span class="text-xs font-semibold text-slate-900 dark:text-white">Quinta-feira</span>
-                            </label>
-                            <label class="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer">
-                                <input type="checkbox" name="dias" value="5" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                                <span class="text-xs font-semibold text-slate-900 dark:text-white">Sexta-feira</span>
-                            </label>
-                            <label class="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer">
-                                <input type="checkbox" name="dias" value="6" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                                <span class="text-xs font-semibold text-slate-900 dark:text-white">Sábado</span>
-                            </label>
-                            <label class="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer">
-                                <input type="checkbox" name="dias" value="0" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                                <span class="text-xs font-semibold text-slate-900 dark:text-white">Domingo</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Horários e Intervalo -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            <label for="horaInicio" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Horário de Abertura</label>
-                            <input type="time" id="horaInicio" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="horaFim" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Horário de Fechamento</label>
-                            <input type="time" id="horaFim" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="intervalo" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Intervalo de Vagas</label>
-                            <select id="intervalo" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="15">A cada 15 minutos</option>
-                                <option value="30">A cada 30 minutos</option>
-                                <option value="45">A cada 45 minutos</option>
-                                <option value="60">A cada 60 minutos (1 hora)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
-                        <button type="submit" class="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-500/25 transition-transform active:scale-95">
-                            <i data-lucide="save" class="h-4 w-4"></i>
-                            <span>Salvar Configurações</span>
-                        </button>
-                    </div>
-                </form>
-
+                <button id="btnReplicarSegunda" type="button" class="flex items-center justify-center gap-2 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-blue-500 hover:text-white dark:hover:bg-blue-600 px-4 py-3 text-xs font-bold transition-all border border-slate-200 dark:border-slate-700">
+                    <i data-lucide="copy" class="h-4 w-4"></i>
+                    <span>Copiar Segunda (Seg-Sex)</span>
+                </button>
             </div>
+
+            <!-- Form de Configurações -->
+            <form id="formConfiguracoes" class="space-y-6">
+                
+                <!-- Intervalo entre Agendamentos -->
+                <div class="bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-3">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Intervalo Padrão entre Agendamentos</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <label class="flex items-center justify-center p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600 transition-all">
+                            <input type="radio" name="intervalo" value="15" class="sr-only"> 15 minutos
+                        </label>
+                        <label class="flex items-center justify-center p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600 transition-all">
+                            <input type="radio" name="intervalo" value="30" class="sr-only" checked> 30 minutos
+                        </label>
+                        <label class="flex items-center justify-center p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600 transition-all">
+                            <input type="radio" name="intervalo" value="45" class="sr-only"> 45 minutos
+                        </label>
+                        <label class="flex items-center justify-center p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600 transition-all">
+                            <input type="radio" name="intervalo" value="60" class="sr-only"> 60 minutos
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Container de Configuração dos Dias da Semana -->
+                <div id="diasSemanaContainer" class="space-y-4">
+                    <!-- Preenchido via JS para Segunda a Domingo -->
+                </div>
+
+                <!-- Botão de Salvar Flutuante / Fixo -->
+                <div class="flex justify-end pt-4">
+                    <button type="submit" id="btnSaveConfig" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-8 py-4 text-sm font-extrabold text-white shadow-xl shadow-blue-500/25 transition-transform active:scale-95">
+                        <i data-lucide="save" class="h-5 w-5"></i>
+                        <span>Salvar Configurações de Horário</span>
+                    </button>
+                </div>
+            </form>
 
         </div>
     </main>
@@ -179,49 +155,205 @@
 
         initTheme();
 
+        const NORM_DIAS = [
+            { key: "1", label: "Segunda-feira" },
+            { key: "2", label: "Terça-feira" },
+            { key: "3", label: "Quarta-feira" },
+            { key: "4", label: "Quinta-feira" },
+            { key: "5", label: "Sexta-feira" },
+            { key: "6", label: "Sábado" },
+            { key: "0", label: "Domingo" }
+        ];
+
+        const container = document.getElementById('diasSemanaContainer');
         const form = document.getElementById('formConfiguracoes');
-        const horaInicioInput = document.getElementById('horaInicio');
-        const horaFimInput = document.getElementById('horaFim');
-        const intervaloSelect = document.getElementById('intervalo');
+        let currentConfig = null;
 
-        async function loadConfig() {
-            const config = await fetchConfiguracaoHorarios();
-            horaInicioInput.value = config.hora_inicio || '08:00';
-            horaFimInput.value = config.hora_fim || '18:00';
-            intervaloSelect.value = config.intervalo_minutos || 30;
+        function createTurnoRow(dayKey, turnoData = { inicio: "08:00", fim: "18:00" }, index = 0) {
+            const row = document.createElement('div');
+            row.className = 'turno-row flex items-center gap-2 flex-wrap sm:flex-nowrap pt-2';
+            row.innerHTML = `
+                <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+                    <div class="flex-1">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Início</span>
+                        <input type="time" class="turno-inicio w-full rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-extrabold text-slate-900 dark:text-white" value="${turnoData.inicio || '08:00'}" required>
+                    </div>
+                    <span class="text-xs text-slate-400 pt-3">até</span>
+                    <div class="flex-1">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Fim</span>
+                        <input type="time" class="turno-fim w-full rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-extrabold text-slate-900 dark:text-white" value="${turnoData.fim || '18:00'}" required>
+                    </div>
+                </div>
+                <button type="button" class="btn-remove-turno self-end mb-0.5 flex items-center justify-center h-9 w-9 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-colors" title="Remover Turno">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                </button>
+            `;
 
-            const diasAtivos = config.dias_semana || [1, 2, 3, 4, 5, 6];
-            document.querySelectorAll('input[name="dias"]').forEach(chk => {
-                chk.checked = diasAtivos.includes(parseInt(chk.value));
+            row.querySelector('.btn-remove-turno').addEventListener('click', () => {
+                const turnosList = row.parentElement;
+                if (turnosList.children.length > 1) {
+                    row.remove();
+                } else {
+                    showToast('O dia precisa ter ao menos um turno configurado.', 'info');
+                }
             });
+
+            return row;
         }
 
+        async function loadConfigUI() {
+            currentConfig = await fetchConfiguracaoHorarios();
+
+            // Seta intervalo
+            const intervalVal = (currentConfig.intervalo_minutos || 30).toString();
+            const radioEl = form.querySelector(`input[name="intervalo"][value="${intervalVal}"]`);
+            if (radioEl) radioEl.checked = true;
+
+            container.innerHTML = '';
+
+            NORM_DIAS.forEach(d => {
+                const dayData = (currentConfig.dias && currentConfig.dias[d.key]) 
+                    ? currentConfig.dias[d.key]
+                    : {
+                        ativo: (currentConfig.dias_semana || [1,2,3,4,5,6]).includes(parseInt(d.key)),
+                        turnos: [{ inicio: currentConfig.hora_inicio || "08:00", fim: currentConfig.hora_fim || "18:00" }]
+                    };
+
+                const card = document.createElement('div');
+                card.className = 'dia-card bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-3';
+                card.dataset.dayKey = d.key;
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/60 pb-3">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" class="chk-dia h-5 w-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" ${dayData.ativo ? 'checked' : ''}>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">${d.label}</h3>
+                        </div>
+                        <span class="badge-status-dia text-xs font-bold px-2.5 py-1 rounded-full ${dayData.ativo ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}">
+                            ${dayData.ativo ? 'Atendimento Ativo' : 'Fechado'}
+                        </span>
+                    </div>
+
+                    <div class="turnos-wrapper space-y-2 ${dayData.ativo ? '' : 'opacity-40 pointer-events-none'}">
+                        <div class="turnos-list space-y-2"></div>
+                        <button type="button" class="btn-add-turno flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-xs hover:bg-blue-500/20 transition-colors mt-2">
+                            <i data-lucide="plus" class="h-3.5 w-3.5"></i>
+                            <span>Adicionar Turno de Atendimento</span>
+                        </button>
+                    </div>
+                `;
+
+                const chk = card.querySelector('.chk-dia');
+                const wrapper = card.querySelector('.turnos-wrapper');
+                const badge = card.querySelector('.badge-status-dia');
+                const turnosList = card.querySelector('.turnos-list');
+                const btnAddTurno = card.querySelector('.btn-add-turno');
+
+                chk.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        wrapper.classList.remove('opacity-40', 'pointer-events-none');
+                        badge.className = 'badge-status-dia text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
+                        badge.textContent = 'Atendimento Ativo';
+                    } else {
+                        wrapper.classList.add('opacity-40', 'pointer-events-none');
+                        badge.className = 'badge-status-dia text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400';
+                        badge.textContent = 'Fechado';
+                    }
+                });
+
+                // Carregar turnos existentes
+                const turnos = (dayData.turnos && dayData.turnos.length > 0) 
+                    ? dayData.turnos 
+                    : [{ inicio: "08:00", fim: "18:00" }];
+
+                turnos.forEach((t, idx) => {
+                    turnosList.appendChild(createTurnoRow(d.key, t, idx));
+                });
+
+                btnAddTurno.addEventListener('click', () => {
+                    turnosList.appendChild(createTurnoRow(d.key, { inicio: "14:00", fim: "18:00" }));
+                    if (window.lucide) window.lucide.createIcons();
+                });
+
+                container.appendChild(card);
+            });
+
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        // Botão para Replicar Segunda-feira para Terça a Sexta
+        document.getElementById('btnReplicarSegunda')?.addEventListener('click', () => {
+            const mondayCard = container.querySelector('[data-day-key="1"]');
+            if (!mondayCard) return;
+
+            const isMondayChecked = mondayCard.querySelector('.chk-dia').checked;
+            const mondayTurnos = [];
+            mondayCard.querySelectorAll('.turno-row').forEach(row => {
+                mondayTurnos.push({
+                    inicio: row.querySelector('.turno-inicio').value,
+                    fim: row.querySelector('.turno-fim').value
+                });
+            });
+
+            ["2", "3", "4", "5"].forEach(dayKey => {
+                const card = container.querySelector(`[data-day-key="${dayKey}"]`);
+                if (card) {
+                    const chk = card.querySelector('.chk-dia');
+                    chk.checked = isMondayChecked;
+                    chk.dispatchEvent(new Event('change'));
+
+                    const turnosList = card.querySelector('.turnos-list');
+                    turnosList.innerHTML = '';
+                    mondayTurnos.forEach(t => turnosList.appendChild(createTurnoRow(dayKey, t)));
+                }
+            });
+
+            if (window.lucide) window.lucide.createIcons();
+            showToast('Horário da Segunda-feira replicado para Terça a Sexta!', 'info');
+        });
+
+        // Salvar Configurações
         form?.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const dias = Array.from(document.querySelectorAll('input[name="dias"]:checked')).map(chk => parseInt(chk.value));
-            if (dias.length === 0) {
-                showToast('Selecione pelo menos um dia de atendimento.', 'error');
-                return;
-            }
+            const intervalo_minutos = parseInt(form.querySelector('input[name="intervalo"]:checked').value);
+            const diasConfig = {};
 
-            const configValor = {
-                dias_semana: dias,
-                hora_inicio: horaInicioInput.value,
-                hora_fim: horaFimInput.value,
-                intervalo_minutos: parseInt(intervaloSelect.value)
+            container.querySelectorAll('.dia-card').forEach(card => {
+                const key = card.dataset.dayKey;
+                const ativo = card.querySelector('.chk-dia').checked;
+                const turnos = [];
+
+                card.querySelectorAll('.turno-row').forEach(row => {
+                    const inicio = row.querySelector('.turno-inicio').value;
+                    const fim = row.querySelector('.turno-fim').value;
+                    if (inicio && fim) {
+                        turnos.push({ inicio, fim });
+                    }
+                });
+
+                diasConfig[key] = { ativo, turnos };
+            });
+
+            const payload = {
+                intervalo_minutos,
+                dias: diasConfig
             };
 
+            const submitBtn = document.getElementById('btnSaveConfig');
+            submitBtn.disabled = true;
+
             try {
-                await saveConfiguracaoHorarios(configValor);
-                showToast('Horários de atendimento salvos com sucesso!', 'success');
+                await saveConfiguracaoHorarios(payload);
+                showToast('Configurações de turno salvas com sucesso!', 'success');
             } catch (err) {
-                showToast('Erro ao salvar horários: ' + err.message, 'error');
+                showToast('Erro ao salvar configurações: ' + err.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
             }
         });
 
-        await loadConfig();
-        if (window.lucide) window.lucide.createIcons();
+        await loadConfigUI();
     </script>
 </body>
 </html>

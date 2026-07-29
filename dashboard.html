@@ -63,7 +63,12 @@
                     A
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Painel Principal</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Painel Principal</span>
+                        <span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span> AO VIVO
+                        </span>
+                    </div>
                     <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Agenda de Atendimentos</h1>
                 </div>
             </div>
@@ -100,7 +105,7 @@
                 <div>
                     <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Gestão Inteligente</span>
                     <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Próximos Compromissos</h2>
-                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Visualize, edite status e cadastre horários de atendimento.</p>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Aceite agendamentos recebidos e envie mensagem no WhatsApp em 1 clique.</p>
                 </div>
 
                 <button id="btnOpenModalAgendamento" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95">
@@ -117,8 +122,11 @@
                 <button id="filterToday" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0">
                     Hoje
                 </button>
-                <button id="filterPendente" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 border border-slate-200 dark:border-slate-800 shrink-0">
-                    Pendentes
+                <button id="filterAguardando" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 border border-slate-200 dark:border-slate-800 shrink-0">
+                    Solicitações
+                </button>
+                <button id="filterPendente" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border border-slate-200 dark:border-slate-800 shrink-0">
+                    Confirmados
                 </button>
                 <button id="filterEmAtendimento" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 border border-slate-200 dark:border-slate-800 shrink-0">
                     Em Atendimento
@@ -280,10 +288,11 @@
                 <div>
                     <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Status</label>
                     <select id="editSelectStatus" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 truncate">
-                        <option value="pendente">Pendente</option>
+                        <option value="aguardando_confirmacao">Aguardando Confirmação</option>
+                        <option value="pendente">Confirmado / Pendente</option>
                         <option value="em_atendimento">Em Atendimento</option>
                         <option value="concluido">Atendido / Concluído</option>
-                        <option value="cancelado">Cancelado</option>
+                        <option value="cancelado">Cancelado / Recusado</option>
                     </select>
                 </div>
 
@@ -312,7 +321,10 @@
             updateAgendamentoStatus,
             updateAgendamento,
             deleteAgendamento,
-            getAvailableTimeSlots
+            getAvailableTimeSlots,
+            subscribeToAgendamentos,
+            generateWhatsAppConfirmMessage,
+            cleanPhone
         } from './js/app.js';
         import { supabase } from './js/supabase.js';
 
@@ -347,6 +359,22 @@
         if (inputData) inputData.value = todayISO;
 
         let currentServicoDuracao = 30;
+        let activeFilterDate = null;
+        let activeFilterStatus = null;
+
+        const refreshAgenda = (silent = false) => {
+            fetchAndRenderAgendamentos('agendamentosContainer', activeFilterDate, activeFilterStatus, silent);
+        };
+
+        // --- REALTIME SUPABASE & AUTO-POLLING ---
+        subscribeToAgendamentos((payload) => {
+            showToast('Nova solicitação ou atualização de agenda!', 'info');
+            refreshAgenda(true);
+        });
+
+        setInterval(() => {
+            refreshAgenda(true);
+        }, 10000);
 
         // Combobox Serviços
         btnComboboxServico?.addEventListener('click', (e) => {
@@ -358,7 +386,6 @@
             if (!listComboboxServico.contains(e.target) && e.target !== btnComboboxServico) {
                 listComboboxServico.classList.add('hidden');
             }
-            // Fechar menus de status ao clicar fora
             if (!e.target.closest('.status-dropdown-wrapper')) {
                 document.querySelectorAll('.status-menu').forEach(menu => menu.classList.add('hidden'));
             }
@@ -382,7 +409,7 @@
             }
         });
 
-        // Atualizar Chips de Horários
+        // Chips de Horários
         async function updateAvailableSlots() {
             const dateVal = inputData.value;
             if (!dateVal) return;
@@ -490,7 +517,7 @@
                 showToast('Agendamento criado com sucesso!', 'success');
                 closeModal();
                 formAgendamento.reset();
-                await fetchAndRenderAgendamentos('agendamentosContainer');
+                refreshAgenda();
 
             } catch (err) {
                 showToast('Erro ao agendar: ' + err.message, 'error');
@@ -499,10 +526,60 @@
             }
         });
 
-        // Eventos da Lista de Agendamentos (Status, Editar, Excluir)
+        // Eventos dos Cartões da Agenda
         const container = document.getElementById('agendamentosContainer');
 
         container?.addEventListener('click', async (e) => {
+            // ACEITAR AGENDAMENTO + ABRIR WHATSAPP AUTOMÁTICO
+            const btnAceitar = e.target.closest('.btn-aceitar-agendamento');
+            if (btnAceitar) {
+                const id = btnAceitar.dataset.id;
+                const clienteNome = btnAceitar.dataset.clienteNome;
+                const servicoNome = btnAceitar.dataset.servicoNome;
+                const whatsapp = btnAceitar.dataset.whatsapp;
+                const dataFormatada = btnAceitar.dataset.dataFormatada;
+                const horaInicio = btnAceitar.dataset.horaInicio;
+
+                try {
+                    await updateAgendamentoStatus(id, 'pendente');
+                    
+                    showToast('Agendamento ACEITO com sucesso! Abrindo WhatsApp...', 'success');
+                    
+                    if (whatsapp) {
+                        const msgEncoded = generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio });
+                        const waUrl = `https://wa.me/55${whatsapp}?text=${msgEncoded}`;
+                        window.open(waUrl, '_blank');
+                    }
+
+                    refreshAgenda(true);
+                } catch (err) {
+                    showToast('Erro ao aceitar agendamento: ' + err.message, 'error');
+                }
+                return;
+            }
+
+            // RECUSAR AGENDAMENTO
+            const btnRecusar = e.target.closest('.btn-recusar-agendamento');
+            if (btnRecusar) {
+                const id = btnRecusar.dataset.id;
+                showConfirmModal({
+                    title: 'Recusar Agendamento',
+                    message: 'Deseja recusar esta solicitação de agendamento?',
+                    confirmText: 'Recusar Agendamento',
+                    type: 'danger',
+                    onConfirm: async () => {
+                        try {
+                            await updateAgendamentoStatus(id, 'cancelado');
+                            showToast('Agendamento recusado com sucesso.', 'info');
+                            refreshAgenda(true);
+                        } catch (err) {
+                            showToast('Erro ao recusar: ' + err.message, 'error');
+                        }
+                    }
+                });
+                return;
+            }
+
             // Abrir menu popover de status
             const btnStatusTrigger = e.target.closest('.btn-status-trigger');
             if (btnStatusTrigger) {
@@ -518,7 +595,7 @@
                 return;
             }
 
-            // Seleção de novo status
+            // Seleção de novo status no popover
             const btnChangeStatus = e.target.closest('.btn-change-status');
             if (btnChangeStatus) {
                 const id = btnChangeStatus.dataset.id;
@@ -526,7 +603,7 @@
                 try {
                     await updateAgendamentoStatus(id, newStatus);
                     showToast('Status atualizado com sucesso!', 'success');
-                    await fetchAndRenderAgendamentos('agendamentosContainer');
+                    refreshAgenda(true);
                 } catch (err) {
                     showToast('Erro ao atualizar status: ' + err.message, 'error');
                 }
@@ -546,7 +623,7 @@
                         try {
                             await deleteAgendamento(id);
                             showToast('Agendamento excluído!', 'success');
-                            await fetchAndRenderAgendamentos('agendamentosContainer');
+                            refreshAgenda(true);
                         } catch (err) {
                             showToast('Erro ao excluir: ' + err.message, 'error');
                         }
@@ -568,7 +645,7 @@
                 const d = new Date(ag.data_hora_inicio);
                 document.getElementById('editInputData').value = d.toISOString().split('T')[0];
                 document.getElementById('editInputHora').value = d.toTimeString().slice(0, 5);
-                document.getElementById('editSelectStatus').value = ag.status || 'pendente';
+                document.getElementById('editSelectStatus').value = ag.status || 'aguardando_confirmacao';
                 document.getElementById('editInputObservacoes').value = ag.observacoes || '';
 
                 modalEdit.classList.remove('hidden');
@@ -594,18 +671,43 @@
                 await updateAgendamento(id, { servico_id, data_hora_inicio, observacoes, status });
                 showToast('Agendamento atualizado com sucesso!', 'success');
                 closeEdit();
-                await fetchAndRenderAgendamentos('agendamentosContainer');
+                refreshAgenda(true);
             } catch (err) {
                 showToast('Erro ao atualizar agendamento: ' + err.message, 'error');
             }
         });
 
         // Filtros
-        document.getElementById('filterAll')?.addEventListener('click', () => fetchAndRenderAgendamentos('agendamentosContainer'));
-        document.getElementById('filterToday')?.addEventListener('click', () => fetchAndRenderAgendamentos('agendamentosContainer', todayISO));
-        document.getElementById('filterPendente')?.addEventListener('click', () => fetchAndRenderAgendamentos('agendamentosContainer', null, 'pendente'));
-        document.getElementById('filterEmAtendimento')?.addEventListener('click', () => fetchAndRenderAgendamentos('agendamentosContainer', null, 'em_atendimento'));
-        document.getElementById('filterConcluido')?.addEventListener('click', () => fetchAndRenderAgendamentos('agendamentosContainer', null, 'concluido'));
+        document.getElementById('filterAll')?.addEventListener('click', () => {
+            activeFilterDate = null;
+            activeFilterStatus = null;
+            refreshAgenda();
+        });
+        document.getElementById('filterToday')?.addEventListener('click', () => {
+            activeFilterDate = todayISO;
+            activeFilterStatus = null;
+            refreshAgenda();
+        });
+        document.getElementById('filterAguardando')?.addEventListener('click', () => {
+            activeFilterDate = null;
+            activeFilterStatus = 'aguardando_confirmacao';
+            refreshAgenda();
+        });
+        document.getElementById('filterPendente')?.addEventListener('click', () => {
+            activeFilterDate = null;
+            activeFilterStatus = 'pendente';
+            refreshAgenda();
+        });
+        document.getElementById('filterEmAtendimento')?.addEventListener('click', () => {
+            activeFilterDate = null;
+            activeFilterStatus = 'em_atendimento';
+            refreshAgenda();
+        });
+        document.getElementById('filterConcluido')?.addEventListener('click', () => {
+            activeFilterDate = null;
+            activeFilterStatus = 'concluido';
+            refreshAgenda();
+        });
 
         // Autenticação
         try {
@@ -623,7 +725,7 @@
 
         document.getElementById('btnLogout')?.addEventListener('click', handleLogout);
 
-        await fetchAndRenderAgendamentos('agendamentosContainer');
+        refreshAgenda();
         if (window.lucide) window.lucide.createIcons();
     </script>
 </body>

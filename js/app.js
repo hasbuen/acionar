@@ -44,6 +44,36 @@ function updateThemeIcons() {
     }
 }
 
+// --- SUPABASE REALTIME (TEMPO REAL AUTOMÁTICO) ---
+export function subscribeToAgendamentos(callback) {
+    try {
+        const channel = supabase
+            .channel('realtime_agendamentos')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'agendamentos' },
+                (payload) => {
+                    console.log('⚡ Atualização em tempo real detectada:', payload);
+                    if (callback) callback(payload);
+                }
+            )
+            .subscribe((status) => {
+                console.log('Status da assinatura Realtime:', status);
+            });
+
+        return channel;
+    } catch (err) {
+        console.warn("Erro ao assinar canal Realtime no Supabase:", err);
+        return null;
+    }
+}
+
+// --- GERADOR DE MENSAGEM CORDIAL DE WHATSAPP ---
+export function generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio }) {
+    const text = `Olá, *${clienteNome}*! 👋\n\nSeu agendamento para *${servicoNome}* foi *CONFIRMADO* para o dia *${dataFormatada}* às *${horaInicio}*.\n\nPor gentileza, informe se concorda com este horário ou se prefere realizar alguma alteração.\n\n📌 *Lembrete importante*: Pedimos a gentileza de chegar com **15 minutos de antecedência**.\n\nAgradecemos a preferência e aguardamos você!😊`;
+    return encodeURIComponent(text);
+}
+
 // --- MODAL DE CONFIRMAÇÃO E ALERTA ELEGANTE E CURTO ---
 export function showConfirmModal({ title = 'Confirmação', message, confirmText = 'Confirmar', cancelText = 'Cancelar', type = 'danger', onConfirm }) {
     let modal = document.getElementById('global-confirm-modal');
@@ -201,7 +231,7 @@ export function cleanPhone(formatted) {
     return (formatted || '').replace(/\D/g, '');
 }
 
-// --- GESTÃO DE CONFIGURAÇÕES DE HORÁRIO DE FUNCIONAMENTO ---
+// --- GESTÃO DE CONFIGURAÇÕES DE HORÁRIO DE FUNCIONAMENTO (MULTIMODAL POR DIA) ---
 export async function fetchConfiguracaoHorarios() {
     try {
         const { data, error } = await supabase
@@ -217,10 +247,16 @@ export async function fetchConfiguracaoHorarios() {
     }
 
     return {
-        dias_semana: [1, 2, 3, 4, 5, 6],
-        hora_inicio: "08:00",
-        hora_fim: "18:00",
-        intervalo_minutos: 30
+        intervalo_minutos: 30,
+        dias: {
+            "1": { ativo: true, turnos: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }] },
+            "2": { ativo: true, turnos: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }] },
+            "3": { ativo: true, turnos: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }] },
+            "4": { ativo: true, turnos: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }] },
+            "5": { ativo: true, turnos: [{ inicio: "08:00", fim: "12:00" }, { inicio: "14:00", fim: "18:00" }] },
+            "6": { ativo: true, turnos: [{ inicio: "08:00", fim: "14:00" }] },
+            "0": { ativo: false, turnos: [{ inicio: "08:00", fim: "12:00" }] }
+        }
     };
 }
 
@@ -230,14 +266,14 @@ export async function saveConfiguracaoHorarios(configValor) {
         .upsert({
             chave: 'horario_funcionamento',
             valor: configValor,
-            descricao: 'Configuração de dias e horários de funcionamento do estabelecimento'
+            descricao: 'Configuração avançada de turnos e horários por dia da semana'
         }, { onConflict: 'chave' });
 
     if (error) throw error;
     return true;
 }
 
-// --- CÁLCULO DE HORÁRIOS DISPONÍVEIS ---
+// --- CÁLCULO DE HORÁRIOS DISPONÍVEIS POR DIA DA SEMANA ---
 export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
     const config = await fetchConfiguracaoHorarios();
     
@@ -245,17 +281,23 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
     const dateObj = new Date(year, month - 1, day);
     const dayOfWeek = dateObj.getDay();
 
-    const diasAtivos = config.dias_semana || [1, 2, 3, 4, 5, 6];
-    if (!diasAtivos.includes(dayOfWeek)) {
-        return { closed: true, slots: [] };
+    const intervalo = config.intervalo_minutos || 30;
+
+    let dayConfig = null;
+
+    if (config.dias && config.dias[dayOfWeek.toString()]) {
+        dayConfig = config.dias[dayOfWeek.toString()];
+    } else if (config.dias_semana) {
+        const isAtivo = config.dias_semana.includes(dayOfWeek);
+        dayConfig = {
+            ativo: isAtivo,
+            turnos: isAtivo ? [{ inicio: config.hora_inicio || "08:00", fim: config.hora_fim || "18:00" }] : []
+        };
     }
 
-    const intervalo = config.intervalo_minutos || 30;
-    const [startH, startM] = (config.hora_inicio || "08:00").split(':').map(Number);
-    const [endH, endM] = (config.hora_fim || "18:00").split(':').map(Number);
-
-    let currentMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
+    if (!dayConfig || !dayConfig.ativo || !dayConfig.turnos || dayConfig.turnos.length === 0) {
+        return { closed: true, slots: [] };
+    }
 
     const startIso = `${dateStr}T00:00:00.000Z`;
     const endIso = `${dateStr}T23:59:59.999Z`;
@@ -284,28 +326,42 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
     }
 
     const slots = [];
-    while (currentMinutes + servicoDuracao <= endMinutes) {
-        const h = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
-        const m = (currentMinutes % 60).toString().padStart(2, '0');
-        const timeStr = `${h}:${m}`;
 
-        const slotStart = currentMinutes;
-        const slotEnd = currentMinutes + servicoDuracao;
+    dayConfig.turnos.forEach(turno => {
+        if (!turno.inicio || !turno.fim) return;
+        const [startH, startM] = turno.inicio.split(':').map(Number);
+        const [endH, endM] = turno.fim.split(':').map(Number);
 
-        const isOccupied = occupiedRanges.some(r => (slotStart < r.end && slotEnd > r.start));
+        let currentMinutes = startH * 60 + startM;
+        const endMinutes = endH * 60 + endM;
 
-        slots.push({
-            time: timeStr,
-            available: !isOccupied
-        });
+        while (currentMinutes + servicoDuracao <= endMinutes) {
+            const h = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
+            const m = (currentMinutes % 60).toString().padStart(2, '0');
+            const timeStr = `${h}:${m}`;
 
-        currentMinutes += intervalo;
-    }
+            const slotStart = currentMinutes;
+            const slotEnd = currentMinutes + servicoDuracao;
+
+            const isOccupied = occupiedRanges.some(r => (slotStart < r.end && slotEnd > r.start));
+
+            if (!slots.some(s => s.time === timeStr)) {
+                slots.push({
+                    time: timeStr,
+                    available: !isOccupied
+                });
+            }
+
+            currentMinutes += intervalo;
+        }
+    });
+
+    slots.sort((a, b) => a.time.localeCompare(b.time));
 
     return { closed: false, slots };
 }
 
-// --- BUSCA DIRETA DE SERVIÇOS ATIVOS DA TABELA 'servicos' ---
+// --- BUSCA DIRETA DE SERVIÇOS ATIVOS ---
 export async function fetchServicosAtivos() {
     const { data, error } = await supabase
         .from('servicos')
@@ -444,16 +500,18 @@ export async function deleteAgendamento(id) {
     return true;
 }
 
-// --- RENDERIZAÇÃO DE AGENDAMENTOS COM COMBOBOX CUSTOMIZADO DE STATUS ---
-export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null) {
+// --- RENDERIZAÇÃO DE AGENDAMENTOS COM ACEITE/RECUSA E WHATSAPP ---
+export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null, silent = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    container.innerHTML = `
-        <div class="flex items-center justify-center py-12">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-        </div>
-    `;
+    if (!silent) {
+        container.innerHTML = `
+            <div class="flex items-center justify-center py-12">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+        `;
+    }
 
     try {
         let query = supabase
@@ -489,18 +547,20 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
         }
 
         if (filterStatus) {
-            agendamentos = agendamentos.filter(a => a.status === filterStatus);
+            agendamentos = agendamentos.filter(a => (a.status || 'aguardando_confirmacao').toLowerCase() === filterStatus.toLowerCase());
         }
 
         renderAgendamentosList(container, agendamentos);
     } catch (err) {
         console.error("Erro ao buscar agendamentos:", err);
-        container.innerHTML = `
-            <div class="py-12 px-4 text-center">
-                <p class="text-sm font-semibold text-rose-500">Erro ao carregar agendamentos do Supabase.</p>
-                <p class="text-xs text-slate-400 mt-1">${escapeHtml(err.message)}</p>
-            </div>
-        `;
+        if (!silent) {
+            container.innerHTML = `
+                <div class="py-12 px-4 text-center">
+                    <p class="text-sm font-semibold text-rose-500">Erro ao carregar agendamentos do Supabase.</p>
+                    <p class="text-xs text-slate-400 mt-1">${escapeHtml(err.message)}</p>
+                </div>
+            `;
+        }
     }
 }
 
@@ -537,17 +597,25 @@ function renderAgendamentosList(container, agendamentos) {
             horaFim = ' - ' + df.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         }
 
-        const statusLower = (ag.status || 'pendente').toLowerCase();
+        const statusLower = (ag.status || 'aguardando_confirmacao').toLowerCase();
         
-        const statusClass = statusLower === 'concluido' || statusLower === 'atendido'
+        const isSolicitacao = statusLower === 'aguardando_confirmacao' || statusLower === 'solicitado';
+
+        const statusClass = isSolicitacao
+            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+            : statusLower === 'concluido' || statusLower === 'atendido'
             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
             : statusLower === 'em_atendimento'
             ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20'
             : statusLower === 'cancelado'
             ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+            : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
 
-        const statusLabel = statusLower === 'em_atendimento' 
+        const statusLabel = isSolicitacao
+            ? 'AGUARDANDO CONFIRMAÇÃO'
+            : statusLower === 'pendente'
+            ? 'CONFIRMADO / PENDENTE'
+            : statusLower === 'em_atendimento' 
             ? 'EM ATENDIMENTO' 
             : statusLower === 'concluido' || statusLower === 'atendido'
             ? 'JÁ ATENDIDO' 
@@ -565,6 +633,9 @@ function renderAgendamentosList(container, agendamentos) {
                 <div class="space-y-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
                         <h4 class="font-semibold text-slate-900 dark:text-white text-base truncate">${escapeHtml(clienteNome)}</h4>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${statusClass}">
+                            ${statusLabel}
+                        </span>
                     </div>
                     <p class="text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
                         <i data-lucide="scissors" class="h-3.5 w-3.5 text-blue-500 shrink-0"></i>
@@ -584,33 +655,53 @@ function renderAgendamentosList(container, agendamentos) {
                 </div>
             </div>
 
-            <!-- SELETOR DE STATUS PERSONALIZADO + BOTÕES HORIZONTAIS -->
+            <!-- SELETOR DE STATUS / BOTÕES DE ACEITE & RECUSA -->
             <div class="flex flex-row items-center gap-2 shrink-0 self-end lg:self-center pt-2 lg:pt-0">
-                <div class="relative status-dropdown-wrapper">
-                    <button type="button" class="btn-status-trigger inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black border transition-all ${statusClass}" data-id="${ag.id}">
-                        <span>${statusLabel}</span>
-                        <i data-lucide="chevron-down" class="h-3.5 w-3.5 opacity-60"></i>
-                    </button>
-
-                    <div class="status-menu absolute right-0 top-full mt-1.5 z-30 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 hidden w-44 space-y-1">
-                        <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors" data-id="${ag.id}" data-status="pendente">
-                            <span class="h-2 w-2 rounded-full bg-amber-500"></span>
-                            <span>Pendente</span>
+                ${isSolicitacao ? `
+                    <div class="flex items-center gap-2">
+                        <button type="button" class="btn-aceitar-agendamento flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 transition-transform active:scale-95" 
+                            data-id="${ag.id}" 
+                            data-cliente-nome="${escapeHtml(clienteNome)}"
+                            data-servico-nome="${escapeHtml(servicoNome)}"
+                            data-whatsapp="${cleanPhone(clienteWhatsapp)}"
+                            data-data-formatada="${dataFormatada}"
+                            data-hora-inicio="${horaInicio}">
+                            <i data-lucide="check-circle" class="h-4 w-4"></i>
+                            <span>Aceitar</span>
                         </button>
-                        <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors" data-id="${ag.id}" data-status="em_atendimento">
-                            <span class="h-2 w-2 rounded-full bg-sky-500"></span>
-                            <span>Em Atendimento</span>
-                        </button>
-                        <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors" data-id="${ag.id}" data-status="concluido">
-                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-                            <span>Já Atendido</span>
-                        </button>
-                        <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors" data-id="${ag.id}" data-status="cancelado">
-                            <span class="h-2 w-2 rounded-full bg-rose-500"></span>
-                            <span>Cancelado</span>
+                        <button type="button" class="btn-recusar-agendamento flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 font-extrabold text-xs border border-rose-500/20 transition-all" 
+                            data-id="${ag.id}">
+                            <i data-lucide="x-circle" class="h-4 w-4"></i>
+                            <span>Recusar</span>
                         </button>
                     </div>
-                </div>
+                ` : `
+                    <div class="relative status-dropdown-wrapper">
+                        <button type="button" class="btn-status-trigger inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black border transition-all ${statusClass}" data-id="${ag.id}">
+                            <span>${statusLabel}</span>
+                            <i data-lucide="chevron-down" class="h-3.5 w-3.5 opacity-60"></i>
+                        </button>
+
+                        <div class="status-menu absolute right-0 top-full mt-1.5 z-30 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 hidden w-44 space-y-1">
+                            <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-colors" data-id="${ag.id}" data-status="pendente">
+                                <span class="h-2 w-2 rounded-full bg-blue-500"></span>
+                                <span>Confirmado / Pendente</span>
+                            </button>
+                            <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors" data-id="${ag.id}" data-status="em_atendimento">
+                                <span class="h-2 w-2 rounded-full bg-sky-500"></span>
+                                <span>Em Atendimento</span>
+                            </button>
+                            <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors" data-id="${ag.id}" data-status="concluido">
+                                <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                                <span>Já Atendido</span>
+                            </button>
+                            <button type="button" class="btn-change-status w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors" data-id="${ag.id}" data-status="cancelado">
+                                <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+                                <span>Cancelado / Recusado</span>
+                            </button>
+                        </div>
+                    </div>
+                `}
 
                 ${clienteWhatsapp ? `
                     <a href="https://wa.me/55${cleanPhone(clienteWhatsapp)}" target="_blank" rel="noopener noreferrer" 
