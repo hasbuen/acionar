@@ -68,10 +68,66 @@ export function subscribeToAgendamentos(callback) {
     }
 }
 
+// --- CONFIGURAÇÃO DE MENSAGEM DO WHATSAPP E ENDEREÇO ---
+export const MENSAGEM_WHATSAPP_PADRAO = `Olá, *{cliente}*! 👋
+
+Seu agendamento para *{servico}* foi *CONFIRMADO* para o dia *{data}* às *{hora}*.
+
+📍 *Endereço*: {endereco}
+
+Por gentileza, informe se concorda com este horário ou se prefere realizar alguma alteração.
+
+📌 *Lembrete importante*: Pedimos a gentileza de chegar com **15 minutos de antecedência**.
+
+Agradecemos a preferência e aguardamos você!😊`;
+
+export async function fetchConfiguracaoMensagemWhatsApp() {
+    try {
+        const { data, error } = await supabase
+            .from('configuracoes')
+            .select('valor')
+            .eq('chave', 'mensagem_whatsapp')
+            .maybeSingle();
+
+        if (error) throw error;
+        if (data && data.valor) return data.valor;
+    } catch (err) {
+        console.warn("Usando configuração padrão de mensagem WhatsApp:", err);
+    }
+
+    return {
+        mensagem: MENSAGEM_WHATSAPP_PADRAO,
+        endereco: "Rua Principal, 123 - Centro"
+    };
+}
+
+export async function saveConfiguracaoMensagemWhatsApp({ mensagem, endereco }) {
+    const { error } = await supabase
+        .from('configuracoes')
+        .upsert({
+            chave: 'mensagem_whatsapp',
+            valor: { mensagem, endereco },
+            descricao: 'Template personalizado de mensagem no WhatsApp e endereço do estabelecimento'
+        }, { onConflict: 'chave' });
+
+    if (error) throw error;
+    return true;
+}
+
 // --- GERADOR DE MENSAGEM CORDIAL DE WHATSAPP ---
-export function generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio }) {
-    const text = `Olá, *${clienteNome}*! 👋\n\nSeu agendamento para *${servicoNome}* foi *CONFIRMADO* para o dia *${dataFormatada}* às *${horaInicio}*.\n\nPor gentileza, informe se concorda com este horário ou se prefere realizar alguma alteração.\n\n📌 *Lembrete importante*: Pedimos a gentileza de chegar com **15 minutos de antecedência**.\n\nAgradecemos a preferência e aguardamos você!😊`;
-    return encodeURIComponent(text);
+export async function generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio }) {
+    const config = await fetchConfiguracaoMensagemWhatsApp();
+    let template = config.mensagem || MENSAGEM_WHATSAPP_PADRAO;
+    const endereco = config.endereco || "Nosso Endereço";
+
+    template = template
+        .replace(/\{cliente\}/g, clienteNome || '')
+        .replace(/\{servico\}/g, servicoNome || '')
+        .replace(/\{data\}/g, dataFormatada || '')
+        .replace(/\{hora\}/g, horaInicio || '')
+        .replace(/\{endereco\}/g, endereco || '');
+
+    return encodeURIComponent(template);
 }
 
 // --- MODAL DE CONFIRMAÇÃO E ALERTA ELEGANTE E CURTO ---

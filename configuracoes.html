@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Acionar - Configurações de Horários</title>
+    <title>Acionar - Configurações & Parâmetros</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -49,7 +49,7 @@
                 </div>
                 <div class="flex flex-col">
                     <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Parâmetros</span>
-                    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Horários de Atendimento</h1>
+                    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Configurações do Sistema</h1>
                 </div>
             </div>
 
@@ -59,7 +59,7 @@
                     <a href="./dashboard.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Agenda</a>
                     <a href="./clientes.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Clientes</a>
                     <a href="./servicos.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Serviços</a>
-                    <a href="./configuracoes.html" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm">Horários</a>
+                    <a href="./configuracoes.html" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm">Horários & Mensagem</a>
                 </nav>
 
                 <button id="theme-toggle" aria-label="Alternar Tema" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 shadow-sm">
@@ -77,9 +77,9 @@
             <!-- Banner do Módulo -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md">
                 <div>
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Expediente Semanal</span>
-                    <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Turnos & Horários por Dia</h2>
-                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Defina múltiplos turnos de atendimento para cada dia da semana.</p>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">Personalização</span>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Parâmetros & Mensagens</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Configure horários por dia, endereço do espaço e mensagem do WhatsApp.</p>
                 </div>
 
                 <button id="btnReplicarSegunda" type="button" class="flex items-center justify-center gap-2 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-blue-500 hover:text-white dark:hover:bg-blue-600 px-4 py-3 text-xs font-bold transition-all border border-slate-200 dark:border-slate-700">
@@ -91,7 +91,46 @@
             <!-- Form de Configurações -->
             <form id="formConfiguracoes" class="space-y-6">
                 
-                <!-- Intervalo entre Agendamentos -->
+                <!-- CARD 1: MENSAGEM DO WHATSAPP & ENDEREÇO -->
+                <div class="bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-4">
+                    <div class="flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                        <div class="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                            <i data-lucide="message-square" class="h-5 w-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Mensagem no WhatsApp & Endereço</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Personalize o texto automático enviado ao aceitar agendamentos.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="inputEndereco" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Endereço do Estabelecimento</label>
+                        <input type="text" id="inputEndereco" placeholder="Ex: Rua das Flores, 123 - Centro, São Paulo - SP" 
+                            class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between gap-2 mb-1">
+                            <label for="inputMensagemWa" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Modelo da Mensagem</label>
+                            <button type="button" id="btnRestaurarPadrao" class="text-[11px] font-bold text-blue-500 hover:underline">Restaurar Padrão</button>
+                        </div>
+                        <textarea id="inputMensagemWa" rows="6" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed font-mono text-xs"></textarea>
+                    </div>
+
+                    <!-- Tags Inteligentes -->
+                    <div class="space-y-1.5 pt-1">
+                        <span class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Clique para inserir variáveis automáticas:</span>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button type="button" class="btn-tag-var px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-extrabold hover:bg-blue-500 hover:text-white transition-colors" data-tag="{cliente}">+{cliente}</button>
+                            <button type="button" class="btn-tag-var px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-extrabold hover:bg-blue-500 hover:text-white transition-colors" data-tag="{servico}">+{servico}</button>
+                            <button type="button" class="btn-tag-var px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-extrabold hover:bg-blue-500 hover:text-white transition-colors" data-tag="{data}">+{data}</button>
+                            <button type="button" class="btn-tag-var px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-extrabold hover:bg-blue-500 hover:text-white transition-colors" data-tag="{hora}">+{hora}</button>
+                            <button type="button" class="btn-tag-var px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-extrabold hover:bg-blue-500 hover:text-white transition-colors" data-tag="{endereco}">+{endereco}</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: INTERVALO ENTRE AGENDAMENTOS -->
                 <div class="bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-3">
                     <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Intervalo Padrão entre Agendamentos</label>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -110,16 +149,16 @@
                     </div>
                 </div>
 
-                <!-- Container de Configuração dos Dias da Semana -->
+                <!-- CARD 3: TURNOS DOS DIAS DA SEMANA -->
                 <div id="diasSemanaContainer" class="space-y-4">
                     <!-- Preenchido via JS para Segunda a Domingo -->
                 </div>
 
-                <!-- Botão de Salvar Flutuante / Fixo -->
+                <!-- Botão de Salvar -->
                 <div class="flex justify-end pt-4">
                     <button type="submit" id="btnSaveConfig" class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-8 py-4 text-sm font-extrabold text-white shadow-xl shadow-blue-500/25 transition-transform active:scale-95">
                         <i data-lucide="save" class="h-5 w-5"></i>
-                        <span>Salvar Configurações de Horário</span>
+                        <span>Salvar Todas as Configurações</span>
                     </button>
                 </div>
             </form>
@@ -151,7 +190,15 @@
 
     <!-- Scripts -->
     <script type="module">
-        import { initTheme, showToast, fetchConfiguracaoHorarios, saveConfiguracaoHorarios } from './js/app.js';
+        import { 
+            initTheme, 
+            showToast, 
+            fetchConfiguracaoHorarios, 
+            saveConfiguracaoHorarios,
+            fetchConfiguracaoMensagemWhatsApp,
+            saveConfiguracaoMensagemWhatsApp,
+            MENSAGEM_WHATSAPP_PADRAO
+        } from './js/app.js';
 
         initTheme();
 
@@ -167,7 +214,12 @@
 
         const container = document.getElementById('diasSemanaContainer');
         const form = document.getElementById('formConfiguracoes');
-        let currentConfig = null;
+        const inputEndereco = document.getElementById('inputEndereco');
+        const inputMensagemWa = document.getElementById('inputMensagemWa');
+        const btnRestaurarPadrao = document.getElementById('btnRestaurarPadrao');
+
+        let currentConfigHorarios = null;
+        let currentConfigWa = null;
 
         function createTurnoRow(dayKey, turnoData = { inicio: "08:00", fim: "18:00" }, index = 0) {
             const row = document.createElement('div');
@@ -202,21 +254,26 @@
         }
 
         async function loadConfigUI() {
-            currentConfig = await fetchConfiguracaoHorarios();
+            currentConfigHorarios = await fetchConfiguracaoHorarios();
+            currentConfigWa = await fetchConfiguracaoMensagemWhatsApp();
 
-            // Seta intervalo
-            const intervalVal = (currentConfig.intervalo_minutos || 30).toString();
+            // Carrega Endereço e Mensagem
+            inputEndereco.value = currentConfigWa.endereco || '';
+            inputMensagemWa.value = currentConfigWa.mensagem || MENSAGEM_WHATSAPP_PADRAO;
+
+            // Carrega intervalo
+            const intervalVal = (currentConfigHorarios.intervalo_minutos || 30).toString();
             const radioEl = form.querySelector(`input[name="intervalo"][value="${intervalVal}"]`);
             if (radioEl) radioEl.checked = true;
 
             container.innerHTML = '';
 
             NORM_DIAS.forEach(d => {
-                const dayData = (currentConfig.dias && currentConfig.dias[d.key]) 
-                    ? currentConfig.dias[d.key]
+                const dayData = (currentConfigHorarios.dias && currentConfigHorarios.dias[d.key]) 
+                    ? currentConfigHorarios.dias[d.key]
                     : {
-                        ativo: (currentConfig.dias_semana || [1,2,3,4,5,6]).includes(parseInt(d.key)),
-                        turnos: [{ inicio: currentConfig.hora_inicio || "08:00", fim: currentConfig.hora_fim || "18:00" }]
+                        ativo: (currentConfigHorarios.dias_semana || [1,2,3,4,5,6]).includes(parseInt(d.key)),
+                        turnos: [{ inicio: currentConfigHorarios.hora_inicio || "08:00", fim: currentConfigHorarios.hora_fim || "18:00" }]
                     };
 
                 const card = document.createElement('div');
@@ -261,7 +318,6 @@
                     }
                 });
 
-                // Carregar turnos existentes
                 const turnos = (dayData.turnos && dayData.turnos.length > 0) 
                     ? dayData.turnos 
                     : [{ inicio: "08:00", fim: "18:00" }];
@@ -281,7 +337,26 @@
             if (window.lucide) window.lucide.createIcons();
         }
 
-        // Botão para Replicar Segunda-feira para Terça a Sexta
+        // Inserção de Tags na Mensagem
+        document.querySelectorAll('.btn-tag-var').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tag = btn.dataset.tag;
+                const start = inputMensagemWa.selectionStart;
+                const end = inputMensagemWa.selectionEnd;
+                const text = inputMensagemWa.value;
+                inputMensagemWa.value = text.substring(0, start) + tag + text.substring(end);
+                inputMensagemWa.focus();
+                inputMensagemWa.selectionStart = inputMensagemWa.selectionEnd = start + tag.length;
+            });
+        });
+
+        // Restaurar Mensagem Padrão
+        btnRestaurarPadrao?.addEventListener('click', () => {
+            inputMensagemWa.value = MENSAGEM_WHATSAPP_PADRAO;
+            showToast('Modelo padrão restaurado!', 'info');
+        });
+
+        // Replicar Segunda para Terça a Sexta
         document.getElementById('btnReplicarSegunda')?.addEventListener('click', () => {
             const mondayCard = container.querySelector('[data-day-key="1"]');
             if (!mondayCard) return;
@@ -312,9 +387,12 @@
             showToast('Horário da Segunda-feira replicado para Terça a Sexta!', 'info');
         });
 
-        // Salvar Configurações
+        // Salvar Todas as Configurações
         form?.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            const endereco = inputEndereco.value.trim();
+            const mensagem = inputMensagemWa.value.trim();
 
             const intervalo_minutos = parseInt(form.querySelector('input[name="intervalo"]:checked').value);
             const diasConfig = {};
@@ -335,17 +413,14 @@
                 diasConfig[key] = { ativo, turnos };
             });
 
-            const payload = {
-                intervalo_minutos,
-                dias: diasConfig
-            };
-
             const submitBtn = document.getElementById('btnSaveConfig');
             submitBtn.disabled = true;
 
             try {
-                await saveConfiguracaoHorarios(payload);
-                showToast('Configurações de turno salvas com sucesso!', 'success');
+                await saveConfiguracaoHorarios({ intervalo_minutos, dias: diasConfig });
+                await saveConfiguracaoMensagemWhatsApp({ mensagem, endereco });
+
+                showToast('Todas as configurações salvas com sucesso!', 'success');
             } catch (err) {
                 showToast('Erro ao salvar configurações: ' + err.message, 'error');
             } finally {
