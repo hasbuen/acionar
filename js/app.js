@@ -1310,6 +1310,7 @@ function renderAgendamentosList(container, agendamentos) {
         const isManutencao = ag.is_manutencao === true;
         const statusLower = (ag.status || 'aguardando_confirmacao').toLowerCase();
         const isSolicitacao = statusLower === 'aguardando_confirmacao' || statusLower === 'solicitado';
+        const isAguardando = isSolicitacao;
 
         const statusClass = isManutencao
             ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
