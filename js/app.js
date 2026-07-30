@@ -806,7 +806,7 @@ export async function saveConfiguracaoHorarios(configValor) {
     return true;
 }
 
-// --- CÁLCULO DE HORÁRIOS DISPONÍVEIS POR DIA DA SEMANA ---
+// --- CÁLCULO INTELIGENTE DE HORÁRIOS DISPONÍVEIS COM BASE NA DURAÇÃO DO SERVIÇO ---
 export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
     const config = await fetchConfiguracaoHorarios();
     
@@ -814,7 +814,9 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
     const dateObj = new Date(year, month - 1, day);
     const dayOfWeek = dateObj.getDay();
 
-    const intervalo = config.intervalo_minutos || 30;
+    const intervaloConfig = config.intervalo_minutos || 15;
+    // slotStep: gera slots a cada 15 min para aceitar serviços de qualquer duração (15m, 30m, 45m, 60m, 90m, 120m, etc.)
+    const slotStep = Math.min(intervaloConfig, 15);
 
     let dayConfig = null;
 
@@ -832,26 +834,35 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
         return { closed: true, slots: [] };
     }
 
-    const startIso = `${dateStr}T00:00:00.000Z`;
-    const endIso = `${dateStr}T23:59:59.999Z`;
-
     let occupiedRanges = [];
     try {
+        // Buscar todos os agendamentos que não estejam cancelados
         const { data: agendamentos, error } = await supabase
             .from('agendamentos')
-            .select('data_hora_inicio, data_hora_fim, status')
-            .neq('status', 'cancelado')
-            .gte('data_hora_inicio', startIso)
-            .lte('data_hora_inicio', endIso);
+            .select(`
+                data_hora_inicio, 
+                data_hora_fim, 
+                status,
+                servicos ( duracao_minutos )
+            `)
+            .neq('status', 'cancelado');
 
         if (!error && agendamentos) {
-            occupiedRanges = agendamentos.map(ag => {
+            agendamentos.forEach(ag => {
                 const s = new Date(ag.data_hora_inicio);
-                const e = new Date(ag.data_hora_fim);
-                return {
-                    start: s.getHours() * 60 + s.getMinutes(),
-                    end: e.getHours() * 60 + e.getMinutes()
-                };
+                let e = ag.data_hora_fim ? new Date(ag.data_hora_fim) : null;
+                
+                const durMin = ag.servicos?.duracao_minutos || 30;
+                if (!e || isNaN(e.getTime()) || e.getTime() <= s.getTime()) {
+                    e = new Date(s.getTime() + durMin * 60000);
+                }
+
+                // Filtrar agendamentos do dia consultado
+                if (s.getFullYear() === year && s.getMonth() === month - 1 && s.getDate() === day) {
+                    const startMin = s.getHours() * 60 + s.getMinutes();
+                    const endMin = e.getHours() * 60 + e.getMinutes();
+                    occupiedRanges.push({ start: startMin, end: endMin });
+                }
             });
         }
     } catch (err) {
@@ -859,6 +870,7 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
     }
 
     const slots = [];
+    const requestedDuration = Math.max(parseInt(servicoDuracao || 30), 15);
 
     dayConfig.turnos.forEach(turno => {
         if (!turno.inicio || !turno.fim) return;
@@ -868,14 +880,18 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
         let currentMinutes = startH * 60 + startM;
         const endMinutes = endH * 60 + endM;
 
-        while (currentMinutes + servicoDuracao <= endMinutes) {
+        // O horário só estará disponível se o atendimento (currentMinutes + requestedDuration) couber integralmente dentro do expediente
+        while (currentMinutes + requestedDuration <= endMinutes) {
             const h = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
             const m = (currentMinutes % 60).toString().padStart(2, '0');
             const timeStr = `${h}:${m}`;
 
             const slotStart = currentMinutes;
-            const slotEnd = currentMinutes + servicoDuracao;
+            const slotEnd = currentMinutes + requestedDuration;
 
+            // REGRA DE CONFLITO INTELIGENTE:
+            // O horário é marcado como INDISPONÍVEL se a janela do serviço desejado [slotStart, slotEnd] 
+            // colidir com qualquer intervalo já agendado [ocupado.start, ocupado.end].
             const isOccupied = occupiedRanges.some(r => (slotStart < r.end && slotEnd > r.start));
 
             if (!slots.some(s => s.time === timeStr)) {
@@ -885,7 +901,7 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
                 });
             }
 
-            currentMinutes += intervalo;
+            currentMinutes += slotStep;
         }
     });
 
@@ -1363,12 +1379,42 @@ export async function updateCliente(id, { nome, whatsapp }) {
 }
 
 export async function deleteCliente(id) {
-    const { error } = await supabase
+    // 1. Buscar todos os agendamentos vinculados a este cliente
+    const { data: agendamentos, error: fetchErr } = await supabase
+        .from('agendamentos')
+        .select('id, status')
+        .eq('cliente_id', id);
+
+    if (fetchErr) throw fetchErr;
+
+    if (agendamentos && agendamentos.length > 0) {
+        // Filtrar agendamentos que NÃO estão cancelados
+        const agendamentosAtivos = agendamentos.filter(a => {
+            const st = (a.status || '').toLowerCase();
+            return st !== 'cancelado';
+        });
+
+        // Se o cliente possuir agendamentos ativos (solicitações, confirmados, atendimento, concluídos ou manutenção)
+        if (agendamentosAtivos.length > 0) {
+            throw new Error('Este cliente possui agendamentos em aberto, confirmados, em atendimento, concluídos ou de manutenção. Para conseguir excluí-lo, é necessário primeiro cancelar todos os compromissos dele.');
+        }
+
+        // Se tiver apenas agendamentos cancelados, exclui os registros de agendamentos cancelados para não violar a chave estrangeira (FK)
+        const { error: delAgErr } = await supabase
+            .from('agendamentos')
+            .delete()
+            .eq('cliente_id', id);
+
+        if (delAgErr) throw delAgErr;
+    }
+
+    // 2. Excluir o cliente
+    const { error: delClientErr } = await supabase
         .from('clientes')
         .delete()
         .eq('id', id);
 
-    if (error) throw error;
+    if (delClientErr) throw delClientErr;
     return true;
 }
 
@@ -1395,7 +1441,7 @@ export async function fetchAndRenderClientes(containerId) {
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-14 px-4 text-center">
                     <div class="h-14 w-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-4 dark:bg-slate-800/80 dark:text-slate-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     </div>
                     <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200">Nenhum cliente cadastrado</h3>
                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">Os clientes cadastrados via agendamento aparecerão aqui.</p>
@@ -1471,6 +1517,31 @@ export async function updateServico(id, { nome, descricao, duracao_minutos, ativ
 }
 
 export async function deleteServico(id) {
+    // 1. Verificar agendamentos vinculados ao serviço
+    const { data: agendamentos, error: fetchErr } = await supabase
+        .from('agendamentos')
+        .select('id, status')
+        .eq('servico_id', id);
+
+    if (fetchErr) throw fetchErr;
+
+    if (agendamentos && agendamentos.length > 0) {
+        const agendamentosAtivos = agendamentos.filter(a => (a.status || '').toLowerCase() !== 'cancelado');
+        if (agendamentosAtivos.length > 0) {
+            throw new Error('Este serviço possui agendamento(s) vinculado(s). Para excluir este serviço, cancele primeiro os compromissos vinculados a ele.');
+        }
+
+        // Se tiver apenas agendamentos cancelados, exclui os agendamentos cancelados vinculados a este serviço
+        await supabase
+            .from('agendamentos')
+            .delete()
+            .eq('servico_id', id);
+    }
+
+    // Apagar tabela de preços
+    await supabase.from('tabela_precos').delete().eq('servico_id', id);
+
+    // Apagar o serviço
     const { error } = await supabase
         .from('servicos')
         .delete()

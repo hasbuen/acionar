@@ -179,6 +179,7 @@
             initTheme, 
             showToast, 
             showConfirmModal,
+            showAlertModal,
             fetchServicosAtivos,
             updateServico,
             deleteServico,
@@ -314,10 +315,14 @@
                     onConfirm: async () => {
                         try {
                             await deleteServico(id);
-                            showToast('Serviço removido!', 'success');
+                            showToast('Serviço removido com sucesso!', 'success');
                             renderServicos();
                         } catch (err) {
-                            showToast('Erro ao remover: ' + err.message, 'error');
+                            showAlertModal({
+                                title: 'Não é possível excluir este serviço',
+                                message: err.message,
+                                type: 'error'
+                            });
                         }
                     }
                 });

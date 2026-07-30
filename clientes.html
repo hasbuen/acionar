@@ -173,6 +173,7 @@
             initTheme, 
             showToast, 
             showConfirmModal,
+            showAlertModal,
             applyPhoneMask, 
             fetchAndRenderClientes,
             updateCliente,
@@ -239,10 +240,14 @@
                     onConfirm: async () => {
                         try {
                             await deleteCliente(id);
-                            showToast('Cliente removido!', 'success');
+                            showToast('Cliente removido com sucesso!', 'success');
                             refreshClientes();
                         } catch (err) {
-                            showToast('Erro ao remover: ' + err.message, 'error');
+                            showAlertModal({
+                                title: 'Não é possível excluir este cliente',
+                                message: err.message,
+                                type: 'error'
+                            });
                         }
                     }
                 });
