@@ -424,6 +424,19 @@
         const hiddenSelectServico = document.getElementById('selectServico');
 
         // Combobox Serviço
+        const btnComboboxServico = document.getElementById('btnComboboxServico');
+        const labelComboboxServico = document.getElementById('labelComboboxServico');
+        const listComboboxServico = document.getElementById('listComboboxServico');
+
+        // Container de Chips de Horários
+        const timeChipsContainer = document.getElementById('timeChipsContainer');
+
+        const modalEdit = document.getElementById('modalEditAgendamento');
+        const closeEditBtn = document.getElementById('btnCloseEditModal');
+        const cancelEditBtn = document.getElementById('btnCancelEditModal');
+        const formEdit = document.getElementById('formEditAgendamento');
+
+        // Combobox Serviço
         btnComboboxServico?.addEventListener('click', (e) => {
             e.stopPropagation();
             listComboboxServico.classList.toggle('hidden');
