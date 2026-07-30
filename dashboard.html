@@ -436,6 +436,28 @@
         const cancelEditBtn = document.getElementById('btnCancelEditModal');
         const formEdit = document.getElementById('formEditAgendamento');
 
+        applyPhoneMask(whatsappInput);
+
+        const todayISO = new Date().toISOString().split('T')[0];
+        if (inputData) inputData.value = todayISO;
+
+        let currentServicoDuracao = 30;
+        let activeFilterDate = null;
+        let activeFilterStatus = null;
+
+        const refreshAgenda = (silent = false) => {
+            fetchAndRenderAgendamentos('agendamentosContainer', activeFilterDate, activeFilterStatus, silent);
+        };
+
+        // --- REALTIME SUPABASE & AUTO-POLLING DE BUSCA ---
+        subscribeToAgendamentos((payload) => {
+            refreshAgenda(true);
+        });
+
+        setInterval(() => {
+            refreshAgenda(true);
+        }, 8000);
+
         // Combobox Serviço
         btnComboboxServico?.addEventListener('click', (e) => {
             e.stopPropagation();
