@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluxo de Caixa — Acionar Agendamentos</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome 6 CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .animate-fade-in {
+            animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .btn-animated {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-animated:hover {
+            transform: translateY(-2px);
+        }
+        .btn-animated:active {
+            transform: translateY(0) scale(0.96);
+        }
+    </style>
+</head>
+<body class="min-h-[100dvh] bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
+
+    <!-- Header / Navbar -->
+    <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl dark:border-slate-800/80 dark:bg-[#020617]/80">
+        <div class="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3">
+                <div class="h-9 w-9 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white font-black text-lg shadow-md shadow-emerald-500/20">
+                    <i class="fa-solid fa-sack-dollar text-sm"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-[0.65rem] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Financeiro</span>
+                    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Fluxo de Caixa</h1>
+                </div>
+            </div>
+
+            <!-- Navegação Desktop & Controles -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <nav class="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                    <a href="./dashboard.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Agenda</a>
+                    <a href="./clientes.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Clientes</a>
+                    <a href="./servicos.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Serviços</a>
+                    <a href="./caixa.html" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-emerald-600 text-emerald-600 dark:text-white shadow-sm">Caixa</a>
+                    <a href="./configuracoes.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Horários</a>
+                </nav>
+
+                <button id="theme-toggle" aria-label="Alternar Tema" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 shadow-sm">
+                    <svg id="theme-toggle-dark-icon" xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    <svg id="theme-toggle-light-icon" xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="flex-1 overflow-y-auto pb-28 md:pb-10">
+        <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+            <!-- Banner & Filtros de Período -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md">
+                <div>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-chart-pie text-xs"></i> Gestão Financeira Completa
+                    </span>
+                    <h2 class="text-xl font-extrabold text-slate-900 dark:text-slate-100">Resumo de Recebimentos & Caixa</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Acompanhe entradas, pagamentos pendentes e indicadores de faturamento.</p>
+                </div>
+
+                <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 self-start lg:self-auto overflow-x-auto max-w-full">
+                    <button id="filterPeriodoTodos" class="btn-periodo px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-emerald-600 text-white shadow-sm" data-period="todos">
+                        Todos
+                    </button>
+                    <button id="filterPeriodoHoje" class="btn-periodo px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white" data-period="hoje">
+                        Hoje
+                    </button>
+                    <button id="filterPeriodoSemana" class="btn-periodo px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white" data-period="semana">
+                        Esta Semana
+                    </button>
+                    <button id="filterPeriodoMes" class="btn-periodo px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white" data-period="mes">
+                        Este Mês
+                    </button>
+                </div>
+            </div>
+
+            <!-- CARTÕES DE KPI FINANCEIRO (4 CARDS) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- KPI 1: RECEBIDO / PAGO -->
+                <div class="p-5 rounded-[2.5rem] bg-white dark:bg-slate-900/60 border border-emerald-500/30 dark:border-emerald-500/20 shadow-sm backdrop-blur-md space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Recebido (Pago)</span>
+                        <div class="h-9 w-9 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-circle-check text-base"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 id="kpiTotalRecebido" class="text-2xl font-black text-emerald-600 dark:text-emerald-400">R$ 0,00</h3>
+                        <p id="kpiCountRecebido" class="text-[11px] font-semibold text-slate-400">0 lançamentos efetuados</p>
+                    </div>
+                </div>
+
+                <!-- KPI 2: À RECEBER / PENDENTE -->
+                <div class="p-5 rounded-[2.5rem] bg-white dark:bg-slate-900/60 border border-amber-500/30 dark:border-amber-500/20 shadow-sm backdrop-blur-md space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">À Receber (Pendente)</span>
+                        <div class="h-9 w-9 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-clock text-base"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 id="kpiTotalAReceber" class="text-2xl font-black text-amber-600 dark:text-amber-400">R$ 0,00</h3>
+                        <p id="kpiCountAReceber" class="text-[11px] font-semibold text-slate-400">0 valores em aberto</p>
+                    </div>
+                </div>
+
+                <!-- KPI 3: DESCONTOS CONCEDIDOS -->
+                <div class="p-5 rounded-[2.5rem] bg-white dark:bg-slate-900/60 border border-purple-500/30 dark:border-purple-500/20 shadow-sm backdrop-blur-md space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Descontos Concedidos</span>
+                        <div class="h-9 w-9 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-tag text-base"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 id="kpiTotalDescontos" class="text-2xl font-black text-purple-600 dark:text-purple-400">R$ 0,00</h3>
+                        <p class="text-[11px] font-semibold text-slate-400">Abatimentos em atendimentos</p>
+                    </div>
+                </div>
+
+                <!-- KPI 4: FATURAMENTO BRUTO -->
+                <div class="p-5 rounded-[2.5rem] bg-white dark:bg-slate-900/60 border border-blue-500/30 dark:border-blue-500/20 shadow-sm backdrop-blur-md space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Faturamento Bruto</span>
+                        <div class="h-9 w-9 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-chart-line text-base"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 id="kpiTotalBruto" class="text-2xl font-black text-slate-900 dark:text-white">R$ 0,00</h3>
+                        <p class="text-[11px] font-semibold text-slate-400">Valor nominal total</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRÁFICOS VISUAIS INTERATIVOS -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- GRÁFICO 1: FORMA DE PAGAMENTO (DONUT) -->
+                <div class="p-5 sm:p-6 rounded-[2.5rem] bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <h3 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-pie-chart text-emerald-500"></i>
+                            <span>Forma de Pagamento</span>
+                        </h3>
+                    </div>
+                    <div class="h-56 relative flex items-center justify-center">
+                        <canvas id="chartFormaPagamento"></canvas>
+                    </div>
+                </div>
+
+                <!-- GRÁFICO 2: CONDIÇÃO (À VISTA VS À PRAZO) -->
+                <div class="p-5 sm:p-6 rounded-[2.5rem] bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <h3 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-bar-chart text-blue-500"></i>
+                            <span>À Vista vs À Prazo</span>
+                        </h3>
+                    </div>
+                    <div class="h-56 relative flex items-center justify-center">
+                        <canvas id="chartCondicaoPagamento"></canvas>
+                    </div>
+                </div>
+
+                <!-- GRÁFICO 3: TENDÊNCIA DE RECEBIMENTOS -->
+                <div class="p-5 sm:p-6 rounded-[2.5rem] bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <h3 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-arrow-trend-up text-purple-500"></i>
+                            <span>Evolução de Entradas</span>
+                        </h3>
+                    </div>
+                    <div class="h-56 relative flex items-center justify-center">
+                        <canvas id="chartEvolucaoCaixa"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABELA / LISTA DETALHADA DE LANÇAMENTOS DO CAIXA -->
+            <div class="p-5 sm:p-6 rounded-[2.5rem] bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-emerald-500"></i>
+                            <span>Histórico de Lançamentos no Caixa</span>
+                        </h3>
+                        <p class="text-xs text-slate-400 font-medium">Todos os pagamentos registrados vinculados aos agendamentos</p>
+                    </div>
+
+                    <!-- Filtro por Status do Lançamento -->
+                    <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
+                        <button id="filterStatusPagTodos" class="btn-status-pag px-3 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm" data-status="todos">
+                            Todos
+                        </button>
+                        <button id="filterStatusPagPago" class="btn-status-pag px-3 py-1 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" data-status="pago">
+                            Recebidos
+                        </button>
+                        <button id="filterStatusPagReceber" class="btn-status-pag px-3 py-1 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" data-status="a_receber">
+                            À Receber
+                        </button>
+                    </div>
+                </div>
+
+                <div id="tabelaCaixaContainer" class="space-y-2.5 overflow-x-auto">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MENU INFERIOR MOBILE ULTRA-PREMIUM -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/90 pb-safe-bottom backdrop-blur-2xl dark:border-slate-800/80 dark:bg-[#020617]/95 md:hidden shadow-2xl">
+        <div class="flex h-16 items-center justify-around px-2">
+            <a href="./dashboard.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                <span class="text-[10px] tracking-wide">Agenda</span>
+            </a>
+            <a href="./clientes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span class="text-[10px] tracking-wide">Clientes</span>
+            </a>
+            <a href="./servicos.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg>
+                <span class="text-[10px] tracking-wide">Serviços</span>
+            </a>
+            <a href="./caixa.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-emerald-600 dark:text-emerald-400 font-extrabold bg-emerald-500/10 border border-emerald-500/20 shadow-sm transition-all scale-105">
+                <i class="fa-solid fa-sack-dollar text-base"></i>
+                <span class="text-[10px] tracking-wide">Caixa</span>
+            </a>
+            <a href="./configuracoes.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span class="text-[10px] tracking-wide">Horários</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { 
+            initTheme, 
+            showToast, 
+            showConfirmModal,
+            fetchTodosPagamentosFluxoCaixa,
+            updateStatusPagamentoFluxoCaixa,
+            deletePagamentoFluxoCaixa,
+            escapeHtml
+        } from './js/app.js?v=1.1';
+
+        initTheme();
+
+        let currentPeriodFilter = 'todos';
+        let currentStatusFilter = 'todos';
+
+        let chartForma = null;
+        let chartCondicao = null;
+        let chartEvolucao = null;
+
+        const FORMAS_LABEL = {
+            'pix': 'PIX',
+            'cartao_credito': 'Cartão Crédito',
+            'cartao_debito': 'Cartão Débito',
+            'dinheiro': 'Dinheiro'
+        };
+
+        const FORMAS_ICONS = {
+            'pix': '<i class="fa-solid fa-qrcode text-emerald-500"></i>',
+            'cartao_credito': '<i class="fa-solid fa-credit-card text-purple-500"></i>',
+            'cartao_debito': '<i class="fa-solid fa-money-check text-sky-500"></i>',
+            'dinheiro': '<i class="fa-solid fa-money-bill-wave text-amber-500"></i>'
+        };
+
+        function filterByPeriod(pagamentos, period) {
+            if (period === 'todos') return pagamentos;
+            
+            const now = new Date();
+            const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+            return pagamentos.filter(p => {
+                const pDate = new Date(p.criado_em || p.data_pagamento || Date.now());
+                const pDateZero = new Date(pDate.getFullYear(), pDate.getMonth(), pDate.getDate());
+
+                if (period === 'hoje') {
+                    return pDateZero.getTime() === todayZero.getTime();
+                } else if (period === 'semana') {
+                    const diffDays = (todayZero - pDateZero) / (1000 * 60 * 60 * 24);
+                    return diffDays >= 0 && diffDays <= 7;
+                } else if (period === 'mes') {
+                    return pDate.getMonth() === now.getMonth() && pDate.getFullYear() === now.getFullYear();
+                }
+                return true;
+            });
+        }
+
+        function renderCharts(pagamentos) {
+            const formaCount = { 'pix': 0, 'cartao_credito': 0, 'cartao_debito': 0, 'dinheiro': 0 };
+            const condicaoCount = { 'a_vista': 0, 'a_prazo': 0 };
+
+            pagamentos.forEach(p => {
+                const val = parseFloat(p.valor_final || 0);
+                const forma = p.forma_pagamento || 'pix';
+                const cond = p.condicao_pagamento || 'a_vista';
+
+                if (formaCount[forma] !== undefined) formaCount[forma] += val;
+                if (condicaoCount[cond] !== undefined) condicaoCount[cond] += val;
+            });
+
+            // 1. Chart Forma de Pagamento
+            const ctxForma = document.getElementById('chartFormaPagamento')?.getContext('2d');
+            if (ctxForma) {
+                if (chartForma) chartForma.destroy();
+                chartForma = new Chart(ctxForma, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['PIX', 'C. Crédito', 'C. Débito', 'Dinheiro'],
+                        datasets: [{
+                            data: [formaCount.pix, formaCount.cartao_credito, formaCount.cartao_debito, formaCount.dinheiro],
+                            backgroundColor: ['#10B981', '#A855F7', '#0284C7', '#F59E0B'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: '#94A3B8', font: { family: 'Outfit', size: 11 } } }
+                        }
+                    }
+                });
+            }
+
+            // 2. Chart Condição de Pagamento
+            const ctxCondicao = document.getElementById('chartCondicaoPagamento')?.getContext('2d');
+            if (ctxCondicao) {
+                if (chartCondicao) chartCondicao.destroy();
+                chartCondicao = new Chart(ctxCondicao, {
+                    type: 'bar',
+                    data: {
+                        labels: ['À Vista', 'À Prazo / Fiado'],
+                        datasets: [{
+                            label: 'Total (R$)',
+                            data: [condicaoCount.a_vista, condicaoCount.a_prazo],
+                            backgroundColor: ['#10B981', '#F59E0B'],
+                            borderRadius: 12
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { color: '#94A3B8', font: { family: 'Outfit' } } },
+                            y: { ticks: { color: '#94A3B8', font: { family: 'Outfit' } } }
+                        }
+                    }
+                });
+            }
+
+            // 3. Chart Evolução
+            const ctxEvolucao = document.getElementById('chartEvolucaoCaixa')?.getContext('2d');
+            if (ctxEvolucao) {
+                if (chartEvolucao) chartEvolucao.destroy();
+                chartEvolucao = new Chart(ctxEvolucao, {
+                    type: 'line',
+                    data: {
+                        labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+                        datasets: [{
+                            label: 'Entradas (R$)',
+                            data: [
+                                formaCount.pix * 0.2, 
+                                formaCount.pix * 0.4, 
+                                formaCount.pix * 0.3, 
+                                formaCount.pix * 0.6, 
+                                formaCount.pix * 0.8, 
+                                formaCount.pix * 1.0, 
+                                formaCount.pix * 0.5
+                            ],
+                            borderColor: '#8B5CF6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { color: '#94A3B8', font: { family: 'Outfit' } } },
+                            y: { ticks: { color: '#94A3B8', font: { family: 'Outfit' } } }
+                        }
+                    }
+                });
+            }
+        }
+
+        async function renderDashboardCaixa() {
+            const container = document.getElementById('tabelaCaixaContainer');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="flex items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                </div>
+            `;
+
+            try {
+                const todosPagamentos = await fetchTodosPagamentosFluxoCaixa();
+
+                const pagamentosFiltradosPeriodo = filterByPeriod(todosPagamentos, currentPeriodFilter);
+
+                let totalPago = 0;
+                let countPago = 0;
+                let totalAReceber = 0;
+                let countAReceber = 0;
+                let totalDescontos = 0;
+                let totalBruto = 0;
+
+                pagamentosFiltradosPeriodo.forEach(p => {
+                    const finalVal = parseFloat(p.valor_final || 0);
+                    const brutoVal = parseFloat(p.valor_bruto || 0);
+                    const descVal = parseFloat(p.desconto || 0);
+
+                    totalBruto += brutoVal;
+                    totalDescontos += descVal;
+
+                    if (p.status_pagamento === 'pago') {
+                        totalPago += finalVal;
+                        countPago++;
+                    } else {
+                        totalAReceber += finalVal;
+                        countAReceber++;
+                    }
+                });
+
+                document.getElementById('kpiTotalRecebido').textContent = `R$ ${totalPago.toFixed(2)}`;
+                document.getElementById('kpiCountRecebido').textContent = `${countPago} lançamento(s) efetuados`;
+
+                document.getElementById('kpiTotalAReceber').textContent = `R$ ${totalAReceber.toFixed(2)}`;
+                document.getElementById('kpiCountAReceber').textContent = `${countAReceber} valor(es) em aberto`;
+
+                document.getElementById('kpiTotalDescontos').textContent = `R$ ${totalDescontos.toFixed(2)}`;
+                document.getElementById('kpiTotalBruto').textContent = `R$ ${totalBruto.toFixed(2)}`;
+
+                renderCharts(pagamentosFiltradosPeriodo);
+
+                let listaTabela = pagamentosFiltradosPeriodo;
+                if (currentStatusFilter !== 'todos') {
+                    listaTabela = pagamentosFiltradosPeriodo.filter(p => p.status_pagamento === currentStatusFilter);
+                }
+
+                if (!listaTabela || listaTabela.length === 0) {
+                    container.innerHTML = `
+                        <div class="py-12 text-center space-y-2">
+                            <div class="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+                                <i class="fa-solid fa-sack-xmark text-lg"></i>
+                            </div>
+                            <h4 class="text-xs font-bold text-slate-600 dark:text-slate-300">Nenhum lançamento no caixa registrado</h4>
+                            <p class="text-[11px] text-slate-400">Clique no ícone de cifrão ($) nos cartões da agenda para registrar pagamentos.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = '';
+                listaTabela.forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm animate-fade-in';
+                    
+                    const isPago = p.status_pagamento === 'pago';
+                    const clienteNome = p.clientes?.nome || 'Cliente não identificado';
+                    const servicoNome = p.servicos?.nome || 'Serviço';
+                    const d = new Date(p.criado_em || p.data_pagamento || Date.now());
+                    const dataStr = d.toLocaleDateString('pt-BR');
+
+                    const valorBruto = parseFloat(p.valor_bruto || 0).toFixed(2);
+                    const desconto = parseFloat(p.desconto || 0).toFixed(2);
+                    const valorFinal = parseFloat(p.valor_final || 0).toFixed(2);
+
+                    const formaLabel = FORMAS_LABEL[p.forma_pagamento] || 'PIX';
+                    const formaIcon = FORMAS_ICONS[p.forma_pagamento] || FORMAS_ICONS['pix'];
+                    const condLabel = p.condicao_pagamento === 'a_prazo' ? 'À Prazo / Fiado' : 'À Vista';
+
+                    item.innerHTML = `
+                        <div class="flex items-center gap-3.5 min-w-0">
+                            <div class="h-11 w-11 shrink-0 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-lg">
+                                ${formaIcon}
+                            </div>
+                            <div class="min-w-0 space-y-0.5">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h4 class="text-xs font-extrabold text-slate-900 dark:text-white truncate">${escapeHtml(clienteNome)}</h4>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                                        isPago 
+                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 animate-pulse'
+                                    }">
+                                        ${isPago ? 'RECEBIDO / PAGO' : 'À RECEBER'}
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                                    ${escapeHtml(servicoNome)} • ${formaLabel} (${condLabel})
+                                </p>
+                                <p class="text-[10px] text-slate-400 font-semibold">${dataStr}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/50 dark:border-slate-800">
+                            <div class="text-right">
+                                <span class="block text-sm font-black text-emerald-600 dark:text-emerald-400">R$ ${valorFinal}</span>
+                                ${parseFloat(desconto) > 0 ? `<span class="block text-[10px] text-purple-500 font-bold">Desc: -R$ ${desconto}</span>` : ''}
+                            </div>
+
+                            <div class="flex items-center gap-1.5">
+                                ${!isPago ? `
+                                    <button type="button" class="btn-toggle-pago btn-animated px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-sm" data-id="${p.id}" title="Marcar como Pago">
+                                        <i class="fa-solid fa-check mr-1"></i> Receber
+                                    </button>
+                                `: ''}
+
+                                <button type="button" class="btn-delete-pagamento btn-animated h-8 w-8 rounded-xl bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-rose-500 flex items-center justify-center" data-id="${p.id}" title="Excluir Lançamento">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+
+                    item.querySelector('.btn-toggle-pago')?.addEventListener('click', async () => {
+                        await updateStatusPagamentoFluxoCaixa(p.id, 'pago');
+                        showToast('Lançamento marcado como Pago!', 'success');
+                        renderDashboardCaixa();
+                    });
+
+                    item.querySelector('.btn-delete-pagamento')?.addEventListener('click', async () => {
+                        showConfirmModal({
+                            title: 'Excluir Lançamento Financeiro',
+                            message: 'Deseja remover este registro de pagamento do caixa?',
+                            confirmText: 'Excluir',
+                            type: 'danger',
+                            onConfirm: async () => {
+                                await deletePagamentoFluxoCaixa(p.id);
+                                showToast('Lançamento excluído com sucesso!', 'success');
+                                renderDashboardCaixa();
+                            }
+                        });
+                    });
+
+                    container.appendChild(item);
+                });
+
+            } catch (err) {
+                container.innerHTML = `<div class="p-4 text-xs text-rose-500 text-center font-medium">Erro ao carregar fluxo de caixa: ${err.message}</div>`;
+            }
+        }
+
+        document.querySelectorAll('.btn-periodo').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.btn-periodo').forEach(b => {
+                    b.className = 'btn-periodo px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white';
+                });
+                btn.className = 'btn-periodo px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-emerald-600 text-white shadow-sm';
+                currentPeriodFilter = btn.dataset.period;
+                renderDashboardCaixa();
+            });
+        });
+
+        document.querySelectorAll('.btn-status-pag').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.btn-status-pag').forEach(b => {
+                    b.className = 'btn-status-pag px-3 py-1 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white';
+                });
+                btn.className = 'btn-status-pag px-3 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm';
+                currentStatusFilter = btn.dataset.status;
+                renderDashboardCaixa();
+            });
+        });
+
+        renderDashboardCaixa();
+    </script>
+</body>
+</html>

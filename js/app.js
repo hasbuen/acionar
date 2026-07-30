@@ -1439,6 +1439,17 @@ function renderAgendamentosList(container, agendamentos) {
                     </button>
                 ` : ''}
 
+                <button type="button" class="btn-open-payment-modal btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold border border-emerald-500/20 shrink-0" 
+                    title="Registrar / Ver Pagamento (Caixa)"
+                    data-agendamento-id="${ag.id}"
+                    data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
+                    data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
+                    data-cliente-nome="${escapeHtml(clienteNome)}"
+                    data-servico-nome="${escapeHtml(servicoNome)}"
+                    data-preco="${ag.servicos?.tabela_precos?.[0]?.valor || 0}">
+                    <i class="fa-solid fa-dollar-sign text-xs"></i>
+                </button>
+
                 <button class="btn-edit-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200/50 dark:border-slate-800 shrink-0" data-agendamento='${JSON.stringify(ag)}' title="Editar Agendamento">
                     <i class="fa-solid fa-pen-to-square text-xs"></i>
                 </button>
@@ -1716,6 +1727,154 @@ export async function deleteSubservico(id) {
         let all = JSON.parse(localStorage.getItem('subservicos_data') || '[]');
         all = all.filter(s => s.id !== id);
         localStorage.setItem('subservicos_data', JSON.stringify(all));
+    } catch (e) {}
+
+    return true;
+}
+
+// --- FLUXO DE CAIXA & FINANCEIRO ---
+export async function fetchPagamentoByAgendamentoId(agendamentoId) {
+    if (!agendamentoId) return null;
+    try {
+        const { data, error } = await supabase
+            .from('fluxo_caixa')
+            .select('*')
+            .eq('agendamento_id', agendamentoId)
+            .single();
+
+        if (!error && data) return data;
+    } catch (e) {}
+
+    try {
+        const all = JSON.parse(localStorage.getItem('fluxo_caixa_data') || '[]');
+        return all.find(p => p.agendamento_id === agendamentoId) || null;
+    } catch (e) {
+        return null;
+    }
+}
+
+export async function savePagamentoFluxoCaixa(payload) {
+    const dataToSave = {
+        agendamento_id: payload.agendamento_id || null,
+        cliente_id: payload.cliente_id || null,
+        servico_id: payload.servico_id || null,
+        valor_bruto: parseFloat(payload.valor_bruto || 0),
+        desconto: parseFloat(payload.desconto || 0),
+        valor_final: parseFloat(payload.valor_final || 0),
+        condicao_pagamento: payload.condicao_pagamento || 'a_vista',
+        forma_pagamento: payload.forma_pagamento || 'pix',
+        status_pagamento: payload.status_pagamento || 'pago',
+        data_pagamento: payload.data_pagamento || new Date().toISOString(),
+        data_vencimento: payload.data_vencimento || new Date().toISOString(),
+        observacoes: payload.observacoes || null
+    };
+
+    let savedRemote = false;
+
+    try {
+        if (payload.id && !payload.id.startsWith('cx-')) {
+            const { error } = await supabase
+                .from('fluxo_caixa')
+                .update(dataToSave)
+                .eq('id', payload.id);
+            if (!error) savedRemote = true;
+        } else {
+            if (payload.agendamento_id) {
+                const existing = await fetchPagamentoByAgendamentoId(payload.agendamento_id);
+                if (existing && existing.id && !existing.id.startsWith('cx-')) {
+                    await supabase
+                        .from('fluxo_caixa')
+                        .update(dataToSave)
+                        .eq('id', existing.id);
+                    savedRemote = true;
+                }
+            }
+            if (!savedRemote) {
+                const { error } = await supabase
+                    .from('fluxo_caixa')
+                    .insert([dataToSave]);
+                if (!error) savedRemote = true;
+            }
+        }
+    } catch (e) {
+        console.warn("Erro ao salvar no Supabase, mantendo LocalStorage.", e);
+    }
+
+    try {
+        let all = JSON.parse(localStorage.getItem('fluxo_caixa_data') || '[]');
+        const idToUse = payload.id || (payload.agendamento_id ? 'cx-ag-' + payload.agendamento_id : 'cx-' + Date.now());
+        
+        const existingIdx = all.findIndex(p => p.id === idToUse || (payload.agendamento_id && p.agendamento_id === payload.agendamento_id));
+        if (existingIdx >= 0) {
+            all[existingIdx] = { ...all[existingIdx], ...dataToSave, id: all[existingIdx].id };
+        } else {
+            all.push({ ...dataToSave, id: idToUse, criado_em: new Date().toISOString() });
+        }
+
+        localStorage.setItem('fluxo_caixa_data', JSON.stringify(all));
+    } catch (e) {}
+
+    return true;
+}
+
+export async function fetchTodosPagamentosFluxoCaixa() {
+    try {
+        const { data, error } = await supabase
+            .from('fluxo_caixa')
+            .select(`
+                *,
+                clientes ( id, nome, whatsapp ),
+                servicos ( id, nome ),
+                agendamentos ( id, data_hora_inicio, status )
+            `)
+            .order('criado_em', { ascending: false });
+
+        if (!error && data && data.length > 0) return data;
+    } catch (e) {
+        console.warn("Consulta fluxo_caixa via Supabase falhou, utilizando fallback.", e);
+    }
+
+    try {
+        const all = JSON.parse(localStorage.getItem('fluxo_caixa_data') || '[]');
+        return all;
+    } catch (e) {
+        return [];
+    }
+}
+
+export async function updateStatusPagamentoFluxoCaixa(id, novoStatus) {
+    try {
+        if (id && !id.startsWith('cx-')) {
+            await supabase
+                .from('fluxo_caixa')
+                .update({ status_pagamento: novoStatus, data_pagamento: new Date().toISOString() })
+                .eq('id', id);
+        }
+    } catch (e) {}
+
+    try {
+        let all = JSON.parse(localStorage.getItem('fluxo_caixa_data') || '[]');
+        all = all.map(p => p.id === id ? { ...p, status_pagamento: novoStatus, data_pagamento: new Date().toISOString() } : p);
+        localStorage.setItem('fluxo_caixa_data', JSON.stringify(all));
+    } catch (e) {}
+
+    return true;
+}
+
+export async function deletePagamentoFluxoCaixa(id) {
+    try {
+        if (id && !id.startsWith('cx-')) {
+            await supabase
+                .from('fluxo_caixa')
+                .delete()
+                .eq('id', id);
+        }
+    } catch (e) {}
+
+    try {
+        let all = JSON.parse(localStorage.getItem('fluxo_caixa_data') || '[]');
+        all = all.filter(p => p.id !== id);
+        localStorage.setItem('fluxo_caixa_data', JSON.stringify(all));
     } catch (e) {}
 
     return true;
