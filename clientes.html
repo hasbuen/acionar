@@ -283,18 +283,8 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Status do Lançamento</label>
-                    <input type="hidden" id="inputStatusPagamento" value="pago">
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" class="btn-chip-status-pagamento btn-animated p-2.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-1.5 border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" data-val="pago">
-                            <i class="fa-solid fa-circle-check text-xs"></i> Pago / Recebido
-                        </button>
-                        <button type="button" class="btn-chip-status-pagamento btn-animated p-2.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-1.5 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300" data-val="a_receber">
-                            <i class="fa-solid fa-clock text-xs"></i> À Receber / Pendente
-                        </button>
-                    </div>
-                </div>
+                <!-- STATUS AUTOMÁTICO COMO PAGO / RECEBIDO NA LIQUIDAÇÃO DO CLIENTE -->
+                <input type="hidden" id="inputStatusPagamento" value="pago">
 
                 <div>
                     <label for="inputObsPagamento" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Observações do Caixa</label>
@@ -565,15 +555,6 @@
             });
         });
 
-        document.querySelectorAll('.btn-chip-status-pagamento').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.btn-chip-status-pagamento').forEach(b => {
-                    b.className = 'btn-chip-status-pagamento btn-animated p-2.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-1.5 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
-                });
-                btn.className = 'btn-chip-status-pagamento btn-animated p-2.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-1.5 border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
-                document.getElementById('inputStatusPagamento').value = btn.dataset.val;
-            });
-        });
 
         const closePagamentoModal = () => modalPag.classList.add('hidden');
         document.getElementById('btnClosePagamentoModal')?.addEventListener('click', closePagamentoModal);
@@ -599,7 +580,7 @@
 
                 document.querySelector(`.btn-chip-condicao[data-val="${item.condicao_pagamento || 'a_vista'}"]`)?.click();
                 document.querySelector(`.btn-chip-forma[data-val="${item.forma_pagamento || 'pix'}"]`)?.click();
-                document.querySelector(`.btn-chip-status-pagamento[data-val="pago"]`)?.click();
+                document.getElementById('inputStatusPagamento').value = 'pago';
 
                 calcValorFinal();
                 modalPag.classList.remove('hidden');
@@ -619,7 +600,7 @@
             const valor_final = parseFloat(inputValorFinal.value || 0);
             const condicao_pagamento = document.getElementById('inputCondicaoPagamento').value;
             const forma_pagamento = document.getElementById('inputFormaPagamento').value;
-            const status_pagamento = document.getElementById('inputStatusPagamento').value;
+            const status_pagamento = 'pago';
             const observacoes = document.getElementById('inputObsPagamento').value.trim();
 
             try {

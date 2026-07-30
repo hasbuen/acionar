@@ -1593,38 +1593,39 @@ export async function fetchAndRenderClientes(containerId) {
         container.innerHTML = '';
         clientes.forEach(cliente => {
             const item = document.createElement('div');
-            item.className = 'p-4 sm:p-5 flex items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all animate-fade-in';
+            item.className = 'p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all animate-fade-in rounded-2xl';
             item.innerHTML = `
                 <div class="flex items-center gap-3 min-w-0">
-                    <div class="h-10 w-10 shrink-0 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-semibold flex items-center justify-center text-sm border border-slate-200 dark:border-slate-700">
+                    <div class="h-10 w-10 shrink-0 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-bold flex items-center justify-center text-sm border border-slate-200 dark:border-slate-700">
                         ${cliente.nome.charAt(0).toUpperCase()}
                     </div>
-                    <div class="min-w-0">
-                        <h4 class="font-semibold text-slate-900 dark:text-white text-sm sm:text-base truncate">${escapeHtml(cliente.nome)}</h4>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                            <i class="fa-solid fa-phone text-xs"></i>
-                            ${cleanPhone(cliente.whatsapp)}
+                    <div class="min-w-0 space-y-0.5">
+                        <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">${escapeHtml(cliente.nome)}</h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
+                            <i class="fa-solid fa-phone text-[10px] text-slate-400"></i>
+                            <span>${cleanPhone(cliente.whatsapp)}</span>
                         </p>
                     </div>
                 </div>
                 
-                <!-- BOTÕES CLIENTES NA HORIZONTAL -->
-                <div class="flex flex-row items-center gap-1.5 shrink-0">
-                    <button class="btn-cliente-financeiro btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 shrink-0" 
+                <!-- BOTÕES CLIENTES: LINHA INFERIOR NO MOBILE / DIREITA NO DESKTOP -->
+                <div class="flex flex-row items-center justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/40">
+                    <button class="btn-cliente-financeiro btn-animated flex items-center justify-center gap-1 h-9 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-black border border-emerald-500/20 shrink-0" 
                         data-cliente-id="${cliente.id}" 
                         data-cliente-nome="${escapeHtml(cliente.nome)}" 
                         data-cliente-whatsapp="${cleanPhone(cliente.whatsapp)}" 
                         title="Ver Histórico Financeiro e Baixa de Pendências">
                         <i class="fa-solid fa-dollar-sign text-xs"></i>
+                        <span class="text-[11px] font-bold sm:hidden">Caixa</span>
                     </button>
                     <a href="https://wa.me/55${cleanPhone(cliente.whatsapp)}" target="_blank" rel="noopener noreferrer" 
                         class="btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 shrink-0" title="Conversar no WhatsApp">
                         <i class="fa-brands fa-whatsapp text-sm"></i>
                     </a>
-                    <button class="btn-edit-cliente btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200/50 dark:border-slate-800" data-cliente='${JSON.stringify(cliente)}' title="Editar Cliente">
+                    <button class="btn-edit-cliente btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200/50 dark:border-slate-800 shrink-0" data-cliente='${JSON.stringify(cliente)}' title="Editar Cliente">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
-                    <button class="btn-delete-cliente btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200/50 dark:border-slate-800" data-id="${cliente.id}" title="Excluir Cliente">
+                    <button class="btn-delete-cliente btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200/50 dark:border-slate-800 shrink-0" data-id="${cliente.id}" title="Excluir Cliente">
                         <i class="fa-solid fa-trash-can text-xs"></i>
                     </button>
                 </div>
