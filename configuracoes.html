@@ -124,18 +124,33 @@
 
                     <div class="space-y-2">
                         <div class="flex items-center justify-between">
-                            <label for="inputMensagemWa" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Modelo da Mensagem</label>
+                            <label for="inputMensagemWa" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">1. Modelo da Mensagem de Confirmação (Novos Agendamentos)</label>
                             <button type="button" id="btnRestaurarMensagemPadrao" class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
                                 Restaurar Padrão
                             </button>
                         </div>
-                        <textarea id="inputMensagemWa" rows="7" required
+                        <textarea id="inputMensagemWa" rows="6" required
                             class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 p-4 text-xs sm:text-sm text-slate-900 dark:text-white font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                    </div>
+
+                    <!-- Modelo de Mensagem de Manutenção (Lembrete) -->
+                    <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label for="inputMensagemManutencaoWa" class="block text-xs font-extrabold uppercase tracking-wider text-purple-600 dark:text-purple-400">2. Modelo da Mensagem de Manutenção (Lembrete 2 dias antes)</label>
+                                <span class="text-[10px] text-slate-400 font-medium">Enviada ao clicar em "Lembrete Manutenção" nos agendamentos de retorno</span>
+                            </div>
+                            <button type="button" id="btnRestaurarMensagemManutencaoPadrao" class="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline shrink-0">
+                                Restaurar Padrão
+                            </button>
+                        </div>
+                        <textarea id="inputMensagemManutencaoWa" rows="6" required
+                            class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-purple-500/20 dark:border-purple-500/30 p-4 text-xs sm:text-sm text-slate-900 dark:text-white font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
                     </div>
 
                     <!-- Tags Inseridoras Rápidas -->
                     <div class="space-y-1.5 pt-1">
-                        <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Toque para Inserir Variáveis:</span>
+                        <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Toque para Inserir Variáveis na Mensagem:</span>
                         <div class="flex flex-wrap gap-1.5">
                             <button type="button" class="btn-insert-tag px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-bold hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors" data-tag="{cliente}">+{cliente}</button>
                             <button type="button" class="btn-insert-tag px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-bold hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors" data-tag="{servico}">+{servico}</button>
@@ -148,7 +163,7 @@
                     <div class="flex justify-end pt-2">
                         <button type="submit" id="btnSaveWhatsApp" class="flex items-center justify-center gap-2 px-6 py-3 rounded-full text-xs font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 transition-all active:scale-95">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span>Salvar Mensagem do WhatsApp</span>
+                            <span>Salvar Configurações de Mensagens</span>
                         </button>
                     </div>
                 </form>
@@ -235,6 +250,7 @@
             fetchConfiguracaoMensagemWhatsApp,
             saveConfiguracaoMensagemWhatsApp,
             MENSAGEM_WHATSAPP_PADRAO,
+            MENSAGEM_MANUTENCAO_PADRAO,
             isAlarmEnabled,
             toggleAlarmState
         } from './js/app.js';
@@ -282,12 +298,24 @@
         const ORDEM_DIAS = ["1", "2", "3", "4", "5", "6", "0"];
 
         let currentConfig = null;
+        let lastFocusedTextarea = null;
+
+        const inputMensagemWa = document.getElementById('inputMensagemWa');
+        const inputMensagemManutencaoWa = document.getElementById('inputMensagemManutencaoWa');
+
+        if (inputMensagemWa) {
+            inputMensagemWa.addEventListener('focus', () => lastFocusedTextarea = inputMensagemWa);
+        }
+        if (inputMensagemManutencaoWa) {
+            inputMensagemManutencaoWa.addEventListener('focus', () => lastFocusedTextarea = inputMensagemManutencaoWa);
+        }
 
         // --- CARREGAR CONFIGURAÇÃO DE MENSAGEM WHATSAPP ---
         async function loadWhatsAppConfig() {
             const config = await fetchConfiguracaoMensagemWhatsApp();
             document.getElementById('inputEndereco').value = config.endereco || "Rua Principal, 123 - Centro";
             document.getElementById('inputMensagemWa').value = config.mensagem || MENSAGEM_WHATSAPP_PADRAO;
+            document.getElementById('inputMensagemManutencaoWa').value = config.mensagem_manutencao || MENSAGEM_MANUTENCAO_PADRAO;
         }
 
         // Form WhatsApp Submit
@@ -295,12 +323,13 @@
             e.preventDefault();
             const endereco = document.getElementById('inputEndereco').value.trim();
             const mensagem = document.getElementById('inputMensagemWa').value.trim();
+            const mensagem_manutencao = document.getElementById('inputMensagemManutencaoWa').value.trim();
             const btn = document.getElementById('btnSaveWhatsApp');
 
             btn.disabled = true;
             try {
-                await saveConfiguracaoMensagemWhatsApp({ endereco, mensagem });
-                showToast('Mensagem do WhatsApp e endereço salvos com sucesso!', 'success');
+                await saveConfiguracaoMensagemWhatsApp({ endereco, mensagem, mensagem_manutencao });
+                showToast('Configurações de mensagens e endereço salvos com sucesso!', 'success');
             } catch (err) {
                 showToast('Erro ao salvar mensagem: ' + err.message, 'error');
             } finally {
@@ -311,16 +340,23 @@
         // Restaurar padrão
         document.getElementById('btnRestaurarMensagemPadrao')?.addEventListener('click', () => {
             document.getElementById('inputMensagemWa').value = MENSAGEM_WHATSAPP_PADRAO;
-            showToast('Modelo padrão restaurado na caixa de texto.', 'info');
+            showToast('Modelo de confirmação padrão restaurado.', 'info');
         });
 
-        // Inserir Tag na posição do cursor
+        document.getElementById('btnRestaurarMensagemManutencaoPadrao')?.addEventListener('click', () => {
+            document.getElementById('inputMensagemManutencaoWa').value = MENSAGEM_MANUTENCAO_PADRAO;
+            showToast('Modelo de manutenção padrão restaurado.', 'info');
+        });
+
+        // Inserir Tag na posição do cursor na caixa focada ou principal
         document.querySelectorAll('.btn-insert-tag').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tag = btn.dataset.tag;
-                const textarea = document.getElementById('inputMensagemWa');
-                const start = textarea.selectionStart;
-                const end = textarea.selectionEnd;
+                const textarea = lastFocusedTextarea || document.getElementById('inputMensagemWa');
+                if (!textarea) return;
+
+                const start = textarea.selectionStart || 0;
+                const end = textarea.selectionEnd || 0;
                 const val = textarea.value;
 
                 textarea.value = val.substring(0, start) + tag + val.substring(end);

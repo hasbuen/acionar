@@ -275,6 +275,16 @@ Por gentileza, informe se concorda com este horário ou se prefere realizar algu
 
 Agradecemos a preferência e aguardamos você!😊`;
 
+export const MENSAGEM_MANUTENCAO_PADRAO = `Olá, *{cliente}*! 👋
+
+Passando para lembrar que sua *MANUTENÇÃO PERIÓDICA* de *{servico}* está agendada para o dia *{data}* às *{hora}*.
+
+📍 *Endereço*: {endereco}
+
+📌 *Lembrete*: Essa manutenção é essencial para garantir o melhor resultado do seu serviço!
+
+Caso precise fazer algum ajuste de horário, por favor nos responda por aqui. Aguardamos você! 😊`;
+
 export async function fetchConfiguracaoMensagemWhatsApp() {
     try {
         const { data, error } = await supabase
@@ -291,16 +301,17 @@ export async function fetchConfiguracaoMensagemWhatsApp() {
 
     return {
         mensagem: MENSAGEM_WHATSAPP_PADRAO,
+        mensagem_manutencao: MENSAGEM_MANUTENCAO_PADRAO,
         endereco: "Rua Principal, 123 - Centro"
     };
 }
 
-export async function saveConfiguracaoMensagemWhatsApp({ mensagem, endereco }) {
+export async function saveConfiguracaoMensagemWhatsApp({ mensagem, mensagem_manutencao, endereco }) {
     const { error } = await supabase
         .from('configuracoes')
         .upsert({
             chave: 'mensagem_whatsapp',
-            valor: { mensagem, endereco },
+            valor: { mensagem, mensagem_manutencao, endereco },
             descricao: 'Template personalizado de mensagem no WhatsApp e endereço do estabelecimento'
         }, { onConflict: 'chave' });
 
@@ -312,6 +323,21 @@ export async function saveConfiguracaoMensagemWhatsApp({ mensagem, endereco }) {
 export async function generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio }) {
     const config = await fetchConfiguracaoMensagemWhatsApp();
     let template = config.mensagem || MENSAGEM_WHATSAPP_PADRAO;
+    const endereco = config.endereco || "Nosso Endereço";
+
+    template = template
+        .replace(/\{cliente\}/g, clienteNome || '')
+        .replace(/\{servico\}/g, servicoNome || '')
+        .replace(/\{data\}/g, dataFormatada || '')
+        .replace(/\{hora\}/g, horaInicio || '')
+        .replace(/\{endereco\}/g, endereco || '');
+
+    return encodeURIComponent(template);
+}
+
+export async function generateWhatsAppManutencaoMessage({ clienteNome, servicoNome, dataFormatada, horaInicio }) {
+    const config = await fetchConfiguracaoMensagemWhatsApp();
+    let template = config.mensagem_manutencao || MENSAGEM_MANUTENCAO_PADRAO;
     const endereco = config.endereco || "Nosso Endereço";
 
     template = template
@@ -1292,10 +1318,21 @@ function renderAgendamentosList(container, agendamentos) {
                 `}
 
                 ${clienteWhatsapp ? `
-                    <a href="https://wa.me/55${cleanPhone(clienteWhatsapp)}" target="_blank" rel="noopener noreferrer" 
-                        class="flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shrink-0" title="Conversar no WhatsApp">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
-                    </a>
+                    <button type="button" class="btn-send-wa-agendamento flex items-center justify-center h-9 px-2.5 rounded-xl ${
+                        isManutencao 
+                            ? 'bg-purple-500/10 text-purple-600 dark:text-purple-300 hover:bg-purple-500/20 border border-purple-500/20' 
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20'
+                    } transition-all shrink-0 font-extrabold text-[11px]" 
+                        title="${isManutencao ? 'Enviar Lembrete de Manutenção no WhatsApp' : 'Conversar no WhatsApp'}"
+                        data-whatsapp="${cleanPhone(clienteWhatsapp)}"
+                        data-cliente-nome="${escapeHtml(clienteNome)}"
+                        data-servico-nome="${escapeHtml(servicoNome)}"
+                        data-data-formatada="${dataFormatada}"
+                        data-hora-inicio="${horaInicio}"
+                        data-is-manutencao="${isManutencao ? 'true' : 'false'}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                        <span>${isManutencao ? 'Lembrete Manutenção' : 'WhatsApp'}</span>
+                    </button>
                 ` : ''}
 
                 <button class="btn-edit-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors shrink-0" data-agendamento='${JSON.stringify(ag)}' title="Editar Agendamento">

@@ -356,6 +356,7 @@
             getAvailableTimeSlots,
             subscribeToAgendamentos,
             generateWhatsAppConfirmMessage,
+            generateWhatsAppManutencaoMessage,
             cleanPhone
         } from './js/app.js';
         import { supabase } from './js/supabase.js';
@@ -599,6 +600,31 @@
 
                 } catch (err) {
                     showToast('Erro ao aceitar agendamento: ' + err.message, 'error');
+                }
+                return;
+            }
+
+            // ENVIAR MENSAGEM DO WHATSAPP (AGENDAMENTO NORMAL OU MANUTENÇÃO)
+            const btnWa = e.target.closest('.btn-send-wa-agendamento');
+            if (btnWa) {
+                const whatsapp = btnWa.dataset.whatsapp;
+                const clienteNome = btnWa.dataset.clienteNome;
+                const servicoNome = btnWa.dataset.servicoNome;
+                const dataFormatada = btnWa.dataset.dataFormatada;
+                const horaInicio = btnWa.dataset.horaInicio;
+                const isManutencao = btnWa.dataset.isManutencao === 'true';
+
+                try {
+                    let msgEncoded = '';
+                    if (isManutencao) {
+                        msgEncoded = await generateWhatsAppManutencaoMessage({ clienteNome, servicoNome, dataFormatada, horaInicio });
+                    } else {
+                        msgEncoded = await generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio });
+                    }
+                    const waUrl = `https://wa.me/55${whatsapp}?text=${msgEncoded}`;
+                    window.open(waUrl, '_blank');
+                } catch (err) {
+                    showToast('Erro ao abrir WhatsApp: ' + err.message, 'error');
                 }
                 return;
             }
