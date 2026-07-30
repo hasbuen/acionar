@@ -143,30 +143,172 @@
         </div>
     </nav>
 
-    <!-- MODAL DE CLIENTE -->
-    <div id="modalCliente" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden p-0 sm:p-4 overflow-y-auto">
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-lg p-6 sm:p-8 shadow-2xl space-y-5 my-0 sm:my-auto">
-            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-4">
-                <h3 id="modalClienteTitle" class="text-lg font-bold text-slate-900 dark:text-white">Novo Cliente</h3>
-                <button id="btnCloseModalCliente" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+    <!-- MODAL HISTÓRICO FINANCEIRO E ESTATÍSTICAS DO CLIENTE -->
+    <div id="modalClienteFinanceiro" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md hidden p-0 sm:p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-2xl p-5 sm:p-7 shadow-2xl space-y-5 my-0 sm:my-auto max-h-[92vh] overflow-y-auto animate-scale-in">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                <div class="flex items-center gap-3">
+                    <div class="h-10 w-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-extrabold border border-emerald-500/20">
+                        <i class="fa-solid fa-dollar-sign text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white leading-tight" id="modalFinClienteNome">Cliente</h3>
+                        <p class="text-xs text-slate-400 font-medium flex items-center gap-1.5" id="modalFinClienteWhatsapp">
+                            <i class="fa-brands fa-whatsapp text-emerald-500"></i> WhatsApp
+                        </p>
+                    </div>
+                </div>
+                <button id="btnCloseModalFinCliente" class="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
+                    <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
 
-            <form id="formCliente" class="space-y-4">
-                <input type="hidden" id="clienteId">
-                <div>
-                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nome Completo</label>
-                    <input type="text" id="inputNome" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <!-- CARDS DE ESTATÍSTICAS DO CLIENTE -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+                    <span class="block text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">Total Pago</span>
+                    <span class="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400" id="finStatPago">R$ 0,00</span>
                 </div>
-                <div>
-                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">WhatsApp</label>
-                    <input type="tel" id="inputWhatsapp" required placeholder="(11) 99999-9999" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center">
+                    <span class="block text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-wider">Em Aberto</span>
+                    <span class="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400" id="finStatPendente">R$ 0,00</span>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-center">
+                    <span class="block text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider">Contratado</span>
+                    <span class="text-sm sm:text-base font-black text-blue-600 dark:text-blue-400" id="finStatTotal">R$ 0,00</span>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-center">
+                    <span class="block text-[10px] font-black uppercase text-purple-600 dark:text-purple-400 tracking-wider">Serviços</span>
+                    <span class="text-sm sm:text-base font-black text-purple-600 dark:text-purple-400" id="finStatQtd">0</span>
+                </div>
+            </div>
+
+            <!-- HISTÓRICO DE SERVIÇOS CONTRATADOS E LANÇAMENTOS -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Histórico de Serviços & Caixa</h4>
+                    <span class="text-[11px] text-slate-400 font-medium">Clique em "Liquidar" para dar baixa</span>
+                </div>
+                <div id="containerHistoricoCliente" class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                    <!-- Preenchido dinamicamente via JS -->
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" id="btnDoneModalFinCliente" class="btn-animated px-6 py-2.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE LIQUIDAÇÃO DE PAGAMENTO (REGISTRAR/DAR BAIXA) -->
+    <div id="modalPagamento" class="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md hidden p-0 sm:p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-lg p-5 sm:p-7 shadow-2xl space-y-4 my-0 sm:my-auto max-h-[92vh] overflow-y-auto animate-scale-in">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-sack-dollar text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900 dark:text-white leading-tight">Liquidar Pendência do Cliente</h3>
+                        <p class="text-[11px] text-slate-400 font-medium">Informe os dados e dê baixa no pagamento</p>
+                    </div>
+                </div>
+                <button id="btnClosePagamentoModal" class="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <form id="formPagamento" class="space-y-4">
+                <input type="hidden" id="pagamentoId">
+                <input type="hidden" id="pagamentoAgendamentoId">
+                <input type="hidden" id="pagamentoClienteId">
+                <input type="hidden" id="pagamentoServicoId">
+
+                <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-between">
+                    <div>
+                        <span id="pagamentoClienteNome" class="block text-xs font-extrabold text-slate-900 dark:text-white">Cliente</span>
+                        <span id="pagamentoServicoNome" class="block text-[11px] text-slate-500 dark:text-slate-400">Serviço</span>
+                    </div>
+                    <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/20">Liquidação</span>
                 </div>
 
-                <div class="flex justify-end gap-3 pt-3">
-                    <button type="button" id="btnCancelModalCliente" class="px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
-                    <button type="submit" class="px-6 py-2.5 rounded-full text-xs font-extrabold bg-blue-600 text-white hover:bg-blue-500 shadow-md">Salvar</button>
+                <div class="grid grid-cols-3 gap-2.5">
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Valor Bruto (R$)</label>
+                        <input type="number" step="0.01" id="inputValorBrutoPagamento" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Desconto (R$)</label>
+                        <input type="number" step="0.01" id="inputDescontoPagamento" value="0.00" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1">Valor Final (R$)</label>
+                        <input type="number" step="0.01" id="inputValorFinalPagamento" readonly class="w-full rounded-2xl bg-emerald-500/10 border border-emerald-500/30 px-3 py-2.5 text-xs font-black text-emerald-600 dark:text-emerald-400 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Condição de Pagamento</label>
+                    <input type="hidden" id="inputCondicaoPagamento" value="a_vista">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" class="btn-chip-condicao btn-animated p-2.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-1.5 border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" data-val="a_vista">
+                            <i class="fa-solid fa-bolt text-xs"></i> À Vista
+                        </button>
+                        <button type="button" class="btn-chip-condicao btn-animated p-2.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-1.5 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300" data-val="a_prazo">
+                            <i class="fa-solid fa-calendar-minus text-xs"></i> À Prazo / Fiado
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Forma de Pagamento</label>
+                    <input type="hidden" id="inputFormaPagamento" value="pix">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button type="button" class="btn-chip-forma btn-animated p-2 rounded-2xl border text-[11px] font-bold flex flex-col items-center gap-1 border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" data-val="pix">
+                            <i class="fa-solid fa-qrcode text-sm"></i> PIX
+                        </button>
+                        <button type="button" class="btn-chip-forma btn-animated p-2 rounded-2xl border text-[11px] font-bold flex flex-col items-center gap-1 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300" data-val="cartao_credito">
+                            <i class="fa-solid fa-credit-card text-sm"></i> C. Crédito
+                        </button>
+                        <button type="button" class="btn-chip-forma btn-animated p-2 rounded-2xl border text-[11px] font-bold flex flex-col items-center gap-1 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300" data-val="cartao_debito">
+                            <i class="fa-solid fa-money-check text-sm"></i> C. Débito
+                        </button>
+                        <button type="button" class="btn-chip-forma btn-animated p-2 rounded-2xl border text-[11px] font-bold flex flex-col items-center gap-1 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300" data-val="dinheiro">
+                            <i class="fa-solid fa-money-bill-wave text-sm"></i> Dinheiro
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Status do Lançamento</label>
+                    <input type="hidden" id="inputStatusPagamento" value="pago">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" class="btn-chip-status-pagamento btn-animated p-2.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-1.5 border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" data-val="pago">
+                            <i class="fa-solid fa-circle-check text-xs"></i> Pago / Recebido
+                        </button>
+                        <button type="button" class="btn-chip-status-pagamento btn-animated p-2.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-1.5 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300" data-val="a_receber">
+                            <i class="fa-solid fa-clock text-xs"></i> À Receber / Pendente
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="inputObsPagamento" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Observações do Caixa</label>
+                    <input type="text" id="inputObsPagamento" placeholder="Ex: Liquidação parcial ou troco..." class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <div class="flex justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" id="btnCancelPagamentoModal" class="btn-animated px-5 py-2.5 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-animated flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-xs font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20">
+                        <i class="fa-solid fa-check text-xs"></i>
+                        <span>Dar Baixa / Salvar</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -182,7 +324,9 @@
             applyPhoneMask, 
             fetchAndRenderClientes,
             updateCliente,
-            deleteCliente
+            deleteCliente,
+            fetchTodosPagamentosFluxoCaixa,
+            savePagamentoFluxoCaixa
         } from './js/app.js?v=1.1';
         import { supabase } from './js/supabase.js';
 
@@ -194,6 +338,10 @@
         const cancelModalBtn = document.getElementById('btnCancelModalCliente');
         const form = document.getElementById('formCliente');
         const phoneInput = document.getElementById('inputWhatsapp');
+
+        const modalFin = document.getElementById('modalClienteFinanceiro');
+        const modalPag = document.getElementById('modalPagamento');
+        let currentClientFin = null;
 
         applyPhoneMask(phoneInput);
 
@@ -232,8 +380,120 @@
             }
         });
 
+        // MODAL FINANCEIRO DO CLIENTE LOGIC
+        const closeFinModal = () => modalFin.classList.add('hidden');
+        document.getElementById('btnCloseModalFinCliente')?.addEventListener('click', closeFinModal);
+        document.getElementById('btnDoneModalFinCliente')?.addEventListener('click', closeFinModal);
+
+        const loadClientFinancialModal = async (cId, cNome, cWhatsapp) => {
+            currentClientFin = { id: cId, nome: cNome, whatsapp: cWhatsapp };
+            document.getElementById('modalFinClienteNome').textContent = cNome;
+            document.getElementById('modalFinClienteWhatsapp').innerHTML = `<i class="fa-brands fa-whatsapp text-emerald-500"></i> ${cWhatsapp || 'Sem WhatsApp'}`;
+
+            const containerHist = document.getElementById('containerHistoricoCliente');
+            containerHist.innerHTML = `
+                <div class="flex items-center justify-center py-8">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
+                </div>
+            `;
+
+            modalFin.classList.remove('hidden');
+
+            try {
+                const todos = await fetchTodosPagamentosFluxoCaixa();
+                const clientItems = todos.filter(p => p.cliente_id === cId || (p.clientes && p.clientes.id === cId));
+
+                let totalPago = 0;
+                let totalPendente = 0;
+                let totalContratado = 0;
+
+                clientItems.forEach(p => {
+                    const val = parseFloat(p.valor_final || 0);
+                    totalContratado += val;
+                    if (p.status_pagamento === 'pago') {
+                        totalPago += val;
+                    } else {
+                        totalPendente += val;
+                    }
+                });
+
+                document.getElementById('finStatPago').textContent = `R$ ${totalPago.toFixed(2)}`;
+                document.getElementById('finStatPendente').textContent = `R$ ${totalPendente.toFixed(2)}`;
+                document.getElementById('finStatTotal').textContent = `R$ ${totalContratado.toFixed(2)}`;
+                document.getElementById('finStatQtd').textContent = clientItems.length;
+
+                if (clientItems.length === 0) {
+                    containerHist.innerHTML = `
+                        <div class="py-8 text-center text-xs text-slate-400">
+                            Nenhum registro de serviço ou pagamento encontrado para este cliente.
+                        </div>
+                    `;
+                    return;
+                }
+
+                containerHist.innerHTML = '';
+                clientItems.forEach(item => {
+                    const sNome = item.servicos?.nome || 'Serviço';
+                    const dataStr = item.data_pagamento || item.criado_em || item.data_vencimento;
+                    const dataFmt = dataStr ? new Date(dataStr).toLocaleDateString('pt-BR') : 'Data n/d';
+                    const isPago = item.status_pagamento === 'pago';
+                    const valFinal = parseFloat(item.valor_final || 0).toFixed(2);
+
+                    const div = document.createElement('div');
+                    div.className = 'p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-between gap-3';
+                    div.innerHTML = `
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-slate-900 dark:text-white text-xs truncate">${sNome}</span>
+                                <span class="text-[9px] font-black px-2 py-0.5 rounded-full border ${
+                                    isPago 
+                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                                } shrink-0">
+                                    ${isPago ? 'PAGO' : 'À RECEBER'}
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+                                <span><i class="fa-regular fa-calendar text-[10px]"></i> ${dataFmt}</span>
+                                <span>• ${item.forma_pagamento ? item.forma_pagamento.toUpperCase() : 'PIX'}</span>
+                            </p>
+                        </div>
+
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-xs font-black text-slate-900 dark:text-white">R$ ${valFinal}</span>
+                            ${!isPago ? `
+                                <button type="button" class="btn-liquidar-item-cliente btn-animated px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-black border border-emerald-500/20 flex items-center gap-1 shrink-0"
+                                    data-item='${JSON.stringify(item)}'>
+                                    <i class="fa-solid fa-check text-[10px]"></i> Liquidar
+                                </button>
+                            ` : ''}
+                        </div>
+                    `;
+                    containerHist.appendChild(div);
+                });
+
+            } catch (err) {
+                console.error("Erro ao carregar financeiro do cliente:", err);
+                containerHist.innerHTML = `
+                    <div class="py-8 text-center text-xs text-rose-500">
+                        Erro ao carregar histórico: ${err.message}
+                    </div>
+                `;
+            }
+        };
+
+        // EVENTOS DE CLIQUE NO CONTAINER DE CLIENTES
         const container = document.getElementById('clientesContainer');
         container?.addEventListener('click', async (e) => {
+            const btnFin = e.target.closest('.btn-cliente-financeiro');
+            if (btnFin) {
+                const cId = btnFin.dataset.clienteId;
+                const cNome = btnFin.dataset.clienteNome;
+                const cWhatsapp = btnFin.dataset.clienteWhatsapp;
+                loadClientFinancialModal(cId, cNome, cWhatsapp);
+                return;
+            }
+
             const btnDelete = e.target.closest('.btn-delete-cliente');
             if (btnDelete) {
                 const id = btnDelete.dataset.id;
@@ -267,6 +527,124 @@
                 document.getElementById('inputWhatsapp').value = cliente.whatsapp;
                 document.getElementById('modalClienteTitle').textContent = 'Editar Cliente';
                 modal.classList.remove('hidden');
+            }
+        });
+
+        // LIQUIDAÇÃO DE PENDÊNCIAS DENTRO DO MODAL FINANCEIRO
+        const inputValorBruto = document.getElementById('inputValorBrutoPagamento');
+        const inputDesconto = document.getElementById('inputDescontoPagamento');
+        const inputValorFinal = document.getElementById('inputValorFinalPagamento');
+
+        const calcValorFinal = () => {
+            const bruto = parseFloat(inputValorBruto.value || 0);
+            const desc = parseFloat(inputDesconto.value || 0);
+            inputValorFinal.value = Math.max(0, bruto - desc).toFixed(2);
+        };
+
+        inputValorBruto?.addEventListener('input', calcValorFinal);
+        inputDesconto?.addEventListener('input', calcValorFinal);
+
+        // SELEÇÃO POR CHIPS NO MODAL PAGAMENTO
+        document.querySelectorAll('.btn-chip-condicao').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.btn-chip-condicao').forEach(b => {
+                    b.className = 'btn-chip-condicao btn-animated p-2.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-1.5 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
+                });
+                btn.className = 'btn-chip-condicao btn-animated p-2.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-1.5 border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
+                document.getElementById('inputCondicaoPagamento').value = btn.dataset.val;
+            });
+        });
+
+        document.querySelectorAll('.btn-chip-forma').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.btn-chip-forma').forEach(b => {
+                    b.className = 'btn-chip-forma btn-animated p-2 rounded-2xl border text-[11px] font-bold flex flex-col items-center gap-1 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
+                });
+                btn.className = 'btn-chip-forma btn-animated p-2 rounded-2xl border text-[11px] font-bold flex flex-col items-center gap-1 border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
+                document.getElementById('inputFormaPagamento').value = btn.dataset.val;
+            });
+        });
+
+        document.querySelectorAll('.btn-chip-status-pagamento').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.btn-chip-status-pagamento').forEach(b => {
+                    b.className = 'btn-chip-status-pagamento btn-animated p-2.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-1.5 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
+                });
+                btn.className = 'btn-chip-status-pagamento btn-animated p-2.5 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-1.5 border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
+                document.getElementById('inputStatusPagamento').value = btn.dataset.val;
+            });
+        });
+
+        const closePagamentoModal = () => modalPag.classList.add('hidden');
+        document.getElementById('btnClosePagamentoModal')?.addEventListener('click', closePagamentoModal);
+        document.getElementById('btnCancelPagamentoModal')?.addEventListener('click', closePagamentoModal);
+
+        // CLIQUE EM "LIQUIDAR" NO MODAL DO CLIENTE
+        document.getElementById('containerHistoricoCliente')?.addEventListener('click', (e) => {
+            const btnLiq = e.target.closest('.btn-liquidar-item-cliente');
+            if (btnLiq) {
+                const item = JSON.parse(btnLiq.dataset.item);
+
+                document.getElementById('pagamentoId').value = item.id || '';
+                document.getElementById('pagamentoAgendamentoId').value = item.agendamento_id || '';
+                document.getElementById('pagamentoClienteId').value = item.cliente_id || '';
+                document.getElementById('pagamentoServicoId').value = item.servico_id || '';
+
+                document.getElementById('pagamentoClienteNome').textContent = currentClientFin?.nome || 'Cliente';
+                document.getElementById('pagamentoServicoNome').textContent = item.servicos?.nome || 'Serviço';
+
+                inputValorBruto.value = parseFloat(item.valor_bruto || item.valor_final || 0).toFixed(2);
+                inputDesconto.value = parseFloat(item.desconto || 0).toFixed(2);
+                document.getElementById('inputObsPagamento').value = item.observacoes || '';
+
+                document.querySelector(`.btn-chip-condicao[data-val="${item.condicao_pagamento || 'a_vista'}"]`)?.click();
+                document.querySelector(`.btn-chip-forma[data-val="${item.forma_pagamento || 'pix'}"]`)?.click();
+                document.querySelector(`.btn-chip-status-pagamento[data-val="pago"]`)?.click();
+
+                calcValorFinal();
+                modalPag.classList.remove('hidden');
+            }
+        });
+
+        // FORM SUBMIT DO MODAL PAGAMENTO
+        document.getElementById('formPagamento')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('pagamentoId').value;
+            const agendamento_id = document.getElementById('pagamentoAgendamentoId').value;
+            const cliente_id = document.getElementById('pagamentoClienteId').value || currentClientFin?.id;
+            const servico_id = document.getElementById('pagamentoServicoId').value;
+
+            const valor_bruto = parseFloat(inputValorBruto.value || 0);
+            const desconto = parseFloat(inputDesconto.value || 0);
+            const valor_final = parseFloat(inputValorFinal.value || 0);
+            const condicao_pagamento = document.getElementById('inputCondicaoPagamento').value;
+            const forma_pagamento = document.getElementById('inputFormaPagamento').value;
+            const status_pagamento = document.getElementById('inputStatusPagamento').value;
+            const observacoes = document.getElementById('inputObsPagamento').value.trim();
+
+            try {
+                await savePagamentoFluxoCaixa({
+                    id,
+                    agendamento_id,
+                    cliente_id,
+                    servico_id,
+                    valor_bruto,
+                    desconto,
+                    valor_final,
+                    condicao_pagamento,
+                    forma_pagamento,
+                    status_pagamento,
+                    observacoes
+                });
+
+                showToast('Baixa/Pagamento registrado com sucesso!', 'success');
+                closePagamentoModal();
+
+                if (currentClientFin) {
+                    loadClientFinancialModal(currentClientFin.id, currentClientFin.nome, currentClientFin.whatsapp);
+                }
+            } catch (err) {
+                showToast('Erro ao dar baixa: ' + err.message, 'error');
             }
         });
 

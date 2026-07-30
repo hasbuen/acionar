@@ -1475,22 +1475,7 @@ function renderAgendamentosList(container, agendamentos) {
                         data-data-formatada="${dataFormatada}"
                         data-hora-inicio="${horaInicio}"
                         data-is-manutencao="${isManutencao ? 'true' : 'false'}">
-                        ${isManutencao 
-                            ? '<i class="fa-solid fa-bell text-xs"></i>' 
-                            : '<i class="fa-brands fa-whatsapp text-sm"></i>'}
-                    </button>
-                ` : ''}
-
-                ${!isAguardando ? `
-                    <button type="button" class="btn-schedule-manutencao btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-extrabold border border-purple-500/20 shrink-0" 
-                        title="Agendar Manutenção Periódica"
-                        data-id="${ag.id}"
-                        data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
-                        data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
-                        data-cliente-nome="${escapeHtml(clienteNome)}"
-                        data-servico-nome="${escapeHtml(servicoNome)}"
-                        data-data-iso="${ag.data_hora_inicio}">
-                        <i class="fa-solid fa-bell text-xs"></i>
+                        <i class="fa-brands fa-whatsapp text-sm"></i>
                     </button>
                 ` : ''}
 
@@ -1625,6 +1610,13 @@ export async function fetchAndRenderClientes(containerId) {
                 
                 <!-- BOTÕES CLIENTES NA HORIZONTAL -->
                 <div class="flex flex-row items-center gap-1.5 shrink-0">
+                    <button class="btn-cliente-financeiro btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 shrink-0" 
+                        data-cliente-id="${cliente.id}" 
+                        data-cliente-nome="${escapeHtml(cliente.nome)}" 
+                        data-cliente-whatsapp="${cleanPhone(cliente.whatsapp)}" 
+                        title="Ver Histórico Financeiro e Baixa de Pendências">
+                        <i class="fa-solid fa-dollar-sign text-xs"></i>
+                    </button>
                     <a href="https://wa.me/55${cleanPhone(cliente.whatsapp)}" target="_blank" rel="noopener noreferrer" 
                         class="btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 shrink-0" title="Conversar no WhatsApp">
                         <i class="fa-brands fa-whatsapp text-sm"></i>
@@ -2013,11 +2005,11 @@ export async function updateStatusPagamentoFluxoCaixa(id, novoStatus) {
             } else {
                 const { data: ag } = await supabase
                     .from('agendamentos')
-                    .select('*, servicos(preco)')
+                    .select('*, servicos(id, nome, tabela_precos(valor))')
                     .eq('id', realAgendamentoId)
                     .single();
 
-                const preco = parseFloat(ag?.servicos?.preco || 0);
+                const preco = getServicePrice(ag?.servicos);
 
                 await supabase.from('fluxo_caixa').insert([{
                     agendamento_id: realAgendamentoId,
