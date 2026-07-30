@@ -334,6 +334,8 @@
         function renderCharts(pagamentos) {
             const formaCount = { 'pix': 0, 'cartao_credito': 0, 'cartao_debito': 0, 'dinheiro': 0 };
             const condicaoCount = { 'a_vista': 0, 'a_prazo': 0 };
+            const diasSemanaSum = [0, 0, 0, 0, 0, 0, 0]; // Seg (0), Ter (1), Qua (2), Qui (3), Sex (4), Sáb (5), Dom (6)
+            const mapDayIndex = [6, 0, 1, 2, 3, 4, 5]; // 0=Dom -> 6, 1=Seg -> 0, etc.
 
             pagamentos.forEach(p => {
                 const val = parseFloat(p.valor_final || 0);
@@ -342,6 +344,10 @@
 
                 if (formaCount[forma] !== undefined) formaCount[forma] += val;
                 if (condicaoCount[cond] !== undefined) condicaoCount[cond] += val;
+
+                const d = new Date(p.criado_em || p.data_pagamento || Date.now());
+                const dayIdx = mapDayIndex[d.getDay()];
+                if (dayIdx !== undefined) diasSemanaSum[dayIdx] += val;
             });
 
             // 1. Chart Forma de Pagamento
@@ -405,15 +411,7 @@
                         labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
                         datasets: [{
                             label: 'Entradas (R$)',
-                            data: [
-                                formaCount.pix * 0.2, 
-                                formaCount.pix * 0.4, 
-                                formaCount.pix * 0.3, 
-                                formaCount.pix * 0.6, 
-                                formaCount.pix * 0.8, 
-                                formaCount.pix * 1.0, 
-                                formaCount.pix * 0.5
-                            ],
+                            data: diasSemanaSum,
                             borderColor: '#8B5CF6',
                             backgroundColor: 'rgba(139, 92, 246, 0.1)',
                             fill: true,

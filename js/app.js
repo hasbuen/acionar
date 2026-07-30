@@ -1439,6 +1439,19 @@ function renderAgendamentosList(container, agendamentos) {
                     </button>
                 ` : ''}
 
+                ${!isAguardando ? `
+                    <button type="button" class="btn-schedule-manutencao btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-extrabold border border-purple-500/20 shrink-0" 
+                        title="Agendar Manutenção Periódica"
+                        data-id="${ag.id}"
+                        data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
+                        data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
+                        data-cliente-nome="${escapeHtml(clienteNome)}"
+                        data-servico-nome="${escapeHtml(servicoNome)}"
+                        data-data-iso="${ag.data_hora_inicio}">
+                        <i class="fa-solid fa-bell text-xs"></i>
+                    </button>
+                ` : ''}
+
                 <button type="button" class="btn-open-payment-modal btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold border border-emerald-500/20 shrink-0" 
                     title="Registrar / Ver Pagamento (Caixa)"
                     data-agendamento-id="${ag.id}"
@@ -1754,6 +1767,9 @@ export async function fetchPagamentoByAgendamentoId(agendamentoId) {
 }
 
 export async function savePagamentoFluxoCaixa(payload) {
+    const isVirtual = payload.id && typeof payload.id === 'string' && payload.id.startsWith('virtual-');
+    const realId = isVirtual ? null : payload.id;
+
     const dataToSave = {
         agendamento_id: payload.agendamento_id || null,
         cliente_id: payload.cliente_id || null,
@@ -1772,16 +1788,16 @@ export async function savePagamentoFluxoCaixa(payload) {
     let savedRemote = false;
 
     try {
-        if (payload.id && !payload.id.startsWith('cx-')) {
+        if (realId && !realId.startsWith('cx-')) {
             const { error } = await supabase
                 .from('fluxo_caixa')
                 .update(dataToSave)
-                .eq('id', payload.id);
+                .eq('id', realId);
             if (!error) savedRemote = true;
         } else {
             if (payload.agendamento_id) {
                 const existing = await fetchPagamentoByAgendamentoId(payload.agendamento_id);
-                if (existing && existing.id && !existing.id.startsWith('cx-')) {
+                if (existing && existing.id && !existing.id.startsWith('cx-') && !existing.id.startsWith('virtual-')) {
                     await supabase
                         .from('fluxo_caixa')
                         .update(dataToSave)
@@ -1802,7 +1818,7 @@ export async function savePagamentoFluxoCaixa(payload) {
 
     try {
         let all = JSON.parse(localStorage.getItem('fluxo_caixa_data') || '[]');
-        const idToUse = payload.id || (payload.agendamento_id ? 'cx-ag-' + payload.agendamento_id : 'cx-' + Date.now());
+        const idToUse = realId || (payload.agendamento_id ? 'cx-ag-' + payload.agendamento_id : 'cx-' + Date.now());
         
         const existingIdx = all.findIndex(p => p.id === idToUse || (payload.agendamento_id && p.agendamento_id === payload.agendamento_id));
         if (existingIdx >= 0) {
@@ -1818,43 +1834,184 @@ export async function savePagamentoFluxoCaixa(payload) {
 }
 
 export async function fetchTodosPagamentosFluxoCaixa() {
+    let explicitPagamentos = [];
+    let deletedAgendamentoIds = [];
+    try {
+        deletedAgendamentoIds = JSON.parse(localStorage.getItem('fluxo_caixa_deleted_ids') || '[]');
+    } catch (e) {}
+
     try {
         const { data, error } = await supabase
             .from('fluxo_caixa')
             .select(`
                 *,
                 clientes ( id, nome, whatsapp ),
-                servicos ( id, nome ),
+                servicos ( id, nome, preco ),
                 agendamentos ( id, data_hora_inicio, status )
             `)
             .order('criado_em', { ascending: false });
 
-        if (!error && data && data.length > 0) return data;
+        if (!error && data) explicitPagamentos = data;
     } catch (e) {
         console.warn("Consulta fluxo_caixa via Supabase falhou, utilizando fallback.", e);
     }
 
-    try {
-        const all = JSON.parse(localStorage.getItem('fluxo_caixa_data') || '[]');
-        return all;
-    } catch (e) {
-        return [];
+    if (explicitPagamentos.length === 0) {
+        try {
+            explicitPagamentos = JSON.parse(localStorage.getItem('fluxo_caixa_data') || '[]');
+        } catch (e) {
+            explicitPagamentos = [];
+        }
     }
+
+    const agendamentosProcessados = new Set();
+    explicitPagamentos.forEach(p => {
+        if (p.agendamento_id) agendamentosProcessados.add(p.agendamento_id);
+    });
+    deletedAgendamentoIds.forEach(id => agendamentosProcessados.add(id));
+
+    let agendamentosSemCaixa = [];
+    try {
+        const { data: agendamentos, error } = await supabase
+            .from('agendamentos')
+            .select(`
+                id,
+                cliente_id,
+                servico_id,
+                data_hora_inicio,
+                status,
+                criado_em,
+                clientes ( id, nome, whatsapp ),
+                servicos ( id, nome, preco )
+            `)
+            .neq('status', 'cancelado')
+            .neq('status', 'aguardando_confirmacao')
+            .order('data_hora_inicio', { ascending: false });
+
+        if (!error && agendamentos) {
+            agendamentosSemCaixa = agendamentos.filter(ag => !agendamentosProcessados.has(ag.id));
+        }
+    } catch (e) {
+        console.warn("Erro ao buscar agendamentos para fluxo de caixa:", e);
+    }
+
+    if (agendamentosSemCaixa.length === 0 && agendamentosProcessados.size === 0) {
+        try {
+            const localAg = JSON.parse(localStorage.getItem('agendamentos_data') || '[]');
+            agendamentosSemCaixa = localAg.filter(ag => 
+                ag.status !== 'cancelado' && 
+                ag.status !== 'aguardando_confirmacao' && 
+                !agendamentosProcessados.has(ag.id)
+            );
+        } catch (e) {}
+    }
+
+    const now = new Date();
+    const pagamentosSintetizados = agendamentosSemCaixa.map(ag => {
+        const precoServico = parseFloat(ag.servicos?.preco || 0);
+        const dataInicio = new Date(ag.data_hora_inicio || ag.criado_em || Date.now());
+        
+        const isPastOrDone = ag.status === 'concluido' || ag.status === 'finalizado' || dataInicio <= now;
+        const statusPag = isPastOrDone ? 'pago' : 'a_receber';
+
+        return {
+            id: `virtual-${ag.id}`,
+            agendamento_id: ag.id,
+            cliente_id: ag.cliente_id,
+            servico_id: ag.servico_id,
+            valor_bruto: precoServico,
+            desconto: 0.00,
+            valor_final: precoServico,
+            condicao_pagamento: 'a_vista',
+            forma_pagamento: 'pix',
+            status_pagamento: statusPag,
+            data_pagamento: ag.data_hora_inicio || ag.criado_em,
+            data_vencimento: ag.data_hora_inicio || ag.criado_em,
+            observacoes: 'Lançamento automático de agendamento',
+            criado_em: ag.data_hora_inicio || ag.criado_em || new Date().toISOString(),
+            clientes: ag.clientes,
+            servicos: ag.servicos,
+            agendamentos: { id: ag.id, data_hora_inicio: ag.data_hora_inicio, status: ag.status },
+            is_virtual: true
+        };
+    });
+
+    const resultadoFinal = [...explicitPagamentos, ...pagamentosSintetizados];
+    resultadoFinal.sort((a, b) => {
+        const dateA = new Date(a.criado_em || a.data_pagamento || Date.now());
+        const dateB = new Date(b.criado_em || b.data_pagamento || Date.now());
+        return dateB - dateA;
+    });
+
+    return resultadoFinal;
 }
 
 export async function updateStatusPagamentoFluxoCaixa(id, novoStatus) {
+    let realAgendamentoId = null;
+    let isVirtual = false;
+
+    if (id && typeof id === 'string' && id.startsWith('virtual-')) {
+        isVirtual = true;
+        realAgendamentoId = id.replace('virtual-', '');
+    }
+
     try {
-        if (id && !id.startsWith('cx-')) {
+        if (!isVirtual && id && !id.startsWith('cx-')) {
             await supabase
                 .from('fluxo_caixa')
                 .update({ status_pagamento: novoStatus, data_pagamento: new Date().toISOString() })
                 .eq('id', id);
+        } else if (realAgendamentoId) {
+            const existing = await fetchPagamentoByAgendamentoId(realAgendamentoId);
+            if (existing && existing.id && !existing.id.startsWith('cx-') && !existing.id.startsWith('virtual-')) {
+                await supabase
+                    .from('fluxo_caixa')
+                    .update({ status_pagamento: novoStatus, data_pagamento: new Date().toISOString() })
+                    .eq('id', existing.id);
+            } else {
+                const { data: ag } = await supabase
+                    .from('agendamentos')
+                    .select('*, servicos(preco)')
+                    .eq('id', realAgendamentoId)
+                    .single();
+
+                const preco = parseFloat(ag?.servicos?.preco || 0);
+
+                await supabase.from('fluxo_caixa').insert([{
+                    agendamento_id: realAgendamentoId,
+                    cliente_id: ag?.cliente_id || null,
+                    servico_id: ag?.servico_id || null,
+                    valor_bruto: preco,
+                    desconto: 0.00,
+                    valor_final: preco,
+                    condicao_pagamento: 'a_vista',
+                    forma_pagamento: 'pix',
+                    status_pagamento: novoStatus,
+                    data_pagamento: new Date().toISOString(),
+                    observacoes: 'Lançamento confirmado no caixa'
+                }]);
+            }
         }
-    } catch (e) {}
+    } catch (e) {
+        console.warn("Erro ao atualizar status do pagamento no Supabase:", e);
+    }
 
     try {
         let all = JSON.parse(localStorage.getItem('fluxo_caixa_data') || '[]');
-        all = all.map(p => p.id === id ? { ...p, status_pagamento: novoStatus, data_pagamento: new Date().toISOString() } : p);
+        const targetId = realAgendamentoId ? `cx-ag-${realAgendamentoId}` : id;
+        
+        const idx = all.findIndex(p => p.id === id || p.agendamento_id === realAgendamentoId);
+        if (idx >= 0) {
+            all[idx] = { ...all[idx], status_pagamento: novoStatus, data_pagamento: new Date().toISOString() };
+        } else if (realAgendamentoId) {
+            all.push({
+                id: targetId,
+                agendamento_id: realAgendamentoId,
+                status_pagamento: novoStatus,
+                data_pagamento: new Date().toISOString(),
+                criado_em: new Date().toISOString()
+            });
+        }
         localStorage.setItem('fluxo_caixa_data', JSON.stringify(all));
     } catch (e) {}
 
@@ -1862,8 +2019,13 @@ export async function updateStatusPagamentoFluxoCaixa(id, novoStatus) {
 }
 
 export async function deletePagamentoFluxoCaixa(id) {
+    let realAgendamentoId = null;
+    if (id && typeof id === 'string' && id.startsWith('virtual-')) {
+        realAgendamentoId = id.replace('virtual-', '');
+    }
+
     try {
-        if (id && !id.startsWith('cx-')) {
+        if (id && !id.startsWith('cx-') && !id.startsWith('virtual-')) {
             await supabase
                 .from('fluxo_caixa')
                 .delete()
@@ -1872,8 +2034,15 @@ export async function deletePagamentoFluxoCaixa(id) {
     } catch (e) {}
 
     try {
+        const agId = realAgendamentoId || id;
+        if (agId) {
+            let deletedIds = JSON.parse(localStorage.getItem('fluxo_caixa_deleted_ids') || '[]');
+            if (!deletedIds.includes(agId)) deletedIds.push(agId);
+            localStorage.setItem('fluxo_caixa_deleted_ids', JSON.stringify(deletedIds));
+        }
+
         let all = JSON.parse(localStorage.getItem('fluxo_caixa_data') || '[]');
-        all = all.filter(p => p.id !== id);
+        all = all.filter(p => p.id !== id && p.agendamento_id !== realAgendamentoId);
         localStorage.setItem('fluxo_caixa_data', JSON.stringify(all));
     } catch (e) {}
 

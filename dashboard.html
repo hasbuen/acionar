@@ -1270,8 +1270,8 @@
                             showToast('Status atualizado com sucesso!', 'success');
                             refreshAgenda(true);
 
-                            // Pergunta de Manutenção se for alterado para Pendente ou Concluído
-                            if ((newStatus === 'pendente' || newStatus === 'concluido') && clienteId && servicoId) {
+                            // Pergunta de Manutenção se for alterado para Pendente, Em Atendimento ou Concluído
+                            if (['pendente', 'em_atendimento', 'concluido', 'atendido'].includes(newStatus) && clienteId && servicoId) {
                                 showManutencaoPromptModal({
                                     agendamento: {
                                         id,
@@ -1307,6 +1307,47 @@
                             showToast('Erro ao atualizar status: ' + err.message, 'error');
                         }
                     }
+                });
+                return;
+            }
+
+            // BOTÃO DIRETO DE AGENDAR MANUTENÇÃO PERIÓDICA
+            const btnManutencao = e.target.closest('.btn-schedule-manutencao');
+            if (btnManutencao) {
+                const id = btnManutencao.dataset.id;
+                const clienteId = btnManutencao.dataset.clienteId;
+                const servicoId = btnManutencao.dataset.servicoId;
+                const clienteNome = btnManutencao.dataset.clienteNome;
+                const servicoNome = btnManutencao.dataset.servicoNome;
+                const dataIso = btnManutencao.dataset.dataIso;
+
+                showManutencaoPromptModal({
+                    agendamento: {
+                        id,
+                        clienteId,
+                        servicoId,
+                        clienteNome,
+                        servicoNome,
+                        data_hora_inicio: dataIso
+                    },
+                    onSchedule: async ({ periodicidadeDias, dataHoraInicioISO, observacoes }) => {
+                        try {
+                            await criarAgendamentoManutencao({
+                                clienteId,
+                                servicoId,
+                                dataHoraInicioISO,
+                                parentId: id,
+                                periodicidadeDias,
+                                observacoes
+                            });
+                            showToast('Manutenção agendada com sucesso!', 'success');
+                            refreshAgenda(true);
+                        } catch (mErr) {
+                            console.error('Erro ao agendar manutenção:', mErr);
+                            showToast('Erro ao agendar manutenção: ' + mErr.message, 'error');
+                        }
+                    },
+                    onSkip: () => {}
                 });
                 return;
             }
