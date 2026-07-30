@@ -1382,11 +1382,11 @@ function renderAgendamentosList(container, agendamentos) {
 
             <!-- BOTÕES DE AÇÃO HORIZONTAIS COMPACTOS -->
             <div class="flex flex-row items-center justify-end gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/40">
-                ${isSolicitacao ? `
-                    <!-- BOTÃO ACEITAR VERDE -->
-                    <button type="button" class="btn-aceitar-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-md shadow-emerald-600/20 shrink-0" 
+                ${isAguardando ? `
+                    <!-- BOTÃO ACEITAR CHECK VERDE -->
+                    <button type="button" class="btn-aceitar-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold border border-emerald-500/20 shrink-0" 
                         title="Aceitar Agendamento"
-                        data-id="${ag.id}" 
+                        data-id="${ag.id}"
                         data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
                         data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
                         data-cliente-nome="${escapeHtml(clienteNome)}"
@@ -1406,7 +1406,7 @@ function renderAgendamentosList(container, agendamentos) {
                     </button>
                 ` : `
                     <!-- BADGE STATUS MODAL -->
-                    <button type="button" class="btn-open-status-modal btn-animated flex items-center justify-center h-9 px-3 rounded-xl text-xs font-black border ${statusClass} shrink-0" 
+                    <button type="button" class="btn-open-status-modal btn-animated flex items-center justify-between h-9 px-2.5 rounded-xl text-xs font-black border ${statusClass} flex-1 min-w-0" 
                         data-id="${ag.id}"
                         data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
                         data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
@@ -1414,17 +1414,17 @@ function renderAgendamentosList(container, agendamentos) {
                         data-cliente-nome="${escapeHtml(clienteNome)}"
                         data-servico-nome="${escapeHtml(servicoNome)}"
                         data-data-iso="${ag.data_hora_inicio}">
-                        <span>${statusLabel}</span>
-                        <i class="fa-solid fa-chevron-down text-[10px] opacity-70 ml-1.5"></i>
+                        <span class="truncate">${statusLabel}</span>
+                        <i class="fa-solid fa-chevron-down text-[10px] opacity-70 ml-1 shrink-0"></i>
                     </button>
                 `}
 
                 ${clienteWhatsapp ? `
-                    <button type="button" class="btn-send-wa-agendamento btn-animated flex items-center justify-center h-9 px-2.5 rounded-xl ${
+                    <button type="button" class="btn-send-wa-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl ${
                         isManutencao 
                             ? 'bg-purple-500/10 text-purple-600 dark:text-purple-300 hover:bg-purple-500/20 border border-purple-500/20' 
                             : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20'
-                    } shrink-0 font-extrabold text-[11px]" 
+                    } shrink-0" 
                         title="${isManutencao ? 'Enviar Lembrete de Manutenção no WhatsApp' : 'Conversar no WhatsApp'}"
                         data-whatsapp="${cleanPhone(clienteWhatsapp)}"
                         data-cliente-nome="${escapeHtml(clienteNome)}"
@@ -1432,8 +1432,9 @@ function renderAgendamentosList(container, agendamentos) {
                         data-data-formatada="${dataFormatada}"
                         data-hora-inicio="${horaInicio}"
                         data-is-manutencao="${isManutencao ? 'true' : 'false'}">
-                        <i class="fa-brands fa-whatsapp text-sm ${isManutencao ? '' : 'sm:mr-0'} mr-1 shrink-0"></i>
-                        <span>${isManutencao ? 'Lembrete Manutenção' : 'WhatsApp'}</span>
+                        ${isManutencao 
+                            ? '<i class="fa-solid fa-bell text-xs"></i>' 
+                            : '<i class="fa-brands fa-whatsapp text-sm"></i>'}
                     </button>
                 ` : ''}
 
