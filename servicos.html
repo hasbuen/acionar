@@ -173,6 +173,97 @@
         </div>
     </div>
 
+    <!-- MODAL DE SUBSERVIÇOS / VARIAÇÕES (1 IMAGEM POR SUBSERVIÇO) -->
+    <div id="modalSubservicos" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md hidden p-0 sm:p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-xl p-5 sm:p-7 shadow-2xl space-y-4 my-0 sm:my-auto max-h-[92vh] overflow-y-auto animate-scale-in">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                <div>
+                    <h3 id="subservicosTitle" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-blue-500"></i>
+                        <span>Gerenciar Subserviços</span>
+                    </h3>
+                    <p id="subservicosSubtitle" class="text-xs text-slate-400 font-medium mt-0.5">Adicione opções como Básico, Premium ou Adicionais</p>
+                </div>
+                <button id="btnCloseSubservicosModal" class="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- FORMULÁRIO DE CADASTRO / EDIÇÃO DE SUBSERVIÇO -->
+            <form id="formSubservico" class="space-y-3 p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
+                <input type="hidden" id="subservicoId">
+                <input type="hidden" id="subservicoParentId">
+                <input type="hidden" id="subservicoImagemUrl">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nome do Subserviço</label>
+                        <input type="text" id="inputNomeSubservico" required placeholder="Ex: Pacote Premium, Megahiper, Com Lavagem Especial" class="w-full rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Preço Adicional (R$)</label>
+                        <input type="number" step="0.01" id="inputPrecoSubservico" required placeholder="0.00" class="w-full rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Duração Adicional (min)</label>
+                        <input type="number" id="inputDuracaoSubservico" required placeholder="0" class="w-full rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Descrição (Opcional)</label>
+                    <input type="text" id="inputDescricaoSubservico" placeholder="Ex: Inclui produto especial e massagem capilar..." class="w-full rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- CAMPO DA IMAGEM DO SUBSERVIÇO (APENAS 1 IMAGEM PERMITIDA) -->
+                <div>
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center justify-between">
+                        <span>Imagem Ilustrativa do Subserviço (Apenas 1 Imagem)</span>
+                        <span class="text-[10px] text-slate-400 font-normal">Formats: JPG, PNG, WEBP</span>
+                    </label>
+
+                    <div class="flex items-center gap-3">
+                        <div id="subservicoImagePreviewContainer" class="h-16 w-16 shrink-0 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden relative group">
+                            <img id="subservicoImagePreview" src="" class="h-full w-full object-cover hidden">
+                            <i id="subservicoImagePlaceholder" class="fa-solid fa-image text-slate-300 dark:text-slate-600 text-xl"></i>
+                        </div>
+
+                        <div class="flex-1 space-y-1.5">
+                            <label class="btn-animated cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-blue-500 hover:text-white transition-all">
+                                <i class="fa-solid fa-upload text-xs"></i>
+                                <span>Selecionar Imagem</span>
+                                <input type="file" id="inputImageFileSubservico" accept="image/*" class="hidden">
+                            </label>
+                            <button type="button" id="btnRemoveSubservicoImage" class="hidden text-xs font-semibold text-rose-500 hover:underline block">
+                                Remover imagem
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" id="btnResetSubservicoForm" class="btn-animated px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800">
+                        Limpar
+                    </button>
+                    <button type="submit" class="btn-animated flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-md">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                        <span>Salvar Subserviço</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- LISTA DE SUBSERVIÇOS CADASTRADOS -->
+            <div class="space-y-2 pt-2">
+                <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Subserviços Cadastrados</h4>
+                <div id="subservicosListContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script type="module">
         import { 
@@ -181,6 +272,9 @@
             showConfirmModal,
             showAlertModal,
             fetchServicosAtivos,
+            fetchSubservicosByServicoId,
+            saveSubservico,
+            deleteSubservico,
             updateServico,
             deleteServico,
             escapeHtml
@@ -194,6 +288,177 @@
         const closeModalBtn = document.getElementById('btnCloseModalServico');
         const cancelModalBtn = document.getElementById('btnCancelModalServico');
         const form = document.getElementById('formServico');
+
+        // GERENCIADOR DO MODAL DE SUBSERVIÇOS
+        const modalSubservicos = document.getElementById('modalSubservicos');
+        const btnCloseSubservicosModal = document.getElementById('btnCloseSubservicosModal');
+        const formSubservico = document.getElementById('formSubservico');
+        const subservicosTitle = document.getElementById('subservicosTitle');
+        const subservicosSubtitle = document.getElementById('subservicosSubtitle');
+        const subservicosListContainer = document.getElementById('subservicosListContainer');
+        const inputImageFileSubservico = document.getElementById('inputImageFileSubservico');
+        const subservicoImagePreview = document.getElementById('subservicoImagePreview');
+        const subservicoImagePlaceholder = document.getElementById('subservicoImagePlaceholder');
+        const btnRemoveSubservicoImage = document.getElementById('btnRemoveSubservicoImage');
+        const subservicoImagemUrl = document.getElementById('subservicoImagemUrl');
+        const btnResetSubservicoForm = document.getElementById('btnResetSubservicoForm');
+
+        let activeServicoId = null;
+
+        function setSubservicoImage(url) {
+            subservicoImagemUrl.value = url || '';
+            if (url) {
+                subservicoImagePreview.src = url;
+                subservicoImagePreview.classList.remove('hidden');
+                subservicoImagePlaceholder.classList.add('hidden');
+                btnRemoveSubservicoImage.classList.remove('hidden');
+            } else {
+                subservicoImagePreview.src = '';
+                subservicoImagePreview.classList.add('hidden');
+                subservicoImagePlaceholder.classList.remove('hidden');
+                btnRemoveSubservicoImage.classList.add('hidden');
+            }
+        }
+
+        inputImageFileSubservico?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showToast('Por favor, selecione um arquivo de imagem válido.', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                setSubservicoImage(evt.target.result);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        btnRemoveSubservicoImage?.addEventListener('click', () => {
+            setSubservicoImage('');
+            if (inputImageFileSubservico) inputImageFileSubservico.value = '';
+        });
+
+        function resetSubservicoForm() {
+            formSubservico.reset();
+            document.getElementById('subservicoId').value = '';
+            document.getElementById('subservicoParentId').value = activeServicoId || '';
+            setSubservicoImage('');
+        }
+
+        btnResetSubservicoForm?.addEventListener('click', resetSubservicoForm);
+
+        async function loadAndRenderSubservicos(servicoId) {
+            subservicosListContainer.innerHTML = `
+                <div class="flex items-center justify-center py-6">
+                    <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                </div>
+            `;
+
+            const list = await fetchSubservicosByServicoId(servicoId);
+
+            if (!list || list.length === 0) {
+                subservicosListContainer.innerHTML = `
+                    <div class="p-4 text-center text-xs text-slate-400 font-medium bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-slate-200/50 dark:border-slate-800">
+                        Nenhum subserviço cadastrado para este serviço. Preencha o formulário acima para adicionar o primeiro.
+                    </div>
+                `;
+                return;
+            }
+
+            subservicosListContainer.innerHTML = '';
+            list.forEach(sub => {
+                const item = document.createElement('div');
+                item.className = 'p-3 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-between gap-3 shadow-sm';
+                
+                const precoAdd = parseFloat(sub.preco_adicional || 0);
+                const durAdd = parseInt(sub.duracao_adicional_minutos || 0);
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="h-12 w-12 shrink-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 overflow-hidden flex items-center justify-center">
+                            ${sub.imagem_url 
+                                ? `<img src="${sub.imagem_url}" class="h-full w-full object-cover">` 
+                                : `<i class="fa-solid fa-layer-group text-slate-400 text-sm"></i>`}
+                        </div>
+                        <div class="min-w-0 space-y-0.5">
+                            <h5 class="text-xs font-extrabold text-slate-900 dark:text-white truncate">${escapeHtml(sub.nome)}</h5>
+                            ${sub.descricao ? `<p class="text-[11px] text-slate-400 truncate">${escapeHtml(sub.descricao)}</p>` : ''}
+                            <div class="flex items-center gap-2 text-[10px] font-bold">
+                                <span class="text-emerald-600 dark:text-emerald-400">${precoAdd > 0 ? '+ R$ ' + precoAdd.toFixed(2) : 'Sem preço adicional'}</span>
+                                <span class="text-slate-400">•</span>
+                                <span class="text-blue-500">${durAdd > 0 ? '+ ' + durAdd + ' min' : 'Sem tempo adicional'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button type="button" class="btn-edit-subservico btn-animated h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-500 flex items-center justify-center" title="Editar Subserviço">
+                            <i class="fa-solid fa-pen-to-square text-xs"></i>
+                        </button>
+                        <button type="button" class="btn-delete-subservico btn-animated h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-rose-500 flex items-center justify-center" title="Excluir Subserviço">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                `;
+
+                item.querySelector('.btn-edit-subservico')?.addEventListener('click', () => {
+                    document.getElementById('subservicoId').value = sub.id;
+                    document.getElementById('subservicoParentId').value = sub.servico_id;
+                    document.getElementById('inputNomeSubservico').value = sub.nome;
+                    document.getElementById('inputPrecoSubservico').value = sub.preco_adicional || 0;
+                    document.getElementById('inputDuracaoSubservico').value = sub.duracao_adicional_minutos || 0;
+                    document.getElementById('inputDescricaoSubservico').value = sub.descricao || '';
+                    setSubservicoImage(sub.imagem_url || '');
+                });
+
+                item.querySelector('.btn-delete-subservico')?.addEventListener('click', async () => {
+                    try {
+                        await deleteSubservico(sub.id);
+                        showToast('Subserviço excluído!', 'success');
+                        loadAndRenderSubservicos(servicoId);
+                    } catch (err) {
+                        showToast('Erro ao excluir subserviço', 'error');
+                    }
+                });
+
+                subservicosListContainer.appendChild(item);
+            });
+        }
+
+        formSubservico?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('subservicoId').value;
+            const servico_id = document.getElementById('subservicoParentId').value;
+            const nome = document.getElementById('inputNomeSubservico').value.trim();
+            const preco_adicional = parseFloat(document.getElementById('inputPrecoSubservico').value || 0);
+            const duracao_adicional_minutos = parseInt(document.getElementById('inputDuracaoSubservico').value || 0);
+            const descricao = document.getElementById('inputDescricaoSubservico').value.trim();
+            const imagem_url = subservicoImagemUrl.value;
+
+            try {
+                await saveSubservico({
+                    id,
+                    servico_id,
+                    nome,
+                    descricao,
+                    preco_adicional,
+                    duracao_adicional_minutos,
+                    imagem_url
+                });
+
+                showToast(id ? 'Subserviço atualizado!' : 'Subserviço cadastrado com sucesso!', 'success');
+                resetSubservicoForm();
+                loadAndRenderSubservicos(servico_id);
+            } catch (err) {
+                showToast('Erro ao salvar subserviço: ' + err.message, 'error');
+            }
+        });
+
+        const closeSubservicosModal = () => modalSubservicos.classList.add('hidden');
+        btnCloseSubservicosModal?.addEventListener('click', closeSubservicosModal);
 
         async function renderServicos() {
             const container = document.getElementById('servicosContainer');
@@ -242,6 +507,10 @@
 
                         <!-- BOTÕES NA HORIZONTAL -->
                         <div class="flex flex-row items-center justify-end gap-1.5 pt-3 border-t border-slate-100 dark:border-slate-800/60">
+                            <button class="btn-subservicos btn-animated flex items-center justify-center gap-1.5 px-3 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 text-xs font-bold shrink-0" data-servico-id="${servico.id}" data-servico-nome="${escapeHtml(servico.nome)}" title="Gerenciar Subserviços">
+                                <i class="fa-solid fa-layer-group text-xs"></i>
+                                <span>Subserviços</span>
+                            </button>
                             <button class="btn-edit-servico btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200/50 dark:border-slate-800" data-servico='${JSON.stringify(servico)}' data-preco="${precoVal}" title="Editar Serviço">
                                 <i class="fa-solid fa-pen-to-square text-xs"></i>
                             </button>
@@ -304,6 +573,23 @@
 
         const container = document.getElementById('servicosContainer');
         container?.addEventListener('click', async (e) => {
+            const btnSub = e.target.closest('.btn-subservicos');
+            if (btnSub) {
+                const sId = btnSub.dataset.servicoId;
+                const sNome = btnSub.dataset.servicoNome;
+
+                activeServicoId = sId;
+                subservicosTitle.innerHTML = `<i class="fa-solid fa-layer-group text-blue-500"></i> <span>Subserviços de ${escapeHtml(sNome)}</span>`;
+                subservicosSubtitle.textContent = `Adicione ou edite opções do serviço ${sNome}`;
+
+                resetSubservicoForm();
+                document.getElementById('subservicoParentId').value = sId;
+
+                modalSubservicos.classList.remove('hidden');
+                loadAndRenderSubservicos(sId);
+                return;
+            }
+
             const btnDelete = e.target.closest('.btn-delete-servico');
             if (btnDelete) {
                 const id = btnDelete.dataset.id;

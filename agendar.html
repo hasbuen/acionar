@@ -115,6 +115,17 @@
                     <div id="servicosGrid" class="space-y-2.5">
                         <div class="py-8 text-center text-xs text-slate-400 font-medium">Carregando serviços disponíveis...</div>
                     </div>
+
+                    <!-- OPÇÕES DE SUBSERVIÇOS / VARIAÇÕES DO SERVIÇO SELECIONADO -->
+                    <div id="subservicosContainer" class="hidden space-y-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                        <label class="block text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-layer-group text-xs"></i> Escolha uma Opção / Variação (Opcional)
+                        </label>
+                        <input type="hidden" id="selectedSubservicoId">
+                        <div id="subservicosGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <!-- Preenchido via JS -->
+                        </div>
+                    </div>
                 </div>
 
                 <!-- PASSO 2: DATA E HORÁRIO -->
@@ -206,6 +217,7 @@
             showToast, 
             applyPhoneMask, 
             fetchServicosAtivos, 
+            fetchSubservicosByServicoId,
             getAvailableTimeSlots,
             fetchConfiguracaoMensagemWhatsApp,
             cleanPhone
@@ -217,6 +229,9 @@
         const inputData = document.getElementById('inputDataAgendamento');
         const inputPhone = document.getElementById('inputWhatsappCliente');
         const servicosGrid = document.getElementById('servicosGrid');
+        const subservicosContainer = document.getElementById('subservicosContainer');
+        const subservicosGrid = document.getElementById('subservicosGrid');
+        const selectedSubservicoIdInput = document.getElementById('selectedSubservicoId');
         const timeChipsContainer = document.getElementById('timeChipsContainer');
         const labelEndereco = document.getElementById('labelEndereco');
         const hiddenServicoId = document.getElementById('selectedServicoId');
@@ -233,7 +248,9 @@
             inputData.min = todayISO;
         }
 
+        let baseServicoDuracao = 30;
         let selectedServicoDuracao = 30;
+        let currentSubservicoDuracaoAdicional = 0;
 
         // Carrega Endereço do Estabelecimento
         async function loadEndereco() {
@@ -245,6 +262,70 @@
             } catch (e) {
                 if (labelEndereco) labelEndereco.textContent = "Atendimento Presencial";
             }
+        }
+
+        // Carrega Subserviços / Variações do Serviço Selecionado
+        async function loadSubservicos(servico) {
+            subservicosContainer.classList.add('hidden');
+            subservicosGrid.innerHTML = '';
+            selectedSubservicoIdInput.value = '';
+            currentSubservicoDuracaoAdicional = 0;
+
+            const list = await fetchSubservicosByServicoId(servico.id);
+            if (!list || list.length === 0) return;
+
+            subservicosContainer.classList.remove('hidden');
+
+            list.forEach(sub => {
+                const card = document.createElement('div');
+                card.className = 'subservico-card p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:border-blue-500 cursor-pointer flex items-center justify-between gap-3 transition-all';
+                
+                const precoAdd = parseFloat(sub.preco_adicional || 0);
+                const durAdd = parseInt(sub.duracao_adicional_minutos || 0);
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="h-10 w-10 shrink-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex items-center justify-center">
+                            ${sub.imagem_url 
+                                ? `<img src="${sub.imagem_url}" class="h-full w-full object-cover">` 
+                                : `<i class="fa-solid fa-layer-group text-slate-400 text-xs"></i>`}
+                        </div>
+                        <div class="min-w-0 space-y-0.5">
+                            <h5 class="text-xs font-bold text-slate-900 dark:text-white truncate">${sub.nome}</h5>
+                            ${sub.descricao ? `<p class="text-[10px] text-slate-400 truncate">${sub.descricao}</p>` : ''}
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="block text-xs font-extrabold text-emerald-600 dark:text-emerald-400">${precoAdd > 0 ? '+ R$ ' + precoAdd.toFixed(2) : 'Incluso'}</span>
+                        <span class="block text-[10px] text-slate-400 font-semibold">${durAdd > 0 ? '+' + durAdd + ' min' : ''}</span>
+                    </div>
+                `;
+
+                card.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isAlreadySelected = card.classList.contains('border-blue-600');
+
+                    document.querySelectorAll('.subservico-card').forEach(c => {
+                        c.className = 'subservico-card p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:border-blue-500 cursor-pointer flex items-center justify-between gap-3 transition-all';
+                    });
+
+                    if (isAlreadySelected) {
+                        // Desselecionar subserviço
+                        selectedSubservicoIdInput.value = '';
+                        currentSubservicoDuracaoAdicional = 0;
+                    } else {
+                        // Selecionar subserviço
+                        card.className = 'subservico-card p-3 rounded-2xl border-2 border-blue-600 bg-blue-500/10 cursor-pointer flex items-center justify-between gap-3 shadow-sm transition-all scale-[1.01]';
+                        selectedSubservicoIdInput.value = sub.id;
+                        currentSubservicoDuracaoAdicional = durAdd;
+                    }
+
+                    selectedServicoDuracao = baseServicoDuracao + currentSubservicoDuracaoAdicional;
+                    updateAvailableSlots();
+                });
+
+                subservicosGrid.appendChild(card);
+            });
         }
 
         // Carrega Serviços Ativos
@@ -299,7 +380,10 @@
                         check.querySelector('i').classList.remove('hidden');
 
                         hiddenServicoId.value = servico.id;
-                        selectedServicoDuracao = parseInt(servico.duracao_minutos || 30);
+                        baseServicoDuracao = parseInt(servico.duracao_minutos || 30);
+                        selectedServicoDuracao = baseServicoDuracao;
+
+                        loadSubservicos(servico);
                         updateAvailableSlots();
                     });
 

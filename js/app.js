@@ -1078,6 +1078,92 @@ export async function deleteAgendamento(id) {
     return true;
 }
 
+// --- BUSCA E GERAÇÃO DE NOTIFICAÇÕES (SOLICITAÇÕES E MANUTENÇÕES D-2) ---
+export async function fetchNotificationsList() {
+    try {
+        const { data: agendamentos, error } = await supabase
+            .from('agendamentos')
+            .select(`
+                id,
+                cliente_id,
+                servico_id,
+                data_hora_inicio,
+                status,
+                is_manutencao,
+                observacoes,
+                clientes ( id, nome, whatsapp ),
+                servicos ( id, nome, duracao_minutos )
+            `)
+            .neq('status', 'cancelado')
+            .order('data_hora_inicio', { ascending: true });
+
+        if (error) throw error;
+        if (!agendamentos) return [];
+
+        const now = new Date();
+        const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        const notifications = [];
+
+        agendamentos.forEach(ag => {
+            const clienteNome = ag.clientes?.nome || 'Cliente';
+            const clientePhone = cleanPhone(ag.clientes?.whatsapp || '');
+            const servicoNome = ag.servicos?.nome || 'Serviço';
+            const d = new Date(ag.data_hora_inicio);
+            const dataFormatada = d.toLocaleDateString('pt-BR');
+            const horaInicio = d.toTimeString().slice(0, 5);
+
+            const statusLower = (ag.status || '').toLowerCase();
+
+            // 1. Novas Solicitações Aguardando Confirmação
+            if (statusLower === 'aguardando_confirmacao' || statusLower === 'solicitado') {
+                notifications.push({
+                    id: `solicitation-${ag.id}`,
+                    type: 'solicitacao',
+                    title: '🔔 Nova Solicitação de Agendamento',
+                    message: `${clienteNome} solicitou ${servicoNome} para ${dataFormatada} às ${horaInicio}.`,
+                    dateStr: dataFormatada,
+                    timeStr: horaInicio,
+                    agendamentoId: ag.id,
+                    agendamento: ag,
+                    timestamp: d.getTime()
+                });
+            }
+
+            // 2. Lembrete de Manutenção (2 Dias Antes, Amanhã ou Hoje)
+            if (ag.is_manutencao && statusLower !== 'concluido' && statusLower !== 'atendido') {
+                const agDateZero = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                const diffDays = Math.round((agDateZero - todayZero) / (1000 * 60 * 60 * 24));
+
+                if (diffDays >= 0 && diffDays <= 2) {
+                    const tempoLabel = diffDays === 0 ? 'Hoje' : diffDays === 1 ? 'Amanhã' : 'Em 2 dias';
+                    notifications.push({
+                        id: `manutencao-remind-${ag.id}`,
+                        type: 'manutencao_lembrete',
+                        title: `🔧 Lembrete: Mensagem de Manutenção (${tempoLabel})`,
+                        message: `${clienteNome} possui retorno de manutenção (${servicoNome}) agendado para ${dataFormatada} às ${horaInicio}. Dispare a mensagem prévia no WhatsApp.`,
+                        dateStr: dataFormatada,
+                        timeStr: horaInicio,
+                        diffDays,
+                        clienteNome,
+                        clientePhone,
+                        servicoNome,
+                        agendamentoId: ag.id,
+                        agendamento: ag,
+                        timestamp: d.getTime()
+                    });
+                }
+            }
+        });
+
+        notifications.sort((a, b) => a.timestamp - b.timestamp);
+        return notifications;
+    } catch (err) {
+        console.error("Erro ao buscar notificações:", err);
+        return [];
+    }
+}
+
 // --- RENDERIZAÇÃO DE AGENDAMENTOS COM FALLBACK DE SEGURANÇA VIA RPC (EVITA ERRO DE RLS PERMISSION DENIED) ---
 export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null, silent = false) {
     const container = document.getElementById(containerId);
@@ -1548,5 +1634,87 @@ export async function deleteServico(id) {
         .eq('id', id);
 
     if (error) throw error;
+    return true;
+}
+
+// --- CRUD DE SUBSERVIÇOS / VARIAÇÕES (1 IMAGEM POR SUBSERVIÇO) ---
+export async function fetchSubservicosByServicoId(servicoId) {
+    if (!servicoId) return [];
+    try {
+        const { data, error } = await supabase
+            .from('subservicos')
+            .select('*')
+            .eq('servico_id', servicoId)
+            .eq('ativo', true)
+            .order('created_at', { ascending: true });
+
+        if (!error && data) return data;
+    } catch (e) {
+        console.warn("Consulta à tabela subservicos no Supabase falhou, utilizando armazenamento local.", e);
+    }
+
+    try {
+        const all = JSON.parse(localStorage.getItem('subservicos_data') || '[]');
+        return all.filter(s => s.servico_id === servicoId && s.ativo !== false);
+    } catch (e) {
+        return [];
+    }
+}
+
+export async function saveSubservico({ id, servico_id, nome, descricao, preco_adicional, duracao_adicional_minutos, imagem_url }) {
+    const payload = {
+        servico_id,
+        nome,
+        descricao: descricao || null,
+        preco_adicional: parseFloat(preco_adicional || 0),
+        duracao_adicional_minutos: parseInt(duracao_adicional_minutos || 0),
+        imagem_url: imagem_url || null,
+        ativo: true
+    };
+
+    try {
+        if (id && !id.startsWith('sub-')) {
+            const { data, error } = await supabase
+                .from('subservicos')
+                .update(payload)
+                .eq('id', id);
+        } else {
+            const { data, error } = await supabase
+                .from('subservicos')
+                .insert([payload]);
+        }
+    } catch (e) {
+        console.warn("Falha ao salvar subserviço no Supabase, mantendo LocalStorage.", e);
+    }
+
+    try {
+        let all = JSON.parse(localStorage.getItem('subservicos_data') || '[]');
+        if (id) {
+            all = all.map(s => s.id === id ? { ...s, ...payload, id } : s);
+        } else {
+            all.push({ ...payload, id: 'sub-' + Date.now() });
+        }
+        localStorage.setItem('subservicos_data', JSON.stringify(all));
+    } catch (e) {}
+
+    return true;
+}
+
+export async function deleteSubservico(id) {
+    try {
+        if (id && !id.startsWith('sub-')) {
+            await supabase
+                .from('subservicos')
+                .delete()
+                .eq('id', id);
+        }
+    } catch (e) {}
+
+    try {
+        let all = JSON.parse(localStorage.getItem('subservicos_data') || '[]');
+        all = all.filter(s => s.id !== id);
+        localStorage.setItem('subservicos_data', JSON.stringify(all));
+    } catch (e) {}
+
     return true;
 }

@@ -122,6 +122,12 @@
 
                 <span id="userLabelDesktop" class="hidden lg:inline-block text-xs font-medium text-slate-500 dark:text-slate-400 px-2 truncate max-w-[150px]"></span>
 
+                <!-- BOTÃO DE NOTIFICAÇÕES COM BADGE CONTADOR -->
+                <button id="btnOpenNotifications" aria-label="Notificações" class="btn-animated relative flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 shadow-sm" title="Central de Notificações">
+                    <i class="fa-solid fa-bell text-base"></i>
+                    <span id="notificationBadge" class="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white px-1 shadow-sm shadow-rose-500/50 animate-pulse hidden">0</span>
+                </button>
+
                 <button id="theme-toggle" aria-label="Alternar Tema" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 shadow-sm transition-transform active:scale-95">
                     <svg id="theme-toggle-dark-icon" xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                     <svg id="theme-toggle-light-icon" xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
@@ -424,6 +430,42 @@
         </div>
     </div>
 
+    <!-- MODAL CENTRAL DE NOTIFICAÇÕES -->
+    <div id="modalNotificacoes" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md hidden p-0 sm:p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-lg p-5 sm:p-7 shadow-2xl space-y-4 my-0 sm:my-auto max-h-[90vh] overflow-y-auto animate-scale-in">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        <i class="fa-solid fa-bell text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900 dark:text-white leading-tight">Central de Notificações</h3>
+                        <p class="text-[11px] text-slate-400 font-medium">Solicitações recentes e lembretes de manutenção</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btnMarkAllRead" class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline px-2 py-1" title="Marcar todas como lidas">
+                        Limpar todas
+                    </button>
+                    <button id="btnCloseNotificationsModal" class="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- LISTA DE NOTIFICAÇÕES -->
+            <div id="notificationsListContainer" class="space-y-2.5 max-h-[58vh] overflow-y-auto pr-1">
+                <!-- Preenchido via JS -->
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                <button id="btnCloseNotificationsModalBottom" class="btn-animated px-5 py-2.5 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script type="module">
         import { 
@@ -439,6 +481,7 @@
             applyPhoneMask, 
             populateServicosDropdown, 
             fetchAndRenderAgendamentos,
+            fetchNotificationsList,
             updateAgendamentoStatus,
             updateAgendamento,
             deleteAgendamento,
@@ -498,8 +541,169 @@
         let activeFilterDate = null;
         let activeFilterStatus = null;
 
+        // --- GERENCIADOR DA CENTRAL DE NOTIFICAÇÕES ---
+        const btnOpenNotifications = document.getElementById('btnOpenNotifications');
+        const notificationBadge = document.getElementById('notificationBadge');
+        const modalNotificacoes = document.getElementById('modalNotificacoes');
+        const btnCloseNotificationsModal = document.getElementById('btnCloseNotificationsModal');
+        const btnCloseNotificationsModalBottom = document.getElementById('btnCloseNotificationsModalBottom');
+        const btnMarkAllRead = document.getElementById('btnMarkAllRead');
+        const notificationsListContainer = document.getElementById('notificationsListContainer');
+
+        function getReadNotificationIds() {
+            try {
+                return JSON.parse(localStorage.getItem('read_notifications') || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function markNotificationAsRead(id) {
+            const readIds = getReadNotificationIds();
+            if (!readIds.includes(id)) {
+                readIds.push(id);
+                localStorage.setItem('read_notifications', JSON.stringify(readIds));
+            }
+            updateNotifications();
+        }
+
+        function markAllNotificationsAsRead(notifications) {
+            const readIds = getReadNotificationIds();
+            notifications.forEach(n => {
+                if (!readIds.includes(n.id)) readIds.push(n.id);
+            });
+            localStorage.setItem('read_notifications', JSON.stringify(readIds));
+            updateNotifications();
+        }
+
+        async function updateNotifications() {
+            const notifications = await fetchNotificationsList();
+            const readIds = getReadNotificationIds();
+            
+            const unreadCount = notifications.filter(n => !readIds.includes(n.id)).length;
+
+            if (unreadCount > 0) {
+                notificationBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                notificationBadge.classList.remove('hidden');
+            } else {
+                notificationBadge.textContent = '0';
+                notificationBadge.classList.add('hidden');
+            }
+
+            return notifications;
+        }
+
+        async function renderNotificationsModal() {
+            notificationsListContainer.innerHTML = `
+                <div class="flex items-center justify-center py-8">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                </div>
+            `;
+
+            const notifications = await updateNotifications();
+            const readIds = getReadNotificationIds();
+
+            if (!notifications || notifications.length === 0) {
+                notificationsListContainer.innerHTML = `
+                    <div class="py-10 text-center space-y-2">
+                        <div class="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+                            <i class="fa-solid fa-bell-slash text-lg"></i>
+                        </div>
+                        <p class="text-xs font-bold text-slate-600 dark:text-slate-300">Nenhuma notificação no momento</p>
+                        <p class="text-[11px] text-slate-400">Você está em dia com solicitações e manutenções!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            notificationsListContainer.innerHTML = '';
+            notifications.forEach(n => {
+                const isRead = readIds.includes(n.id);
+                const item = document.createElement('div');
+                
+                const isSolicitacao = n.type === 'solicitacao';
+                
+                item.className = `p-3.5 rounded-2xl border transition-all flex flex-col gap-2 ${
+                    isRead 
+                        ? 'bg-slate-50/50 dark:bg-slate-800/20 border-slate-100 dark:border-slate-800/50 opacity-75' 
+                        : 'bg-white dark:bg-slate-800/80 border-blue-500/30 dark:border-blue-500/40 shadow-sm'
+                }`;
+
+                item.innerHTML = `
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="h-2 w-2 rounded-full ${isRead ? 'bg-slate-300 dark:bg-slate-700' : 'bg-blue-500 animate-pulse'} shrink-0"></span>
+                            <h4 class="text-xs font-extrabold ${isSolicitacao ? 'text-amber-600 dark:text-amber-400' : 'text-purple-600 dark:text-purple-400'}">${n.title}</h4>
+                        </div>
+                        <span class="text-[10px] font-semibold text-slate-400 shrink-0">${n.dateStr} às ${n.timeStr}</span>
+                    </div>
+
+                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed pl-4 font-medium">${n.message}</p>
+
+                    <div class="flex items-center justify-end gap-2 pt-1">
+                        ${isSolicitacao ? `
+                            <button type="button" class="btn-notif-action btn-animated px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold border border-amber-500/20 hover:bg-amber-500/20" data-action="filter-solicitacoes" data-id="${n.id}">
+                                <i class="fa-solid fa-arrow-right text-[10px] mr-1"></i> Ver Solicitação
+                            </button>
+                        ` : `
+                            <button type="button" class="btn-notif-action btn-animated px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20 hover:bg-emerald-500/20" data-action="send-wa-manutencao" data-id="${n.id}" data-cliente="${n.clienteNome}" data-servico="${n.servicoNome}" data-phone="${n.clientePhone}" data-date="${n.dateStr}" data-time="${n.timeStr}">
+                                <i class="fa-brands fa-whatsapp text-xs mr-1"></i> Enviar Mensagem
+                            </button>
+                        `}
+                    </div>
+                `;
+
+                item.querySelector('.btn-notif-action')?.addEventListener('click', async (e) => {
+                    markNotificationAsRead(n.id);
+                    const btn = e.currentTarget;
+                    const action = btn.dataset.action;
+
+                    if (action === 'filter-solicitacoes') {
+                        modalNotificacoes.classList.add('hidden');
+                        const filterBtn = document.getElementById('filterAguardando');
+                        if (filterBtn) filterBtn.click();
+                    } else if (action === 'send-wa-manutencao') {
+                        const clienteNome = btn.dataset.cliente;
+                        const servicoNome = btn.dataset.servico;
+                        const clientePhone = btn.dataset.phone;
+                        const dataFormatada = btn.dataset.date;
+                        const horaInicio = btn.dataset.time;
+
+                        const waMsg = await generateWhatsAppManutencaoMessage({
+                            clienteNome,
+                            servicoNome,
+                            dataFormatada,
+                            horaInicio
+                        });
+
+                        const waUrl = `https://wa.me/55${clientePhone}?text=${encodeURIComponent(waMsg)}`;
+                        window.open(waUrl, '_blank');
+                    }
+                });
+
+                notificationsListContainer.appendChild(item);
+            });
+        }
+
+        btnOpenNotifications?.addEventListener('click', () => {
+            renderNotificationsModal();
+            modalNotificacoes.classList.remove('hidden');
+        });
+
+        const closeNotifModal = () => modalNotificacoes.classList.add('hidden');
+        btnCloseNotificationsModal?.addEventListener('click', closeNotifModal);
+        btnCloseNotificationsModalBottom?.addEventListener('click', closeNotifModal);
+
+        btnMarkAllRead?.addEventListener('click', async () => {
+            const notifications = await fetchNotificationsList();
+            markAllNotificationsAsRead(notifications);
+            renderNotificationsModal();
+            showToast('Todas as notificações foram limpas!', 'info');
+        });
+
         const refreshAgenda = (silent = false) => {
             fetchAndRenderAgendamentos('agendamentosContainer', activeFilterDate, activeFilterStatus, silent);
+            updateNotifications();
         };
 
         // --- REALTIME SUPABASE & AUTO-POLLING DE BUSCA ---
