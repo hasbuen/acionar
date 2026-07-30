@@ -1164,6 +1164,21 @@ export async function fetchNotificationsList() {
     }
 }
 
+export function getServicePrice(servico) {
+    if (!servico) return 0;
+    if (typeof servico.preco === 'number' && !isNaN(servico.preco)) return servico.preco;
+    if (typeof servico.preco === 'string' && !isNaN(parseFloat(servico.preco))) return parseFloat(servico.preco);
+    if (Array.isArray(servico.tabela_precos) && servico.tabela_precos.length > 0) {
+        const val = parseFloat(servico.tabela_precos[0].valor);
+        if (!isNaN(val)) return val;
+    }
+    if (servico.tabela_precos && typeof servico.tabela_precos === 'object' && servico.tabela_precos.valor) {
+        const val = parseFloat(servico.tabela_precos.valor);
+        if (!isNaN(val)) return val;
+    }
+    return 0;
+}
+
 // --- RENDERIZAÇÃO DE AGENDAMENTOS COM FALLBACK DE SEGURANÇA VIA RPC (EVITA ERRO DE RLS PERMISSION DENIED) ---
 export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null, silent = false) {
     const container = document.getElementById(containerId);
@@ -1177,11 +1192,11 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
         `;
     }
 
-    try {
-        let agendamentos = [];
-        let error = null;
+    let agendamentos = [];
+    let fetchSuccess = false;
 
-        // Tentativa 1: Busca direta na tabela agendamentos
+    // Tentativa 1: Busca direta na tabela agendamentos via Supabase
+    try {
         const res = await supabase
             .from('agendamentos')
             .select(`
@@ -1203,75 +1218,102 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
                 servicos (
                     id,
                     nome,
-                    duracao_minutos
+                    duracao_minutos,
+                    tabela_precos (
+                        valor
+                    )
                 )
             `)
             .order('data_hora_inicio', { ascending: true });
 
-        if (res.error) {
-            console.warn("Busca direta em agendamentos bloqueada por RLS. Acionando fallback RPC...", res.error);
-            // Tentativa 2: Fallback via RPC SECURITY DEFINER (Infalível contra permission denied no iOS/Android)
+        if (!res.error && res.data) {
+            agendamentos = res.data;
+            fetchSuccess = true;
+        } else if (res.error) {
+            console.warn("Busca direta em agendamentos bloqueada por RLS. Tentando RPC...", res.error);
+        }
+    } catch (e) {
+        console.warn("Erro na busca direta:", e);
+    }
+
+    // Tentativa 2: Fallback via RPC SECURITY DEFINER (Infalível contra permission denied no iOS/Android PWA)
+    if (!fetchSuccess) {
+        try {
             const rpcRes = await supabase.rpc('listar_agendamentos_painel');
-            if (rpcRes.error) {
-                throw rpcRes.error;
+            if (!rpcRes.error && rpcRes.data) {
+                agendamentos = rpcRes.data.map(a => ({
+                    id: a.id,
+                    cliente_id: a.cliente_id,
+                    servico_id: a.servico_id,
+                    data_hora_inicio: a.data_hora_inicio,
+                    data_hora_fim: a.data_hora_fim,
+                    status: a.status,
+                    observacoes: a.observacoes,
+                    is_manutencao: a.is_manutencao,
+                    agendamento_pai_id: a.agendamento_pai_id,
+                    periodicidade_dias: a.periodicidade_dias,
+                    clientes: { id: a.cliente_id, nome: a.cliente_nome, whatsapp: a.cliente_whatsapp },
+                    servicos: { 
+                        id: a.servico_id, 
+                        nome: a.servico_nome, 
+                        duracao_minutos: a.servico_duracao_minutos,
+                        tabela_precos: [{ valor: a.servico_preco || 0 }]
+                    }
+                }));
+                fetchSuccess = true;
             }
-            agendamentos = (rpcRes.data || []).map(a => ({
-                id: a.id,
-                cliente_id: a.cliente_id,
-                servico_id: a.servico_id,
-                data_hora_inicio: a.data_hora_inicio,
-                data_hora_fim: a.data_hora_fim,
-                status: a.status,
-                observacoes: a.observacoes,
-                is_manutencao: a.is_manutencao,
-                agendamento_pai_id: a.agendamento_pai_id,
-                periodicidade_dias: a.periodicidade_dias,
-                clientes: { id: a.cliente_id, nome: a.cliente_nome, whatsapp: a.cliente_whatsapp },
-                servicos: { id: a.servico_id, nome: a.servico_nome, duracao_minutos: a.servico_duracao_minutos }
-            }));
-        } else {
-            agendamentos = res.data || [];
-        }
-
-        // DETECÇÃO DE NOVO AGENDAMENTO PARA DISPARAR SOM DE ALARME GARANTIDO
-        if (isInitialLoadDone) {
-            const hasNewBooking = agendamentos.some(ag => !knownAgendamentoIds.has(ag.id));
-            if (hasNewBooking) {
-                triggerSystemNotification(
-                    '🔔 NOVO AGENDAMENTO RECEBIDO!',
-                    'Um novo agendamento acabou de entrar no seu sistema!'
-                );
-            }
-        }
-
-        // Atualiza o Set de IDs conhecidos
-        knownAgendamentoIds = new Set(agendamentos.map(a => a.id));
-        isInitialLoadDone = true;
-
-        if (filterDate) {
-            agendamentos = agendamentos.filter(a => a.data_hora_inicio && a.data_hora_inicio.startsWith(filterDate));
-        }
-
-        if (filterStatus) {
-            if (filterStatus.toLowerCase() === 'manutencao') {
-                agendamentos = agendamentos.filter(a => a.is_manutencao === true);
-            } else {
-                agendamentos = agendamentos.filter(a => (a.status || 'aguardando_confirmacao').toLowerCase() === filterStatus.toLowerCase());
-            }
-        }
-
-        renderAgendamentosList(container, agendamentos);
-    } catch (err) {
-        console.error("Erro ao buscar agendamentos:", err);
-        if (!silent) {
-            container.innerHTML = `
-                <div class="py-12 px-4 text-center">
-                    <p class="text-sm font-semibold text-rose-500">Erro ao carregar agendamentos do Supabase.</p>
-                    <p class="text-xs text-slate-400 mt-1">${escapeHtml(err.message)}</p>
-                </div>
-            `;
+        } catch (rpcErr) {
+            console.warn("RPC fallback falhou:", rpcErr);
         }
     }
+
+    // Tentativa 3: Fallback via LocalStorage (Segurança total para PWA offline/isolado)
+    if (!fetchSuccess) {
+        try {
+            const localAg = JSON.parse(localStorage.getItem('agendamentos_data') || '[]');
+            if (localAg && localAg.length > 0) {
+                agendamentos = localAg;
+                fetchSuccess = true;
+            }
+        } catch (e) {}
+    }
+
+    // Atualizar LocalStorage cache se obteve dados do servidor
+    if (fetchSuccess && agendamentos.length > 0) {
+        try {
+            localStorage.setItem('agendamentos_data', JSON.stringify(agendamentos));
+        } catch (e) {}
+    }
+
+    // DETECÇÃO DE NOVO AGENDAMENTO PARA DISPARAR SOM DE ALARME
+    if (isInitialLoadDone && fetchSuccess) {
+        const hasNewBooking = agendamentos.some(ag => !knownAgendamentoIds.has(ag.id));
+        if (hasNewBooking) {
+            triggerSystemNotification(
+                '🔔 NOVO AGENDAMENTO RECEBIDO!',
+                'Um novo agendamento acabou de entrar no seu sistema!'
+            );
+        }
+    }
+
+    if (fetchSuccess) {
+        knownAgendamentoIds = new Set(agendamentos.map(a => a.id));
+        isInitialLoadDone = true;
+    }
+
+    if (filterDate) {
+        agendamentos = agendamentos.filter(a => a.data_hora_inicio && a.data_hora_inicio.startsWith(filterDate));
+    }
+
+    if (filterStatus) {
+        if (filterStatus.toLowerCase() === 'manutencao') {
+            agendamentos = agendamentos.filter(a => a.is_manutencao === true);
+        } else {
+            agendamentos = agendamentos.filter(a => (a.status || 'aguardando_confirmacao').toLowerCase() === filterStatus.toLowerCase());
+        }
+    }
+
+    renderAgendamentosList(container, agendamentos);
 }
 
 function renderAgendamentosList(container, agendamentos) {
@@ -1459,7 +1501,7 @@ function renderAgendamentosList(container, agendamentos) {
                     data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
                     data-cliente-nome="${escapeHtml(clienteNome)}"
                     data-servico-nome="${escapeHtml(servicoNome)}"
-                    data-preco="${ag.servicos?.tabela_precos?.[0]?.valor || 0}">
+                    data-preco="${getServicePrice(ag.servicos)}">
                     <i class="fa-solid fa-dollar-sign text-xs"></i>
                 </button>
 
@@ -1882,7 +1924,7 @@ export async function fetchTodosPagamentosFluxoCaixa() {
                 status,
                 criado_em,
                 clientes ( id, nome, whatsapp ),
-                servicos ( id, nome, preco )
+                servicos ( id, nome, tabela_precos ( valor ) )
             `)
             .neq('status', 'cancelado')
             .neq('status', 'aguardando_confirmacao')
@@ -1908,7 +1950,7 @@ export async function fetchTodosPagamentosFluxoCaixa() {
 
     const now = new Date();
     const pagamentosSintetizados = agendamentosSemCaixa.map(ag => {
-        const precoServico = parseFloat(ag.servicos?.preco || 0);
+        const precoServico = getServicePrice(ag.servicos);
         const dataInicio = new Date(ag.data_hora_inicio || ag.criado_em || Date.now());
         
         const isPastOrDone = ag.status === 'concluido' || ag.status === 'finalizado' || dataInicio <= now;

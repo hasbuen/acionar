@@ -607,6 +607,7 @@
             fetchNotificationsList,
             fetchPagamentoByAgendamentoId,
             savePagamentoFluxoCaixa,
+            getServicePrice,
             updateAgendamentoStatus,
             updateAgendamento,
             deleteAgendamento,
@@ -930,7 +931,7 @@
                 const sId = btnPay.dataset.servicoId;
                 const cNome = btnPay.dataset.clienteNome;
                 const sNome = btnPay.dataset.servicoNome;
-                const precoVal = parseFloat(btnPay.dataset.preco || 0);
+                let precoVal = parseFloat(btnPay.dataset.preco || 0);
 
                 document.getElementById('pagamentoId').value = '';
                 document.getElementById('pagamentoAgendamentoId').value = agId;
@@ -942,9 +943,9 @@
 
                 const existing = await fetchPagamentoByAgendamentoId(agId);
                 if (existing) {
-                    document.getElementById('pagamentoId').value = existing.id;
-                    inputValorBruto.value = (existing.valor_bruto || 0).toFixed(2);
-                    inputDesconto.value = (existing.desconto || 0).toFixed(2);
+                    document.getElementById('pagamentoId').value = existing.id || '';
+                    inputValorBruto.value = (parseFloat(existing.valor_bruto) || precoVal || 0).toFixed(2);
+                    inputDesconto.value = (parseFloat(existing.desconto) || 0).toFixed(2);
                     document.getElementById('inputObsPagamento').value = existing.observacoes || '';
 
                     const condBtn = document.querySelector(`.btn-chip-condicao[data-val="${existing.condicao_pagamento}"]`);
@@ -956,6 +957,13 @@
                     const statusBtn = document.querySelector(`.btn-chip-status-pagamento[data-val="${existing.status_pagamento}"]`);
                     if (statusBtn) statusBtn.click();
                 } else {
+                    if (precoVal <= 0 && sId) {
+                        try {
+                            const { data: s } = await supabase.from('servicos').select('*, tabela_precos(valor)').eq('id', sId).single();
+                            if (s) precoVal = getServicePrice(s);
+                        } catch(e) {}
+                    }
+
                     inputValorBruto.value = precoVal > 0 ? precoVal.toFixed(2) : '0.00';
                     inputDesconto.value = '0.00';
                     document.getElementById('inputObsPagamento').value = '';
