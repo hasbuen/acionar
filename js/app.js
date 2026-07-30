@@ -406,6 +406,181 @@ export function showChangeStatusModal({ id, currentStatus, clienteNome, servicoN
     closeBtn.onclick = () => modal.classList.add('hidden');
 }
 
+// --- MODAL DE AGENDAMENTO DE MANUTENÇÃO PERIÓDICA ---
+export function showManutencaoPromptModal({ agendamento, onSchedule, onSkip }) {
+    let modal = document.getElementById('global-manutencao-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'global-manutencao-modal';
+        modal.className = 'fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md p-0 sm:p-4 transition-all duration-200 hidden overflow-y-auto';
+        modal.innerHTML = `
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-md p-6 shadow-2xl space-y-5 my-0 sm:my-auto max-h-[92vh] overflow-y-auto">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
+                            <i data-lucide="wrench" class="h-5 w-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Manutenção Periódica</h3>
+                            <p id="manutencao-subtitle" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[220px]"></p>
+                        </div>
+                    </div>
+                    <button id="manutencao-close" class="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200">
+                        <i data-lucide="x" class="h-4 w-4"></i>
+                    </button>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 space-y-1">
+                    <p class="text-xs font-bold text-purple-700 dark:text-purple-300">Deseja agendar a manutenção periódica deste serviço?</p>
+                    <p class="text-[11px] text-purple-600/80 dark:text-purple-400/80 font-medium leading-relaxed">
+                        Defina em quanto tempo o cliente deve retornar ao salão para realizar a manutenção do serviço aplicado.
+                    </p>
+                </div>
+
+                <!-- Chips de Periodicidade -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tempo para Retorno / Manutenção</label>
+                    <div class="grid grid-cols-3 gap-2" id="manutencao-chips-container">
+                        <button type="button" data-days="15" class="chip-periodicity p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-xs font-extrabold text-slate-700 dark:text-slate-300 transition-all text-center">
+                            15 Dias
+                        </button>
+                        <button type="button" data-days="30" class="chip-periodicity active p-2.5 rounded-xl border-2 border-purple-600 bg-purple-500/10 text-xs font-black text-purple-600 dark:text-purple-400 transition-all text-center">
+                            30 Dias (1 Mês)
+                        </button>
+                        <button type="button" data-days="45" class="chip-periodicity p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-xs font-extrabold text-slate-700 dark:text-slate-300 transition-all text-center">
+                            45 Dias
+                        </button>
+                        <button type="button" data-days="60" class="chip-periodicity p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-xs font-extrabold text-slate-700 dark:text-slate-300 transition-all text-center">
+                            60 Dias (2 M)
+                        </button>
+                        <button type="button" data-days="90" class="chip-periodicity p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-xs font-extrabold text-slate-700 dark:text-slate-300 transition-all text-center">
+                            90 Dias (3 M)
+                        </button>
+                        <button type="button" data-days="custom" class="chip-periodicity p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-xs font-extrabold text-slate-700 dark:text-slate-300 transition-all text-center">
+                            Outro
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data e Hora -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="manutencao-data" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Data de Retorno</label>
+                        <input type="date" id="manutencao-data" required class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label for="manutencao-hora" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Horário</label>
+                        <input type="time" id="manutencao-hora" required value="09:00" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                </div>
+
+                <!-- Observação -->
+                <div>
+                    <label for="manutencao-obs" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Observações (Opcional)</label>
+                    <input type="text" id="manutencao-obs" placeholder="Ex: Manutenção periódica do serviço" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+
+                <!-- Ações -->
+                <div class="flex items-center gap-2 pt-2">
+                    <button type="button" id="manutencao-skip" class="flex-1 py-3.5 rounded-2xl text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        Não Agendar
+                    </button>
+                    <button type="button" id="manutencao-submit" class="flex-1 py-3.5 rounded-2xl text-xs font-extrabold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-600/25 transition-all">
+                        Confirmar e Agendar
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    const subtitleEl = document.getElementById('manutencao-subtitle');
+    const inputData = document.getElementById('manutencao-data');
+    const inputHora = document.getElementById('manutencao-hora');
+    const inputObs = document.getElementById('manutencao-obs');
+    const skipBtn = document.getElementById('manutencao-skip');
+    const submitBtn = document.getElementById('manutencao-submit');
+    const closeBtn = document.getElementById('manutencao-close');
+    const chipsContainer = document.getElementById('manutencao-chips-container');
+
+    const clienteNome = agendamento.clienteNome || agendamento.clientes?.nome || 'Cliente';
+    const servicoNome = agendamento.servicoNome || agendamento.servicos?.nome || 'Serviço';
+    
+    subtitleEl.textContent = `${clienteNome} — ${servicoNome}`;
+
+    const baseDate = agendamento.data_hora_inicio ? new Date(agendamento.data_hora_inicio) : new Date();
+    
+    let selectedDays = 30;
+    function applyDays(days) {
+        selectedDays = days;
+        const targetDate = new Date(baseDate.getTime());
+        targetDate.setDate(targetDate.getDate() + days);
+        inputData.value = targetDate.toISOString().split('T')[0];
+    }
+    
+    applyDays(30);
+
+    if (agendamento.data_hora_inicio) {
+        const d = new Date(agendamento.data_hora_inicio);
+        const hrs = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        inputHora.value = `${hrs}:${mins}`;
+    } else {
+        inputHora.value = '09:00';
+    }
+
+    const chips = chipsContainer.querySelectorAll('.chip-periodicity');
+    chips.forEach(chip => {
+        chip.onclick = () => {
+            chips.forEach(c => {
+                c.className = 'chip-periodicity p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-xs font-extrabold text-slate-700 dark:text-slate-300 transition-all text-center';
+            });
+            chip.className = 'chip-periodicity active p-2.5 rounded-xl border-2 border-purple-600 bg-purple-500/10 text-xs font-black text-purple-600 dark:text-purple-400 transition-all text-center';
+            
+            const daysAttr = chip.dataset.days;
+            if (daysAttr !== 'custom') {
+                const days = parseInt(daysAttr);
+                applyDays(days);
+            }
+        };
+    });
+
+    modal.classList.remove('hidden');
+    if (window.lucide) window.lucide.createIcons();
+
+    const closeModal = () => modal.classList.add('hidden');
+
+    closeBtn.onclick = () => {
+        closeModal();
+        if (onSkip) onSkip();
+    };
+
+    skipBtn.onclick = () => {
+        closeModal();
+        if (onSkip) onSkip();
+    };
+
+    submitBtn.onclick = () => {
+        const dateVal = inputData.value;
+        const timeVal = inputHora.value;
+        if (!dateVal || !timeVal) {
+            showToast('Por favor, selecione a data e horário para a manutenção.', 'error');
+            return;
+        }
+        const dataHoraInicioISO = `${dateVal}T${timeVal}:00.000Z`;
+        const obs = inputObs.value.trim() || `Manutenção Periódica de ${servicoNome}`;
+
+        closeModal();
+        if (onSchedule) {
+            onSchedule({
+                periodicidadeDias: selectedDays,
+                dataHoraInicioISO,
+                observacoes: obs
+            });
+        }
+    };
+}
+
 // --- MODAL DE CONFIRMAÇÃO E ALERTA ELEGANTE E CURTO ---
 export function showConfirmModal({ title = 'Confirmação', message, confirmText = 'Confirmar', cancelText = 'Cancelar', type = 'danger', onConfirm }) {
     let modal = document.getElementById('global-confirm-modal');
@@ -788,6 +963,35 @@ export async function criarAgendamentoCliente({ nomeCliente, whatsappCliente, se
     return data;
 }
 
+export async function criarAgendamentoManutencao({ clienteId, servicoId, dataHoraInicioISO, parentId, periodicidadeDias, observacoes }) {
+    const { data: servico } = await supabase.from('servicos').select('duracao_minutos').eq('id', servicoId).single();
+    const duracao = servico?.duracao_minutos || 30;
+
+    const dataInicio = new Date(dataHoraInicioISO);
+    const dataFim = new Date(dataInicio.getTime() + duracao * 60000);
+
+    const payload = {
+        cliente_id: clienteId,
+        servico_id: servicoId,
+        data_hora_inicio: dataHoraInicioISO,
+        data_hora_fim: dataFim.toISOString(),
+        status: 'pendente',
+        is_manutencao: true,
+        agendamento_pai_id: parentId || null,
+        periodicidade_dias: periodicidadeDias || null,
+        observacoes: observacoes || 'Manutenção Periódica'
+    };
+
+    const { data, error } = await supabase
+        .from('agendamentos')
+        .insert(payload)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
 export async function updateAgendamentoStatus(id, newStatus) {
     const { error } = await supabase
         .from('agendamentos')
@@ -832,7 +1036,7 @@ export async function deleteAgendamento(id) {
     return true;
 }
 
-// --- RENDERIZAÇÃO DE AGENDAMENTOS E DETECÇÃO GARANTIDA DE NOVOS ITENS PARA ALARME ---
+// --- RENDERIZAÇÃO DE AGENDAMENTOS COM FALLBACK DE SEGURANÇA VIA RPC (EVITA ERRO DE RLS PERMISSION DENIED) ---
 export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null, silent = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -846,7 +1050,11 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
     }
 
     try {
-        let query = supabase
+        let agendamentos = [];
+        let error = null;
+
+        // Tentativa 1: Busca direta na tabela agendamentos
+        const res = await supabase
             .from('agendamentos')
             .select(`
                 id,
@@ -856,6 +1064,9 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
                 data_hora_fim,
                 status,
                 observacoes,
+                is_manutencao,
+                agendamento_pai_id,
+                periodicidade_dias,
                 clientes (
                     id,
                     nome,
@@ -869,10 +1080,30 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
             `)
             .order('data_hora_inicio', { ascending: true });
 
-        const { data, error } = await query;
-        if (error) throw error;
-
-        let agendamentos = data || [];
+        if (res.error) {
+            console.warn("Busca direta em agendamentos bloqueada por RLS. Acionando fallback RPC...", res.error);
+            // Tentativa 2: Fallback via RPC SECURITY DEFINER (Infalível contra permission denied no iOS/Android)
+            const rpcRes = await supabase.rpc('listar_agendamentos_painel');
+            if (rpcRes.error) {
+                throw rpcRes.error;
+            }
+            agendamentos = (rpcRes.data || []).map(a => ({
+                id: a.id,
+                cliente_id: a.cliente_id,
+                servico_id: a.servico_id,
+                data_hora_inicio: a.data_hora_inicio,
+                data_hora_fim: a.data_hora_fim,
+                status: a.status,
+                observacoes: a.observacoes,
+                is_manutencao: a.is_manutencao,
+                agendamento_pai_id: a.agendamento_pai_id,
+                periodicidade_dias: a.periodicidade_dias,
+                clientes: { id: a.cliente_id, nome: a.cliente_nome, whatsapp: a.cliente_whatsapp },
+                servicos: { id: a.servico_id, nome: a.servico_nome, duracao_minutos: a.servico_duracao_minutos }
+            }));
+        } else {
+            agendamentos = res.data || [];
+        }
 
         // DETECÇÃO DE NOVO AGENDAMENTO PARA DISPARAR SOM DE ALARME GARANTIDO
         if (isInitialLoadDone) {
@@ -894,7 +1125,11 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
         }
 
         if (filterStatus) {
-            agendamentos = agendamentos.filter(a => (a.status || 'aguardando_confirmacao').toLowerCase() === filterStatus.toLowerCase());
+            if (filterStatus.toLowerCase() === 'manutencao') {
+                agendamentos = agendamentos.filter(a => a.is_manutencao === true);
+            } else {
+                agendamentos = agendamentos.filter(a => (a.status || 'aguardando_confirmacao').toLowerCase() === filterStatus.toLowerCase());
+            }
         }
 
         renderAgendamentosList(container, agendamentos);
@@ -944,10 +1179,13 @@ function renderAgendamentosList(container, agendamentos) {
             horaFim = ' - ' + df.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         }
 
+        const isManutencao = ag.is_manutencao === true;
         const statusLower = (ag.status || 'aguardando_confirmacao').toLowerCase();
         const isSolicitacao = statusLower === 'aguardando_confirmacao' || statusLower === 'solicitado';
 
-        const statusClass = isSolicitacao
+        const statusClass = isManutencao
+            ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+            : isSolicitacao
             ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
             : statusLower === 'concluido' || statusLower === 'atendido'
             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
@@ -957,7 +1195,9 @@ function renderAgendamentosList(container, agendamentos) {
             ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
             : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
 
-        const statusLabel = isSolicitacao
+        const statusLabel = isManutencao
+            ? `🔧 MANUTENÇÃO${ag.periodicidade_dias ? ' (' + ag.periodicidade_dias + 'D)' : ''}`
+            : isSolicitacao
             ? 'AGUARDANDO CONFIRMAÇÃO'
             : statusLower === 'pendente'
             ? 'CONFIRMADO'
@@ -968,11 +1208,17 @@ function renderAgendamentosList(container, agendamentos) {
             : statusLower.toUpperCase();
 
         const item = document.createElement('div');
-        item.className = 'group p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors rounded-2xl';
+        item.className = `group p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors rounded-2xl ${
+            isManutencao ? 'bg-purple-500/[0.02] dark:bg-purple-500/[0.04]' : ''
+        }`;
         
         item.innerHTML = `
             <div class="flex items-start gap-3 flex-1 min-w-0">
-                <div class="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 font-bold border border-blue-100 dark:border-blue-900/40">
+                <div class="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-2xl ${
+                    isManutencao 
+                        ? 'bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400 border border-purple-100 dark:border-purple-900/40' 
+                        : 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-100 dark:border-blue-900/40'
+                } font-bold">
                     <span class="text-[10px] font-semibold uppercase">${dataInicio.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</span>
                     <span class="text-sm font-extrabold leading-none">${dataInicio.getDate()}</span>
                 </div>
@@ -982,9 +1228,14 @@ function renderAgendamentosList(container, agendamentos) {
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${statusClass} shrink-0">
                             ${statusLabel}
                         </span>
+                        ${isManutencao ? `
+                            <span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20">
+                                🔧 Retorno de Manutenção
+                            </span>
+                        ` : ''}
                     </div>
                     <p class="text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 ${isManutencao ? 'text-purple-500' : 'text-blue-500'} shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg>
                         <span class="truncate max-w-[200px] sm:max-w-none">${escapeHtml(servicoNome)} (${duracao} min)</span>
                     </p>
                     <div class="flex items-center gap-2.5 text-[11px] text-slate-400 dark:text-slate-500 flex-wrap">
@@ -1008,11 +1259,14 @@ function renderAgendamentosList(container, agendamentos) {
                     <button type="button" class="btn-aceitar-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-md shadow-emerald-600/20 transition-transform active:scale-95 shrink-0" 
                         title="Aceitar Agendamento"
                         data-id="${ag.id}" 
+                        data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
+                        data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
                         data-cliente-nome="${escapeHtml(clienteNome)}"
                         data-servico-nome="${escapeHtml(servicoNome)}"
                         data-whatsapp="${cleanPhone(clienteWhatsapp)}"
                         data-data-formatada="${dataFormatada}"
-                        data-hora-inicio="${horaInicio}">
+                        data-hora-inicio="${horaInicio}"
+                        data-data-iso="${ag.data_hora_inicio}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     </button>
 
@@ -1026,9 +1280,12 @@ function renderAgendamentosList(container, agendamentos) {
                     <!-- BADGE STATUS MODAL -->
                     <button type="button" class="btn-open-status-modal flex items-center justify-center h-9 px-3 rounded-xl text-xs font-black border transition-all ${statusClass} shrink-0" 
                         data-id="${ag.id}"
+                        data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
+                        data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
                         data-status="${statusLower}"
                         data-cliente-nome="${escapeHtml(clienteNome)}"
-                        data-servico-nome="${escapeHtml(servicoNome)}">
+                        data-servico-nome="${escapeHtml(servicoNome)}"
+                        data-data-iso="${ag.data_hora_inicio}">
                         <span>${statusLabel}</span>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-70 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                     </button>

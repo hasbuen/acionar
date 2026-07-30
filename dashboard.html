@@ -160,6 +160,10 @@
                 <button id="filterConcluido" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 border border-slate-200 dark:border-slate-800 shrink-0">
                     Atendidos
                 </button>
+                <button id="filterManutencao" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 border border-slate-200 dark:border-slate-800 shrink-0 flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                    <span>Manutenções</span>
+                </button>
                 <button id="filterCancelado" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 border border-slate-200 dark:border-slate-800 shrink-0">
                     Cancelados
                 </button>
@@ -345,6 +349,8 @@
             showToast, 
             showConfirmModal,
             showChangeStatusModal,
+            showManutencaoPromptModal,
+            criarAgendamentoManutencao,
             isAlarmEnabled,
             toggleAlarmState,
             registerServiceWorker,
@@ -602,28 +608,66 @@
         const container = document.getElementById('agendamentosContainer');
 
         container?.addEventListener('click', async (e) => {
-            // ACEITAR AGENDAMENTO + ABRIR WHATSAPP AUTOMÁTICO
+            // ACEITAR AGENDAMENTO + ABRIR VALIDAÇÃO DE MANUTENÇÃO PERIÓDICA
             const btnAceitar = e.target.closest('.btn-aceitar-agendamento');
             if (btnAceitar) {
                 const id = btnAceitar.dataset.id;
+                const clienteId = btnAceitar.dataset.clienteId;
+                const servicoId = btnAceitar.dataset.servicoId;
                 const clienteNome = btnAceitar.dataset.clienteNome;
                 const servicoNome = btnAceitar.dataset.servicoNome;
                 const whatsapp = btnAceitar.dataset.whatsapp;
                 const dataFormatada = btnAceitar.dataset.dataFormatada;
                 const horaInicio = btnAceitar.dataset.horaInicio;
+                const dataIso = btnAceitar.dataset.dataIso;
 
                 try {
                     await updateAgendamentoStatus(id, 'pendente');
-                    
-                    showToast('Agendamento CONFIRMADO com sucesso! Abrindo WhatsApp...', 'success');
-                    
-                    if (whatsapp) {
-                        const msgEncoded = await generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio });
-                        const waUrl = `https://wa.me/55${whatsapp}?text=${msgEncoded}`;
-                        window.open(waUrl, '_blank');
-                    }
-
                     refreshAgenda(true);
+
+                    // Validação de Manutenção Periódica
+                    showManutencaoPromptModal({
+                        agendamento: {
+                            id,
+                            clienteId,
+                            servicoId,
+                            clienteNome,
+                            servicoNome,
+                            data_hora_inicio: dataIso
+                        },
+                        onSchedule: async ({ periodicidadeDias, dataHoraInicioISO, observacoes }) => {
+                            try {
+                                await criarAgendamentoManutencao({
+                                    clienteId,
+                                    servicoId,
+                                    dataHoraInicioISO,
+                                    parentId: id,
+                                    periodicidadeDias,
+                                    observacoes
+                                });
+                                showToast('Agendamento aceito e Manutenção agendada com sucesso!', 'success');
+                            } catch (mErr) {
+                                console.error('Erro ao agendar manutenção:', mErr);
+                                showToast('Agendamento aceito, mas erro ao agendar manutenção: ' + mErr.message, 'error');
+                            }
+                            if (whatsapp) {
+                                const msgEncoded = await generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio });
+                                const waUrl = `https://wa.me/55${whatsapp}?text=${msgEncoded}`;
+                                window.open(waUrl, '_blank');
+                            }
+                            refreshAgenda(true);
+                        },
+                        onSkip: async () => {
+                            showToast('Agendamento CONFIRMADO com sucesso! Abrindo WhatsApp...', 'success');
+                            if (whatsapp) {
+                                const msgEncoded = await generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio });
+                                const waUrl = `https://wa.me/55${whatsapp}?text=${msgEncoded}`;
+                                window.open(waUrl, '_blank');
+                            }
+                            refreshAgenda(true);
+                        }
+                    });
+
                 } catch (err) {
                     showToast('Erro ao aceitar agendamento: ' + err.message, 'error');
                 }
@@ -659,6 +703,9 @@
                 const currentStatus = btnOpenStatusModal.dataset.status;
                 const clienteNome = btnOpenStatusModal.dataset.clienteNome;
                 const servicoNome = btnOpenStatusModal.dataset.servicoNome;
+                const clienteId = btnOpenStatusModal.dataset.clienteId;
+                const servicoId = btnOpenStatusModal.dataset.servicoId;
+                const dataIso = btnOpenStatusModal.dataset.dataIso;
 
                 showChangeStatusModal({
                     id,
@@ -670,6 +717,40 @@
                             await updateAgendamentoStatus(id, newStatus);
                             showToast('Status atualizado com sucesso!', 'success');
                             refreshAgenda(true);
+
+                            // Pergunta de Manutenção se for alterado para Pendente ou Concluído
+                            if ((newStatus === 'pendente' || newStatus === 'concluido') && clienteId && servicoId) {
+                                showManutencaoPromptModal({
+                                    agendamento: {
+                                        id,
+                                        clienteId,
+                                        servicoId,
+                                        clienteNome,
+                                        servicoNome,
+                                        data_hora_inicio: dataIso
+                                    },
+                                    onSchedule: async ({ periodicidadeDias, dataHoraInicioISO, observacoes }) => {
+                                        try {
+                                            await criarAgendamentoManutencao({
+                                                clienteId,
+                                                servicoId,
+                                                dataHoraInicioISO,
+                                                parentId: id,
+                                                periodicidadeDias,
+                                                observacoes
+                                            });
+                                            showToast('Manutenção periódica agendada com sucesso!', 'success');
+                                            refreshAgenda(true);
+                                        } catch (mErr) {
+                                            console.error('Erro ao agendar manutenção:', mErr);
+                                            showToast('Erro ao agendar manutenção: ' + mErr.message, 'error');
+                                        }
+                                    },
+                                    onSkip: () => {
+                                        refreshAgenda(true);
+                                    }
+                                });
+                            }
                         } catch (err) {
                             showToast('Erro ao atualizar status: ' + err.message, 'error');
                         }
@@ -780,6 +861,13 @@
             setActiveFilterBtn(e.target);
             activeFilterDate = null;
             activeFilterStatus = 'concluido';
+            refreshAgenda();
+        });
+        document.getElementById('filterManutencao')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('.filter-btn') || e.target;
+            setActiveFilterBtn(btn);
+            activeFilterDate = null;
+            activeFilterStatus = 'manutencao';
             refreshAgenda();
         });
         document.getElementById('filterCancelado')?.addEventListener('click', (e) => {
