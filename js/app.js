@@ -1379,6 +1379,13 @@ function renderAgendamentosList(container, agendamentos) {
             ? 'JÁ ATENDIDO' 
             : statusLower.toUpperCase();
 
+        const clienteIdStr = ag.cliente_id || ag.clientes?.id || '';
+        const servicoIdStr = ag.servico_id || ag.servicos?.id || '';
+        const precoStr = getServicePrice(ag.servicos);
+        const waMsgStatus = isManutencao ? 'true' : 'false';
+        const showManutencaoBtn = !isSolicitacao && statusLower !== 'cancelado';
+        const agendamentoJson = escapeHtml(JSON.stringify(ag));
+
         const item = document.createElement('div');
         item.className = `group p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all rounded-2xl animate-fade-in ${
             isManutencao ? 'bg-purple-500/[0.02] dark:bg-purple-500/[0.04]' : ''
@@ -1427,12 +1434,11 @@ function renderAgendamentosList(container, agendamentos) {
             <!-- BOTÕES DE AÇÃO HORIZONTAIS COMPACTOS -->
             <div class="flex flex-row items-center justify-end gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/40">
                 ${isAguardando ? `
-                    <!-- BOTÃO ACEITAR CHECK VERDE -->
                     <button type="button" class="btn-aceitar-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold border border-emerald-500/20 shrink-0" 
                         title="Aceitar Agendamento"
                         data-id="${ag.id}"
-                        data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
-                        data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
+                        data-cliente-id="${clienteIdStr}"
+                        data-servico-id="${servicoIdStr}"
                         data-cliente-nome="${escapeHtml(clienteNome)}"
                         data-servico-nome="${escapeHtml(servicoNome)}"
                         data-whatsapp="${cleanPhone(clienteWhatsapp)}"
@@ -1442,18 +1448,16 @@ function renderAgendamentosList(container, agendamentos) {
                         <i class="fa-solid fa-check text-sm"></i>
                     </button>
 
-                    <!-- BOTÃO RECUSAR X VERMELHO -->
                     <button type="button" class="btn-recusar-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 font-extrabold border border-rose-500/20 shrink-0" 
                         title="Recusar Agendamento"
                         data-id="${ag.id}">
                         <i class="fa-solid fa-xmark text-sm"></i>
                     </button>
                 ` : `
-                    <!-- BADGE STATUS MODAL -->
                     <button type="button" class="btn-open-status-modal btn-animated flex items-center justify-between h-9 px-2.5 rounded-xl text-xs font-black border ${statusClass} flex-1 min-w-0" 
                         data-id="${ag.id}"
-                        data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
-                        data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
+                        data-cliente-id="${clienteIdStr}"
+                        data-servico-id="${servicoIdStr}"
                         data-status="${statusLower}"
                         data-cliente-nome="${escapeHtml(clienteNome)}"
                         data-servico-nome="${escapeHtml(servicoNome)}"
@@ -1475,15 +1479,17 @@ function renderAgendamentosList(container, agendamentos) {
                         data-servico-nome="${escapeHtml(servicoNome)}"
                         data-data-formatada="${dataFormatada}"
                         data-hora-inicio="${horaInicio}"
-                        data-is-manutencao="${isManutencao ? 'true' : 'false'}">
+                        data-is-manutencao="${waMsgStatus}">
                         <i class="fa-brands fa-whatsapp text-sm"></i>
                     </button>
-                ${!isSolicitacao && statusLower !== 'cancelado' ? `
+                ` : ''}
+
+                ${showManutencaoBtn ? `
                     <button type="button" class="btn-schedule-manutencao btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-extrabold border border-purple-500/20 shrink-0" 
                         title="Agendar Retorno de Manutenção"
                         data-id="${ag.id}"
-                        data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
-                        data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
+                        data-cliente-id="${clienteIdStr}"
+                        data-servico-id="${servicoIdStr}"
                         data-cliente-nome="${escapeHtml(clienteNome)}"
                         data-servico-nome="${escapeHtml(servicoNome)}"
                         data-data-iso="${ag.data_hora_inicio}">
@@ -1494,15 +1500,15 @@ function renderAgendamentosList(container, agendamentos) {
                 <button type="button" class="btn-open-payment-modal btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold border border-emerald-500/20 shrink-0" 
                     title="Registrar / Ver Pagamento (Caixa)"
                     data-agendamento-id="${ag.id}"
-                    data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
-                    data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
+                    data-cliente-id="${clienteIdStr}"
+                    data-servico-id="${servicoIdStr}"
                     data-cliente-nome="${escapeHtml(clienteNome)}"
                     data-servico-nome="${escapeHtml(servicoNome)}"
-                    data-preco="${getServicePrice(ag.servicos)}">
+                    data-preco="${precoStr}">
                     <i class="fa-solid fa-dollar-sign text-xs"></i>
                 </button>
 
-                <button class="btn-edit-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200/50 dark:border-slate-800 shrink-0" data-agendamento='${JSON.stringify(ag)}' title="Editar Agendamento">
+                <button class="btn-edit-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200/50 dark:border-slate-800 shrink-0" data-agendamento='${agendamentoJson}' title="Editar Agendamento">
                     <i class="fa-solid fa-pen-to-square text-xs"></i>
                 </button>
 
