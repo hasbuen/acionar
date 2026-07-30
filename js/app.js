@@ -387,6 +387,7 @@ export function showChangeStatusModal({ id, currentStatus, clienteNome, servicoN
         { key: 'pendente', label: 'Confirmado / Pendente', sub: 'Aguardando atendimento', color: 'blue', icon: 'calendar-check' },
         { key: 'em_atendimento', label: 'Em Atendimento', sub: 'Serviço em andamento', color: 'sky', icon: 'play-circle' },
         { key: 'concluido', label: 'Já Atendido / Concluído', sub: 'Serviço finalizado', color: 'emerald', icon: 'check-circle-2' },
+        { key: 'agendar_manutencao', label: '🔧 Agendar Manutenção Periódica', sub: 'Programar retorno (30, 45, 60 dias)', color: 'purple', icon: 'wrench' },
         { key: 'cancelado', label: 'Cancelado / Recusado', sub: 'Agendamento desmarcado', color: 'rose', icon: 'x-circle' }
     ];
 
@@ -1476,6 +1477,17 @@ function renderAgendamentosList(container, agendamentos) {
                         data-hora-inicio="${horaInicio}"
                         data-is-manutencao="${isManutencao ? 'true' : 'false'}">
                         <i class="fa-brands fa-whatsapp text-sm"></i>
+                    </button>
+                ${!isSolicitacao && statusLower !== 'cancelado' ? `
+                    <button type="button" class="btn-schedule-manutencao btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-extrabold border border-purple-500/20 shrink-0" 
+                        title="Agendar Retorno de Manutenção"
+                        data-id="${ag.id}"
+                        data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
+                        data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
+                        data-cliente-nome="${escapeHtml(clienteNome)}"
+                        data-servico-nome="${escapeHtml(servicoNome)}"
+                        data-data-iso="${ag.data_hora_inicio}">
+                        <i class="fa-solid fa-wrench text-xs"></i>
                     </button>
                 ` : ''}
 

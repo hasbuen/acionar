@@ -1274,6 +1274,37 @@
                     servicoNome,
                     onSelect: async (newStatus) => {
                         try {
+                            if (newStatus === 'agendar_manutencao') {
+                                showManutencaoPromptModal({
+                                    agendamento: {
+                                        id,
+                                        clienteId,
+                                        servicoId,
+                                        clienteNome,
+                                        servicoNome,
+                                        data_hora_inicio: dataIso
+                                    },
+                                    onSchedule: async ({ periodicidadeDias, dataHoraInicioISO, observacoes }) => {
+                                        try {
+                                            await criarAgendamentoManutencao({
+                                                clienteId,
+                                                servicoId,
+                                                dataHoraInicioISO,
+                                                parentId: id,
+                                                periodicidadeDias,
+                                                observacoes
+                                            });
+                                            showToast('Manutenção periódica agendada com sucesso!', 'success');
+                                            refreshAgenda(true);
+                                        } catch (mErr) {
+                                            showToast('Erro ao agendar manutenção: ' + mErr.message, 'error');
+                                        }
+                                    },
+                                    onSkip: () => refreshAgenda(true)
+                                });
+                                return;
+                            }
+
                             await updateAgendamentoStatus(id, newStatus);
                             showToast('Status atualizado com sucesso!', 'success');
                             refreshAgenda(true);
