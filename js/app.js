@@ -1234,7 +1234,7 @@ function renderAgendamentosList(container, agendamentos) {
             : statusLower.toUpperCase();
 
         const item = document.createElement('div');
-        item.className = `group p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors rounded-2xl ${
+        item.className = `group p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all rounded-2xl animate-fade-in ${
             isManutencao ? 'bg-purple-500/[0.02] dark:bg-purple-500/[0.04]' : ''
         }`;
         
@@ -1256,21 +1256,21 @@ function renderAgendamentosList(container, agendamentos) {
                         </span>
                         ${isManutencao ? `
                             <span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20">
-                                🔧 Retorno de Manutenção
+                                <i class="fa-solid fa-wrench text-[10px]"></i> Retorno de Manutenção
                             </span>
                         ` : ''}
                     </div>
-                    <p class="text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 ${isManutencao ? 'text-purple-500' : 'text-blue-500'} shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg>
+                    <p class="text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
+                        <i class="fa-solid fa-scissors ${isManutencao ? 'text-purple-500' : 'text-blue-500'} shrink-0 text-xs"></i>
                         <span class="truncate max-w-[200px] sm:max-w-none">${escapeHtml(servicoNome)} (${duracao} min)</span>
                     </p>
                     <div class="flex items-center gap-2.5 text-[11px] text-slate-400 dark:text-slate-500 flex-wrap">
                         <span class="flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <i class="fa-regular fa-clock text-xs"></i>
                             ${horaInicio}${horaFim}
                         </span>
                         <span class="flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                            <i class="fa-regular fa-calendar-check text-xs"></i>
                             ${dataFormatada}
                         </span>
                         ${ag.observacoes ? `<span class="italic text-slate-400 dark:text-slate-500 max-w-[180px] truncate" title="${escapeHtml(ag.observacoes)}">Obs: ${escapeHtml(ag.observacoes)}</span>` : ''}
@@ -1282,7 +1282,7 @@ function renderAgendamentosList(container, agendamentos) {
             <div class="flex flex-row items-center justify-end gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/40">
                 ${isSolicitacao ? `
                     <!-- BOTÃO ACEITAR VERDE -->
-                    <button type="button" class="btn-aceitar-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-md shadow-emerald-600/20 transition-transform active:scale-95 shrink-0" 
+                    <button type="button" class="btn-aceitar-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-md shadow-emerald-600/20 shrink-0" 
                         title="Aceitar Agendamento"
                         data-id="${ag.id}" 
                         data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
@@ -1293,18 +1293,18 @@ function renderAgendamentosList(container, agendamentos) {
                         data-data-formatada="${dataFormatada}"
                         data-hora-inicio="${horaInicio}"
                         data-data-iso="${ag.data_hora_inicio}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        <i class="fa-solid fa-check text-sm"></i>
                     </button>
 
                     <!-- BOTÃO RECUSAR X VERMELHO -->
-                    <button type="button" class="btn-recusar-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 font-extrabold border border-rose-500/20 transition-all shrink-0" 
+                    <button type="button" class="btn-recusar-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 font-extrabold border border-rose-500/20 shrink-0" 
                         title="Recusar Agendamento"
                         data-id="${ag.id}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+                        <i class="fa-solid fa-xmark text-sm"></i>
                     </button>
                 ` : `
                     <!-- BADGE STATUS MODAL -->
-                    <button type="button" class="btn-open-status-modal flex items-center justify-center h-9 px-3 rounded-xl text-xs font-black border transition-all ${statusClass} shrink-0" 
+                    <button type="button" class="btn-open-status-modal btn-animated flex items-center justify-center h-9 px-3 rounded-xl text-xs font-black border ${statusClass} shrink-0" 
                         data-id="${ag.id}"
                         data-cliente-id="${ag.cliente_id || ag.clientes?.id || ''}"
                         data-servico-id="${ag.servico_id || ag.servicos?.id || ''}"
@@ -1313,16 +1313,16 @@ function renderAgendamentosList(container, agendamentos) {
                         data-servico-nome="${escapeHtml(servicoNome)}"
                         data-data-iso="${ag.data_hora_inicio}">
                         <span>${statusLabel}</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-70 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        <i class="fa-solid fa-chevron-down text-[10px] opacity-70 ml-1.5"></i>
                     </button>
                 `}
 
                 ${clienteWhatsapp ? `
-                    <button type="button" class="btn-send-wa-agendamento flex items-center justify-center h-9 px-2.5 rounded-xl ${
+                    <button type="button" class="btn-send-wa-agendamento btn-animated flex items-center justify-center h-9 px-2.5 rounded-xl ${
                         isManutencao 
                             ? 'bg-purple-500/10 text-purple-600 dark:text-purple-300 hover:bg-purple-500/20 border border-purple-500/20' 
                             : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20'
-                    } transition-all shrink-0 font-extrabold text-[11px]" 
+                    } shrink-0 font-extrabold text-[11px]" 
                         title="${isManutencao ? 'Enviar Lembrete de Manutenção no WhatsApp' : 'Conversar no WhatsApp'}"
                         data-whatsapp="${cleanPhone(clienteWhatsapp)}"
                         data-cliente-nome="${escapeHtml(clienteNome)}"
@@ -1330,17 +1330,17 @@ function renderAgendamentosList(container, agendamentos) {
                         data-data-formatada="${dataFormatada}"
                         data-hora-inicio="${horaInicio}"
                         data-is-manutencao="${isManutencao ? 'true' : 'false'}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                        <i class="fa-brands fa-whatsapp text-sm ${isManutencao ? '' : 'sm:mr-0'} mr-1 shrink-0"></i>
                         <span>${isManutencao ? 'Lembrete Manutenção' : 'WhatsApp'}</span>
                     </button>
                 ` : ''}
 
-                <button class="btn-edit-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors shrink-0" data-agendamento='${JSON.stringify(ag)}' title="Editar Agendamento">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <button class="btn-edit-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200/50 dark:border-slate-800 shrink-0" data-agendamento='${JSON.stringify(ag)}' title="Editar Agendamento">
+                    <i class="fa-solid fa-pen-to-square text-xs"></i>
                 </button>
 
-                <button class="btn-delete-agendamento flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shrink-0" data-id="${ag.id}" title="Excluir Agendamento">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                <button class="btn-delete-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200/50 dark:border-slate-800 shrink-0" data-id="${ag.id}" title="Excluir Agendamento">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
                 </button>
             </div>
         `;
@@ -1408,7 +1408,7 @@ export async function fetchAndRenderClientes(containerId) {
         container.innerHTML = '';
         clientes.forEach(cliente => {
             const item = document.createElement('div');
-            item.className = 'p-4 sm:p-5 flex items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors';
+            item.className = 'p-4 sm:p-5 flex items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all animate-fade-in';
             item.innerHTML = `
                 <div class="flex items-center gap-3 min-w-0">
                     <div class="h-10 w-10 shrink-0 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-semibold flex items-center justify-center text-sm border border-slate-200 dark:border-slate-700">
@@ -1416,8 +1416,8 @@ export async function fetchAndRenderClientes(containerId) {
                     </div>
                     <div class="min-w-0">
                         <h4 class="font-semibold text-slate-900 dark:text-white text-sm sm:text-base truncate">${escapeHtml(cliente.nome)}</h4>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-phone text-xs"></i>
                             ${cleanPhone(cliente.whatsapp)}
                         </p>
                     </div>
@@ -1426,14 +1426,14 @@ export async function fetchAndRenderClientes(containerId) {
                 <!-- BOTÕES CLIENTES NA HORIZONTAL -->
                 <div class="flex flex-row items-center gap-1.5 shrink-0">
                     <a href="https://wa.me/55${cleanPhone(cliente.whatsapp)}" target="_blank" rel="noopener noreferrer" 
-                        class="flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                        class="btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 shrink-0" title="Conversar no WhatsApp">
+                        <i class="fa-brands fa-whatsapp text-sm"></i>
                     </a>
-                    <button class="btn-edit-cliente flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors" data-cliente='${JSON.stringify(cliente)}' title="Editar Cliente">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    <button class="btn-edit-cliente btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200/50 dark:border-slate-800" data-cliente='${JSON.stringify(cliente)}' title="Editar Cliente">
+                        <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
-                    <button class="btn-delete-cliente flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors" data-id="${cliente.id}" title="Excluir Cliente">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    <button class="btn-delete-cliente btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200/50 dark:border-slate-800" data-id="${cliente.id}" title="Excluir Cliente">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
                     </button>
                 </div>
             `;

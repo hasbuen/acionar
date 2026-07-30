@@ -32,10 +32,29 @@
             document.documentElement.classList.remove('dark');
         }
     </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
     <style>
         * { -webkit-tap-highlight-color: transparent; }
         ::-webkit-scrollbar { width: 0px; background: transparent; }
         input[type="time"] { min-height: 40px; -webkit-appearance: none; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .btn-animated {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-animated:hover {
+            transform: translateY(-2px) scale(1.04);
+        }
+        .btn-animated:active {
+            transform: translateY(0) scale(0.96);
+        }
     </style>
 </head>
 <body class="min-h-[100dvh] bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
@@ -253,7 +272,7 @@
             MENSAGEM_MANUTENCAO_PADRAO,
             isAlarmEnabled,
             toggleAlarmState
-        } from './js/app.js';
+        } from './js/app.js?v=1.1';
 
         initTheme();
 
