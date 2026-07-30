@@ -1888,7 +1888,7 @@ export async function fetchTodosPagamentosFluxoCaixa() {
             .select(`
                 *,
                 clientes ( id, nome, whatsapp ),
-                servicos ( id, nome, preco ),
+                servicos ( id, nome ),
                 agendamentos ( id, data_hora_inicio, status )
             `)
             .order('criado_em', { ascending: false });
