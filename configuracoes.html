@@ -83,6 +83,26 @@
                 </div>
             </div>
 
+            <!-- CONFIGURAÇÃO 0: ALARME SONORO E NOTIFICAÇÕES -->
+            <section class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 flex-wrap gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Alarme Sonoro de Novos Agendamentos</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Emite aviso sonoro e alerta no dispositivo quando chegar novo agendamento</p>
+                        </div>
+                    </div>
+
+                    <button id="btnEnableNotifications" type="button" class="flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-xs font-extrabold transition-all shadow-sm shrink-0">
+                        <svg id="iconAlarm" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                        <span id="btnEnableNotificationsText">Alarme Sonoro</span>
+                    </button>
+                </div>
+            </section>
+
             <!-- CONFIGURAÇÃO 1: MENSAGEM DO WHATSAPP & ENDEREÇO -->
             <section class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-6 backdrop-blur-md">
                 <div class="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -214,10 +234,40 @@
             saveConfiguracaoHorarios,
             fetchConfiguracaoMensagemWhatsApp,
             saveConfiguracaoMensagemWhatsApp,
-            MENSAGEM_WHATSAPP_PADRAO
+            MENSAGEM_WHATSAPP_PADRAO,
+            isAlarmEnabled,
+            toggleAlarmState
         } from './js/app.js';
 
         initTheme();
+
+        // --- CONTROLE DE ALARME SONORO ---
+        const btnEnableNotifications = document.getElementById('btnEnableNotifications');
+        const btnEnableNotificationsText = document.getElementById('btnEnableNotificationsText');
+        const iconAlarm = document.getElementById('iconAlarm');
+
+        function updateAlarmButtonUI() {
+            const enabled = isAlarmEnabled();
+            if (btnEnableNotificationsText) {
+                btnEnableNotificationsText.textContent = enabled ? 'Alarme Ativado 🔔' : 'Alarme Desativado 🔕';
+            }
+            if (btnEnableNotifications) {
+                btnEnableNotifications.className = enabled
+                    ? 'flex items-center justify-center gap-2 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-5 py-3 text-xs font-extrabold transition-all shadow-sm shrink-0'
+                    : 'flex items-center justify-center gap-2 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 px-5 py-3 text-xs font-extrabold transition-all opacity-80 shrink-0';
+            }
+            if (iconAlarm) {
+                iconAlarm.setAttribute('class', enabled ? 'h-4 w-4 text-emerald-500' : 'h-4 w-4 text-slate-400');
+            }
+        }
+
+        updateAlarmButtonUI();
+
+        btnEnableNotifications?.addEventListener('click', () => {
+            toggleAlarmState(() => {
+                updateAlarmButtonUI();
+            });
+        });
 
         const NOMES_DIAS = {
             "1": "Segunda-feira",
