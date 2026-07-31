@@ -50,7 +50,12 @@
             white-space: nowrap !important;
             overflow: hidden !important;
         }
-        select option {
+        html:not(.dark) select option {
+            background-color: #ffffff;
+            color: #0f172a;
+            padding: 10px;
+        }
+        html.dark select option {
             background-color: #0f172a;
             color: #f8fafc;
             padding: 10px;
@@ -74,9 +79,6 @@
         .filter-btn {
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .filter-btn:hover {
-            transform: translateY(-2px);
-        }
         .filter-btn:active {
             transform: translateY(0) scale(0.96);
         }
@@ -91,7 +93,7 @@
         }
     </style>
 </head>
-<body class="min-h-[100dvh] bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
+<body class="min-h-[100dvh] bg-slate-100/90 text-slate-900 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
 
     <!-- Header Principal -->
     <header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 pt-safe-top backdrop-blur-xl transition-colors duration-300 dark:border-slate-800/80 dark:bg-[#020617]/80">
@@ -617,7 +619,7 @@
             generateWhatsAppConfirmMessage,
             generateWhatsAppManutencaoMessage,
             cleanPhone
-        } from './js/app.js?v=1.8';
+        } from './js/app.js?v=1.9';
         import { supabase } from './js/supabase.js';
         import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './js/datetime.js';
 

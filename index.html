@@ -54,9 +54,19 @@
         .btn-animated:active {
             transform: translateY(0) scale(0.96);
         }
+        html:not(.dark) select option {
+            background-color: #ffffff;
+            color: #0f172a;
+            padding: 10px;
+        }
+        html.dark select option {
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 10px;
+        }
     </style>
 </head>
-<body class="min-h-[100dvh] bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col justify-between px-4 py-6 sm:py-12 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.12),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.12),_transparent_30%)]">
+<body class="min-h-[100dvh] bg-slate-100/90 text-slate-900 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col items-center justify-center p-4">
 
     <!-- Header superior com modo escuro -->
     <header class="w-full max-w-md mx-auto flex items-center justify-between pt-safe-top">
@@ -126,7 +136,7 @@
 
     <script type="module">
         import { supabase } from './js/supabase.js';
-        import { initTheme } from './js/app.js?v=1.8';
+        import { initTheme } from './js/app.js?v=1.9';
 
         initTheme();
 

@@ -2200,12 +2200,25 @@ export async function saveSubservico({ id, servico_id, nome, descricao, preco_ad
 export async function deleteSubservico(id) {
     try {
         if (id && !id.startsWith('sub-')) {
+            // Marca como inativo no Supabase (para ocultar instantaneamente da visão do cliente)
             await supabase
+                .from('subservicos')
+                .update({ ativo: false })
+                .eq('id', id);
+
+            // Tenta deletar fisicamente
+            const { error } = await supabase
                 .from('subservicos')
                 .delete()
                 .eq('id', id);
+
+            if (error) {
+                console.warn("Hard delete do subserviço mantido como ativo=false:", error.message);
+            }
         }
-    } catch (e) {}
+    } catch (e) {
+        console.warn("Erro ao deletar subserviço no Supabase:", e);
+    }
 
     try {
         let all = JSON.parse(localStorage.getItem('subservicos_data') || '[]');
