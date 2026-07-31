@@ -2427,6 +2427,18 @@ export async function deleteCliente(id) {
     return true;
 }
 
+export async function fetchClientesDoProfissional() {
+    await ensureActiveProfessionalFromSession();
+
+    const { data, error } = await supabase
+        .from('clientes')
+        .select('*')
+        .order('nome', { ascending: true });
+
+    if (error) throw error;
+    return filterRecordsForActiveProfessional(data || []);
+}
+
 export async function fetchAndRenderClientes(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -2439,13 +2451,7 @@ export async function fetchAndRenderClientes(containerId) {
     `;
 
     try {
-        const { data, error } = await supabase
-            .from('clientes')
-            .select('*')
-            .order('nome', { ascending: true });
-
-        if (error) throw error;
-        const clientes = filterRecordsForActiveProfessional(data || []);
+        const clientes = await fetchClientesDoProfissional();
 
         if (clientes.length === 0) {
             container.innerHTML = `

@@ -100,10 +100,10 @@
         }
     </style>
 </head>
-<body class="min-h-[100dvh] bg-slate-100/90 text-slate-900 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
+<body class="min-h-[100dvh] bg-[#e8eef6] text-slate-900 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 flex flex-col">
 
     <!-- Header Principal -->
-    <header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 pt-safe-top backdrop-blur-xl transition-colors duration-300 dark:border-slate-800/80 dark:bg-[#020617]/80">
+    <header class="sticky top-0 z-40 w-full border-b border-slate-300/70 bg-[#f4f7fb]/90 pt-safe-top backdrop-blur-xl transition-colors duration-300 dark:border-slate-800/80 dark:bg-[#020617]/80">
         <div class="px-4 sm:px-6 py-3.5 max-w-7xl mx-auto flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="h-9 w-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white font-black text-lg shadow-md shadow-blue-500/20">
@@ -122,8 +122,8 @@
 
             <!-- Navegação Desktop & Controles -->
             <div class="flex items-center gap-2 sm:gap-3">
-                <nav class="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200/60 dark:border-slate-800">
-                    <a href="./dashboard.html" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm">Agenda</a>
+                <nav class="hidden md:flex items-center gap-1 bg-slate-200/70 dark:bg-slate-900 p-1 rounded-2xl border border-slate-300/70 dark:border-slate-800">
+                    <a href="./dashboard.html" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-blue-600 border border-slate-200/80 dark:border-blue-500/30 text-blue-600 dark:text-white shadow-sm">Agenda</a>
                     <a href="./clientes.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Clientes</a>
                     <a href="./servicos.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Serviços</a>
                     <a href="./caixa.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Caixa</a>
@@ -225,7 +225,7 @@
     </main>
 
     <!-- MENU INFERIOR MOBILE ULTRA-PREMIUM -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/90 pb-safe-bottom backdrop-blur-2xl dark:border-slate-800/80 dark:bg-[#020617]/95 md:hidden shadow-2xl">
+    <nav class="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-300/70 bg-[#f4f7fb]/95 pb-safe-bottom backdrop-blur-2xl dark:border-slate-800/80 dark:bg-[#020617]/95 md:hidden shadow-lg">
         <div class="flex h-16 items-center justify-around px-2">
             <a href="./dashboard.html" class="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 px-3 text-blue-600 dark:text-blue-400 font-extrabold bg-blue-500/10 border border-blue-500/20 shadow-sm transition-all scale-105">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
@@ -271,7 +271,13 @@
 
             <form id="formAgendamento" class="space-y-4">
                 <div>
-                    <label for="inputCliente" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nome do Cliente</label>
+                    <div class="mb-1 flex items-center justify-between gap-3">
+                        <label for="inputCliente" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nome do Cliente</label>
+                        <button type="button" id="btnSelecionarCliente" class="btn-animated inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-[11px] font-extrabold text-blue-700 hover:bg-blue-500/15 dark:text-blue-300 dark:hover:bg-blue-500/20">
+                            <i class="fa-solid fa-address-book text-[10px]"></i>
+                            <span>Buscar cliente</span>
+                        </button>
+                    </div>
                     <input type="text" id="inputCliente" required placeholder="Ex: João Silva" 
                         class="w-full max-w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 box-border">
                 </div>
@@ -333,6 +339,30 @@
                 </div>
             </form>
 
+        </div>
+    </div>
+
+    <!-- MODAL DE SELEÇÃO DE CLIENTE -->
+    <div id="modalSelecionarCliente" class="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-slate-950/65 backdrop-blur-sm hidden p-0 sm:p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2rem] sm:rounded-[2rem] w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 max-h-[84vh] overflow-hidden box-border">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 dark:text-white">Selecionar cliente</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Escolha um cadastro para preencher o agendamento.</p>
+                </div>
+                <button id="btnCloseSelecionarCliente" class="h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
+                <input type="search" id="inputBuscaClienteAgendamento" placeholder="Buscar por nome ou WhatsApp" class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 pl-10 pr-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div id="listaClientesAgendamento" class="max-h-[52vh] overflow-y-auto rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-slate-50/60 dark:bg-slate-950/30 divide-y divide-slate-200/70 dark:divide-slate-800/70">
+                <div class="py-8 text-center text-xs font-semibold text-slate-400">Carregando clientes...</div>
+            </div>
         </div>
     </div>
 
@@ -616,6 +646,7 @@
             fetchAndRenderAgendamentos,
             criarAgendamentoProfissional,
             fetchNotificationsList,
+            fetchClientesDoProfissional,
             fetchPagamentoByAgendamentoId,
             savePagamentoFluxoCaixa,
             getServicePrice,
@@ -628,7 +659,7 @@
             generateWhatsAppManutencaoMessage,
             cleanPhone,
             performLogout
-        } from './js/app.js?v=2.8';
+        } from './js/app.js?v=2.9';
         import { supabase } from './js/supabase.js';
         import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './js/datetime.js';
 
@@ -653,10 +684,16 @@
         const closeModalBtn = document.getElementById('btnCloseModal');
         const cancelModalBtn = document.getElementById('btnCancelModal');
         const formAgendamento = document.getElementById('formAgendamento');
+        const clienteInput = document.getElementById('inputCliente');
         const whatsappInput = document.getElementById('inputWhatsapp');
         const inputData = document.getElementById('inputData');
         const hiddenSelectHora = document.getElementById('selectHora');
         const hiddenSelectServico = document.getElementById('selectServico');
+        const btnSelecionarCliente = document.getElementById('btnSelecionarCliente');
+        const modalSelecionarCliente = document.getElementById('modalSelecionarCliente');
+        const btnCloseSelecionarCliente = document.getElementById('btnCloseSelecionarCliente');
+        const inputBuscaClienteAgendamento = document.getElementById('inputBuscaClienteAgendamento');
+        const listaClientesAgendamento = document.getElementById('listaClientesAgendamento');
 
         // Combobox Serviço
         const btnComboboxServico = document.getElementById('btnComboboxServico');
@@ -679,6 +716,97 @@
         let currentServicoDuracao = 30;
         let activeFilterDate = null;
         let activeFilterStatus = null;
+        let clientesParaAgendamento = [];
+
+        function formatPhoneForPicker(value) {
+            const digits = cleanPhone(value || '');
+            if (!digits) return 'Sem WhatsApp cadastrado';
+            if (digits.length > 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+            if (digits.length > 6) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6, 10)}`;
+            return digits;
+        }
+
+        function renderClientePickerList(searchTerm = '') {
+            if (!listaClientesAgendamento) return;
+            const term = searchTerm.trim().toLowerCase();
+            const clientesFiltrados = clientesParaAgendamento.filter(cliente => {
+                const nome = String(cliente.nome || '').toLowerCase();
+                const telefone = cleanPhone(cliente.whatsapp || '');
+                const phoneTerm = cleanPhone(term);
+                return !term || nome.includes(term) || (phoneTerm && telefone.includes(phoneTerm));
+            });
+
+            listaClientesAgendamento.innerHTML = '';
+
+            if (clientesFiltrados.length === 0) {
+                const emptyState = document.createElement('div');
+                emptyState.className = 'py-8 px-4 text-center text-xs font-semibold text-slate-400';
+                emptyState.textContent = clientesParaAgendamento.length === 0
+                    ? 'Nenhum cliente cadastrado para este profissional.'
+                    : 'Nenhum cliente encontrado.';
+                listaClientesAgendamento.appendChild(emptyState);
+                return;
+            }
+
+            clientesFiltrados.forEach(cliente => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white dark:hover:bg-slate-800/70 transition-colors';
+
+                const avatar = document.createElement('span');
+                avatar.className = 'h-9 w-9 shrink-0 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 flex items-center justify-center text-sm font-black';
+                avatar.textContent = String(cliente.nome || '?').trim().charAt(0).toUpperCase() || '?';
+
+                const info = document.createElement('span');
+                info.className = 'min-w-0 flex-1';
+
+                const nome = document.createElement('span');
+                nome.className = 'block truncate text-sm font-bold text-slate-900 dark:text-white';
+                nome.textContent = cliente.nome || 'Cliente sem nome';
+
+                const telefone = document.createElement('span');
+                telefone.className = 'mt-0.5 block truncate text-xs font-medium text-slate-500 dark:text-slate-400';
+                telefone.textContent = formatPhoneForPicker(cliente.whatsapp || '');
+
+                info.append(nome, telefone);
+                button.append(avatar, info);
+
+                button.addEventListener('click', () => {
+                    if (clienteInput) clienteInput.value = cliente.nome || '';
+                    if (whatsappInput) {
+                        whatsappInput.value = cleanPhone(cliente.whatsapp || '');
+                        whatsappInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                    modalSelecionarCliente?.classList.add('hidden');
+                    clienteInput?.focus();
+                });
+
+                listaClientesAgendamento.appendChild(button);
+            });
+        }
+
+        async function openClientePicker() {
+            if (!modalSelecionarCliente || !listaClientesAgendamento) return;
+            modalSelecionarCliente.classList.remove('hidden');
+            if (inputBuscaClienteAgendamento) inputBuscaClienteAgendamento.value = '';
+            listaClientesAgendamento.innerHTML = '<div class="py-8 text-center text-xs font-semibold text-slate-400">Carregando clientes...</div>';
+
+            try {
+                clientesParaAgendamento = await fetchClientesDoProfissional();
+                renderClientePickerList();
+                setTimeout(() => inputBuscaClienteAgendamento?.focus(), 50);
+            } catch (err) {
+                listaClientesAgendamento.innerHTML = '<div class="py-8 px-4 text-center text-xs font-semibold text-rose-500">Não foi possível carregar os clientes.</div>';
+                showToast('Erro ao carregar clientes: ' + err.message, 'error');
+            }
+        }
+
+        btnSelecionarCliente?.addEventListener('click', openClientePicker);
+        btnCloseSelecionarCliente?.addEventListener('click', () => modalSelecionarCliente?.classList.add('hidden'));
+        modalSelecionarCliente?.addEventListener('click', (e) => {
+            if (e.target === modalSelecionarCliente) modalSelecionarCliente.classList.add('hidden');
+        });
+        inputBuscaClienteAgendamento?.addEventListener('input', (e) => renderClientePickerList(e.target.value));
 
         // --- GERENCIADOR DA CENTRAL DE NOTIFICAÇÕES ---
         const btnOpenNotifications = document.getElementById('btnOpenNotifications');
@@ -1097,6 +1225,7 @@
             labelComboboxServico.className = 'truncate font-medium text-slate-400';
             hiddenSelectServico.value = '';
             hiddenSelectHora.value = '';
+            if (inputData && !inputData.value) inputData.value = todayISO;
             await populateServicosDropdown(null, 'listComboboxServico');
             await updateAvailableSlots();
         }
