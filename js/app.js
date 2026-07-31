@@ -1192,6 +1192,14 @@ export async function fetchProfissionais() {
     }
 }
 
+export function getActiveProfessional() {
+    try {
+        const saved = localStorage.getItem('active_professional');
+        if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return null;
+}
+
 export async function saveProfissional({ id, nome, email, senha, cargo = 'auxiliar', cor_identificadora = '#8b5cf6', ativo = true }) {
     // Validação estrita do e-mail no domínio @acionar.online
     const cleanEmail = (email || '').trim().toLowerCase();
@@ -1207,6 +1215,21 @@ export async function saveProfissional({ id, nome, email, senha, cargo = 'auxili
         cor_identificadora,
         ativo
     };
+
+    // Tenta registrar a conta no Supabase Auth (GoTrue) para permitir login direto
+    if (!id && senha) {
+        try {
+            await supabase.auth.signUp({
+                email: cleanEmail,
+                password: senha,
+                options: {
+                    data: { nome, cargo }
+                }
+            });
+        } catch (authErr) {
+            console.warn("Registro no Supabase Auth falhou, mantendo cadastro na tabela profissionais:", authErr);
+        }
+    }
 
     if (id) {
         const { data, error } = await supabase

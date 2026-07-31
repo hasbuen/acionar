@@ -136,7 +136,7 @@
 
     <script type="module">
         import { supabase } from './js/supabase.js';
-        import { initTheme } from './js/app.js?v=1.9';
+        import { initTheme } from './js/app.js?v=2.0';
 
         initTheme();
 
@@ -150,7 +150,8 @@
         async function checkSession() {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
-                if (session) {
+                const activeProf = localStorage.getItem('active_professional');
+                if (session || activeProf) {
                     window.location.href = './dashboard.html';
                 }
             } catch (err) {
@@ -176,23 +177,41 @@
                 <span>Entrando...</span>
             `;
 
-            const email = emailInput.value.trim();
+            const email = emailInput.value.trim().toLowerCase();
             const password = passwordInput.value;
 
-            try {
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
-                
-                if (error) {
-                    showError('Falha na autenticação: ' + error.message);
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = `<span>Entrar</span><i data-lucide="arrow-right" class="h-4 w-4"></i>`;
-                    if (window.lucide) window.lucide.createIcons();
-                    return;
-                }
+            let authSuccess = false;
 
+            // 1. Tentar autenticação no Supabase Auth (GoTrue)
+            try {
+                const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email, password });
+                if (!authErr && authData?.session) {
+                    authSuccess = true;
+                }
+            } catch (e) {}
+
+            // 2. Se não encontrou no Supabase Auth, tentar via Tabela de Profissionais (Auxiliares cadastrados no painel)
+            if (!authSuccess) {
+                try {
+                    const { data: profData, error: profErr } = await supabase
+                        .from('profissionais')
+                        .select('*')
+                        .eq('email', email)
+                        .eq('senha_hash', password)
+                        .eq('ativo', true)
+                        .maybeSingle();
+
+                    if (profData) {
+                        localStorage.setItem('active_professional', JSON.stringify(profData));
+                        authSuccess = true;
+                    }
+                } catch (e) {}
+            }
+
+            if (authSuccess) {
                 window.location.href = './dashboard.html';
-            } catch (err) {
-                showError('Erro ao conectar com o Supabase: ' + err.message);
+            } else {
+                showError('E-mail ou senha incorretos. Verifique suas credenciais.');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = `<span>Entrar</span><i data-lucide="arrow-right" class="h-4 w-4"></i>`;
                 if (window.lucide) window.lucide.createIcons();
