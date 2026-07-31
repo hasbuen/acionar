@@ -231,7 +231,7 @@
             getAvailableTimeSlots,
             fetchConfiguracaoMensagemWhatsApp,
             cleanPhone
-        } from './js/app.js?v=2.7';
+        } from './js/app.js?v=2.8';
         import { supabase } from './js/supabase.js';
 
         initTheme();
@@ -422,7 +422,7 @@
             hiddenHora.value = '';
             timeChipsContainer.innerHTML = '<div class="col-span-full py-4 text-xs text-slate-400 text-center font-medium">Buscando horários livres...</div>';
 
-            const { closed, slots } = await getAvailableTimeSlots(dateVal, selectedServicoDuracao);
+            const { closed, slots } = await getAvailableTimeSlots(dateVal, selectedServicoDuracao, { scope: 'public' });
 
             if (closed) {
                 timeChipsContainer.innerHTML = `

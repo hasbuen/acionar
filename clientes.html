@@ -323,12 +323,12 @@
             showAlertModal,
             applyPhoneMask, 
             fetchAndRenderClientes,
+            createCliente,
             updateCliente,
             deleteCliente,
             fetchTodosPagamentosFluxoCaixa,
             savePagamentoFluxoCaixa
-        } from './js/app.js?v=2.7';
-        import { supabase } from './js/supabase.js';
+        } from './js/app.js?v=2.8';
 
         initTheme();
 
@@ -369,8 +369,7 @@
                     await updateCliente(id, { nome, whatsapp });
                     showToast('Cliente atualizado!', 'success');
                 } else {
-                    const { error } = await supabase.from('clientes').insert([{ nome, whatsapp: whatsapp.replace(/\D/g, '') }]);
-                    if (error) throw error;
+                    await createCliente({ nome, whatsapp });
                     showToast('Cliente cadastrado!', 'success');
                 }
                 closeModal();

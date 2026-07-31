@@ -614,6 +614,7 @@
             applyPhoneMask, 
             populateServicosDropdown, 
             fetchAndRenderAgendamentos,
+            criarAgendamentoProfissional,
             fetchNotificationsList,
             fetchPagamentoByAgendamentoId,
             savePagamentoFluxoCaixa,
@@ -627,7 +628,7 @@
             generateWhatsAppManutencaoMessage,
             cleanPhone,
             performLogout
-        } from './js/app.js?v=2.7';
+        } from './js/app.js?v=2.8';
         import { supabase } from './js/supabase.js';
         import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './js/datetime.js';
 
@@ -1129,15 +1130,13 @@
             submitBtn.disabled = true;
 
             try {
-                const { error } = await supabase.rpc('criar_agendamento_cliente', {
-                    p_nome: nomeCliente,
-                    p_whatsapp: whatsappCliente.replace(/\D/g, ''),
-                    p_servico_id: servicoIdSelecionado,
-                    p_data_hora_inicio: dataHoraInicioISO,
-                    p_observacoes: observacoesCliente || null
+                await criarAgendamentoProfissional({
+                    nomeCliente,
+                    whatsappCliente,
+                    servicoIdSelecionado,
+                    dataHoraInicioISO,
+                    observacoesCliente
                 });
-
-                if (error) throw error;
 
                 showToast('Agendamento criado com sucesso!', 'success');
                 closeModal();

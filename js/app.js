@@ -53,6 +53,7 @@ export function initTheme() {
 
     // Iniciar checagem em segundo plano de agendamentos prestes a iniciar (5 minutos antes)
     try {
+        ensureActiveProfessionalFromSession();
         startUpcoming5MinChecker();
     } catch (e) {}
 }
@@ -778,10 +779,69 @@ export function cleanPhone(formatted) {
     return (formatted || '').replace(/\D/g, '');
 }
 
+function isRequestStatus(status) {
+    const statusLower = (status || '').toLowerCase();
+    return statusLower === 'aguardando_confirmacao' || statusLower === 'solicitado';
+}
+
+function getActiveProfessionalId() {
+    const activeProf = getActiveProfessional();
+    return activeProf?.id || null;
+}
+
+function getAppointmentProfessionalId(agendamento) {
+    return agendamento?.profissional_id || agendamento?.profissionais?.id || null;
+}
+
+function belongsToActiveProfessional(record, columnName = 'profissional_id') {
+    const activeProfId = getActiveProfessionalId();
+    const recordProfId = record?.[columnName] || record?.profissionais?.id || record?.agendamentos?.profissional_id || null;
+    return activeProfId ? recordProfId === activeProfId : !recordProfId;
+}
+
+function hasProfessionalMarker(record, columnName = 'profissional_id') {
+    return Object.prototype.hasOwnProperty.call(record || {}, columnName) ||
+        Object.prototype.hasOwnProperty.call(record?.agendamentos || {}, 'profissional_id') ||
+        Boolean(record?.profissionais?.id);
+}
+
+function filterRecordsForActiveProfessional(records, columnName = 'profissional_id') {
+    const list = records || [];
+    if (getActiveProfessionalId() && !list.some(record => hasProfessionalMarker(record, columnName))) {
+        return list;
+    }
+    return list.filter(record => belongsToActiveProfessional(record, columnName));
+}
+
+function filterAppointmentsForActiveProfessional(agendamentos) {
+    return (agendamentos || []).filter(ag => {
+        const profId = getAppointmentProfessionalId(ag);
+        if (isRequestStatus(ag.status) && !profId) return true;
+        return belongsToActiveProfessional(ag);
+    });
+}
+
+async function updateClienteProfessional(clienteId, profissionalId) {
+    if (!clienteId) return;
+
+    try {
+        const { error } = await supabase
+            .from('clientes')
+            .update({ profissional_id: profissionalId || null })
+            .eq('id', clienteId);
+
+        if (error && !String(error.message || '').includes('profissional_id')) {
+            console.warn('Erro ao atualizar profissional do cliente:', error);
+        }
+    } catch (err) {
+        console.warn('Coluna profissional_id em clientes indisponivel:', err);
+    }
+}
+
 // --- GESTÃO DE CONFIGURAÇÕES DE HORÁRIO DE FUNCIONAMENTO ---
 export async function fetchConfiguracaoHorarios(profissionalId = null) {
-    const activeProf = getActiveProfessional();
-    const targetProfId = profissionalId || (activeProf && activeProf.cargo === 'auxiliar' ? activeProf.id : null);
+    const activeProf = getActiveProfessional() || (!profissionalId ? await ensureActiveProfessionalFromSession() : null);
+    const targetProfId = profissionalId || activeProf?.id || null;
 
     if (targetProfId) {
         try {
@@ -827,8 +887,8 @@ export async function fetchConfiguracaoHorarios(profissionalId = null) {
 }
 
 export async function saveConfiguracaoHorarios(configValor) {
-    const activeProf = getActiveProfessional();
-    const targetProfId = activeProf && activeProf.cargo === 'auxiliar' ? activeProf.id : null;
+    const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
+    const targetProfId = activeProf?.id || null;
     const chave = targetProfId ? `horario_funcionamento_${targetProfId}` : 'horario_funcionamento';
 
     const { error } = await supabase
@@ -844,38 +904,42 @@ export async function saveConfiguracaoHorarios(configValor) {
 }
 
 // --- CÁLCULO INTELIGENTE DE HORÁRIOS DISPONÍVEIS COM BASE NA DURAÇÃO DO SERVIÇO ---
-export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
+export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30, options = {}) {
     if (!dateStr) return { closed: true, slots: [] };
 
     const [year, month, day] = dateStr.split('-').map(Number);
     const selectedDate = new Date(year, month - 1, day);
     const dayOfWeek = selectedDate.getDay().toString();
+    const scope = options.scope || 'active';
+    let activeProfId = getActiveProfessionalId();
+    if (scope === 'active' && !activeProfId) {
+        const resolvedProf = await ensureActiveProfessionalFromSession();
+        activeProfId = resolvedProf?.id || null;
+    }
 
     // 1. Obter profissionais ativos e carregar horários individuais
-    let activeProfs = [];
-    try {
-        const { data: profs } = await supabase.from('profissionais').select('id, nome').eq('ativo', true);
-        if (profs && profs.length > 0) {
-            activeProfs = profs;
-        }
-    } catch (e) {}
-
     let profConfigs = [];
-    if (activeProfs.length > 0) {
-        for (const p of activeProfs) {
-            const cfg = await fetchConfiguracaoHorarios(p.id);
-            const dCfg = cfg && cfg.dias && cfg.dias[dayOfWeek] ? cfg.dias[dayOfWeek] : null;
-            if (dCfg && dCfg.ativo && dCfg.turnos && dCfg.turnos.length > 0) {
-                profConfigs.push({ profId: p.id, turnos: dCfg.turnos });
+    if (scope === 'public') {
+        try {
+            const { data: profs } = await supabase.from('profissionais').select('id, nome').eq('ativo', true);
+            if (profs && profs.length > 0) {
+                for (const p of profs) {
+                    const cfg = await fetchConfiguracaoHorarios(p.id);
+                    const dCfg = cfg && cfg.dias && cfg.dias[dayOfWeek] ? cfg.dias[dayOfWeek] : null;
+                    if (dCfg && dCfg.ativo && dCfg.turnos && dCfg.turnos.length > 0) {
+                        profConfigs.push({ profId: p.id, turnos: dCfg.turnos });
+                    }
+                }
             }
-        }
+        } catch (e) {}
     }
 
     if (profConfigs.length === 0) {
-        const globalCfg = await fetchConfiguracaoHorarios();
+        const targetProfId = scope === 'active' ? activeProfId : null;
+        const globalCfg = await fetchConfiguracaoHorarios(targetProfId);
         const dCfg = globalCfg && globalCfg.dias && globalCfg.dias[dayOfWeek] ? globalCfg.dias[dayOfWeek] : null;
         if (dCfg && dCfg.ativo && dCfg.turnos && dCfg.turnos.length > 0) {
-            profConfigs.push({ profId: 'global', turnos: dCfg.turnos });
+            profConfigs.push({ profId: targetProfId || 'global', turnos: dCfg.turnos });
         }
     }
 
@@ -891,12 +955,21 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
                 data_hora_inicio, 
                 data_hora_fim, 
                 status,
+                profissional_id,
                 servicos ( duracao_minutos )
             `)
             .neq('status', 'cancelado');
 
         if (!error && agendamentos) {
             agendamentos.forEach(ag => {
+                const agProfId = ag.profissional_id || null;
+                const pendingSharedRequest = isRequestStatus(ag.status) && !agProfId;
+
+                if (scope === 'active') {
+                    const slotOwnerId = activeProfId || null;
+                    if (!pendingSharedRequest && (agProfId || null) !== slotOwnerId) return;
+                }
+
                 const s = new Date(ag.data_hora_inicio);
                 let e = ag.data_hora_fim ? new Date(ag.data_hora_fim) : null;
                 
@@ -908,7 +981,7 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
                 if (s.getFullYear() === year && s.getMonth() === month - 1 && s.getDate() === day) {
                     const startMin = s.getHours() * 60 + s.getMinutes();
                     const endMin = e.getHours() * 60 + e.getMinutes();
-                    occupiedRanges.push({ start: startMin, end: endMin });
+                    occupiedRanges.push({ start: startMin, end: endMin, profId: agProfId });
                 }
             });
         }
@@ -950,10 +1023,15 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
                 const concurrentCount = occupiedRanges.filter(r => (slotStart < r.end && slotEnd > r.start)).length;
                 const isOccupied = openProfsCount === 0 || concurrentCount >= openProfsCount;
 
-                if (!slots.some(s => s.time === timeStr)) {
+                const existingSlot = slots.find(s => s.time === timeStr);
+                if (existingSlot) {
+                    existingSlot.available = existingSlot.available || !isOccupied;
+                    existingSlot.occupied = !existingSlot.available;
+                } else {
                     slots.push({
                         time: timeStr,
-                        occupied: isOccupied
+                        occupied: isOccupied,
+                        available: !isOccupied
                     });
                 }
                 currentMinutes += slotStep;
@@ -1061,9 +1139,116 @@ export async function criarAgendamentoCliente({ nomeCliente, whatsappCliente, se
     return data;
 }
 
+export async function criarAgendamentoProfissional({ nomeCliente, whatsappCliente, servicoIdSelecionado, dataHoraInicioISO, observacoesCliente }) {
+    const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
+    const activeProfId = activeProf?.id || null;
+    const whatsapp = cleanPhone(whatsappCliente);
+
+    const { data: servico, error: servicoErr } = await supabase
+        .from('servicos')
+        .select('duracao_minutos')
+        .eq('id', servicoIdSelecionado)
+        .single();
+
+    if (servicoErr) throw servicoErr;
+
+    const duracao = servico?.duracao_minutos || 30;
+    const start = new Date(dataHoraInicioISO);
+    const end = new Date(start.getTime() + duracao * 60000);
+    const dateStrISO = dataHoraInicioISO.slice(0, 10);
+
+    const { data: agsDia } = await supabase
+        .from('agendamentos')
+        .select('id, data_hora_inicio, data_hora_fim, status, profissional_id, servicos(duracao_minutos)')
+        .neq('status', 'cancelado')
+        .gte('data_hora_inicio', `${dateStrISO}T00:00:00.000Z`)
+        .lte('data_hora_inicio', `${dateStrISO}T23:59:59.999Z`);
+
+    const conflito = (agsDia || []).find(ag => {
+        if ((ag.profissional_id || null) !== (activeProfId || null)) return false;
+        const agStart = new Date(ag.data_hora_inicio).getTime();
+        const agEnd = ag.data_hora_fim
+            ? new Date(ag.data_hora_fim).getTime()
+            : agStart + (ag.servicos?.duracao_minutos || 30) * 60000;
+        return start.getTime() < agEnd && end.getTime() > agStart;
+    });
+
+    if (conflito) {
+        const err = new Error('Horario indisponivel para este profissional.');
+        err.isConflict = true;
+        err.dateStrISO = dateStrISO;
+        const slotsData = await getAvailableTimeSlots(dateStrISO, duracao);
+        err.sugestoes = slotsData.closed ? [] : (slotsData.slots || []).filter(s => s.available).map(s => s.time);
+        throw err;
+    }
+
+    let cliente = null;
+    try {
+        const { data } = await supabase
+            .from('clientes')
+            .select('*')
+            .eq('whatsapp', whatsapp)
+            .eq('profissional_id', activeProfId)
+            .maybeSingle();
+        cliente = data || null;
+    } catch (e) {
+        const { data } = await supabase
+            .from('clientes')
+            .select('*')
+            .eq('whatsapp', whatsapp)
+            .maybeSingle();
+        cliente = data || null;
+    }
+
+    if (!cliente) {
+        const payload = { nome: nomeCliente.trim(), whatsapp, profissional_id: activeProfId };
+        let { data, error } = await supabase
+            .from('clientes')
+            .insert([payload])
+            .select()
+            .single();
+
+        if (error && String(error.message || '').includes('profissional_id')) {
+            const { profissional_id, ...fallbackPayload } = payload;
+            const fallback = await supabase.from('clientes').insert([fallbackPayload]).select().single();
+            data = fallback.data;
+            error = fallback.error;
+        }
+
+        if (error) throw error;
+        cliente = data;
+    }
+
+    const payload = {
+        cliente_id: cliente.id,
+        servico_id: servicoIdSelecionado,
+        data_hora_inicio: dataHoraInicioISO,
+        data_hora_fim: end.toISOString(),
+        status: 'pendente',
+        observacoes: observacoesCliente || null,
+        profissional_id: activeProfId
+    };
+
+    let { data, error } = await supabase.from('agendamentos').insert(payload).select().single();
+    if (error && String(error.message || '').includes('profissional_id')) {
+        const { profissional_id, ...fallbackPayload } = payload;
+        const fallback = await supabase.from('agendamentos').insert(fallbackPayload).select().single();
+        data = fallback.data;
+        error = fallback.error;
+    }
+
+    if (error) throw error;
+    return data;
+}
+
 export async function criarAgendamentoManutencao({ clienteId, servicoId, dataHoraInicioISO, parentId, periodicidadeDias, observacoes }) {
     const { data: servico } = await supabase.from('servicos').select('duracao_minutos, nome').eq('id', servicoId).single();
     const duracao = servico?.duracao_minutos || 30;
+    let activeProfId = getActiveProfessionalId();
+    if (!activeProfId) {
+        const resolvedProf = await ensureActiveProfessionalFromSession();
+        activeProfId = resolvedProf?.id || null;
+    }
 
     const startMs = new Date(dataHoraInicioISO).getTime();
     const endMs = startMs + duracao * 60000;
@@ -1072,7 +1257,7 @@ export async function criarAgendamentoManutencao({ clienteId, servicoId, dataHor
     // CHECAGEM DE CONFLITO DE HORÁRIO COM OUTROS AGENDAMENTOS ATIVOS NO DIA
     const { data: agsDia } = await supabase
         .from('agendamentos')
-        .select('id, data_hora_inicio, data_hora_fim, status, clientes(nome), servicos(nome, duracao_minutos)')
+        .select('id, data_hora_inicio, data_hora_fim, status, profissional_id, clientes(nome), servicos(nome, duracao_minutos)')
         .neq('status', 'cancelado')
         .gte('data_hora_inicio', `${dateStrISO}T00:00:00.000Z`)
         .lte('data_hora_inicio', `${dateStrISO}T23:59:59.999Z`);
@@ -1080,6 +1265,7 @@ export async function criarAgendamentoManutencao({ clienteId, servicoId, dataHor
     if (agsDia && agsDia.length > 0) {
         const conflito = agsDia.find(a => {
             if (parentId && a.id === parentId) return false;
+            if ((a.profissional_id || null) !== (activeProfId || null)) return false;
             const aStart = new Date(a.data_hora_inicio).getTime();
             const aDur = a.servicos?.duracao_minutos || 30;
             const aEnd = a.data_hora_fim ? new Date(a.data_hora_fim).getTime() : aStart + aDur * 60000;
@@ -1115,14 +1301,26 @@ export async function criarAgendamentoManutencao({ clienteId, servicoId, dataHor
         is_manutencao: true,
         agendamento_pai_id: parentId || null,
         periodicidade_dias: periodicidadeDias || null,
+        profissional_id: activeProfId || null,
         observacoes: observacoes || 'Manutenção Periódica'
     };
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from('agendamentos')
         .insert(payload)
         .select()
         .single();
+
+    if (error && String(error.message || '').includes('profissional_id')) {
+        const { profissional_id, ...fallbackPayload } = payload;
+        const fallback = await supabase
+            .from('agendamentos')
+            .insert(fallbackPayload)
+            .select()
+            .single();
+        data = fallback.data;
+        error = fallback.error;
+    }
 
     if (error) throw error;
     return data;
@@ -1193,18 +1391,54 @@ export function showConflictModalWithSuggestions({ message, dateStrISO, sugestoe
     closeBtn.onclick = () => modal.classList.add('hidden');
 }
 
-export async function updateAgendamentoStatus(id, newStatus, profissionalId = null) {
+export async function updateAgendamentoStatus(id, newStatus, profissionalId = undefined) {
+    let currentAgendamento = null;
+    try {
+        const { data } = await supabase
+            .from('agendamentos')
+            .select('cliente_id, status, profissional_id')
+            .eq('id', id)
+            .maybeSingle();
+        currentAgendamento = data || null;
+    } catch (e) {}
+
+    let activeProfId = getActiveProfessionalId();
+    if (!activeProfId) {
+        const resolvedProf = await ensureActiveProfessionalFromSession();
+        activeProfId = resolvedProf?.id || null;
+    }
+    const shouldClaim =
+        isRequestStatus(currentAgendamento?.status) &&
+        !currentAgendamento?.profissional_id &&
+        !isRequestStatus(newStatus) &&
+        (newStatus || '').toLowerCase() !== 'cancelado';
+
+    const targetProfId = profissionalId !== undefined ? profissionalId : (shouldClaim ? activeProfId : undefined);
     const updatePayload = { status: newStatus };
-    if (profissionalId) {
-        updatePayload.profissional_id = profissionalId;
+    if (targetProfId !== undefined) {
+        updatePayload.profissional_id = targetProfId || null;
     }
 
-    const { error } = await supabase
+    let { error } = await supabase
         .from('agendamentos')
         .update(updatePayload)
         .eq('id', id);
 
+    if (error && String(error.message || '').includes('profissional_id')) {
+        const { profissional_id, ...fallbackPayload } = updatePayload;
+        const fallback = await supabase
+            .from('agendamentos')
+            .update(fallbackPayload)
+            .eq('id', id);
+        error = fallback.error;
+    }
+
     if (error) throw error;
+
+    if (shouldClaim && currentAgendamento?.cliente_id) {
+        await updateClienteProfessional(currentAgendamento.cliente_id, targetProfId || null);
+    }
+
     return true;
 }
 
@@ -1232,6 +1466,64 @@ export function getActiveProfessional() {
         const saved = localStorage.getItem('active_professional');
         if (saved) return JSON.parse(saved);
     } catch (e) {}
+    return null;
+}
+
+export async function ensureActiveProfessionalFromSession() {
+    const existing = getActiveProfessional();
+    if (existing?.id) return existing;
+
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const email = session?.user?.email?.trim().toLowerCase();
+        if (!email) return null;
+
+        const { data: profData, error } = await supabase
+            .from('profissionais')
+            .select('*')
+            .eq('email', email)
+            .eq('ativo', true)
+            .maybeSingle();
+
+        if (!error && profData) {
+            localStorage.setItem('active_professional', JSON.stringify(profData));
+            return profData;
+        }
+
+        const nome = session.user.user_metadata?.nome || session.user.user_metadata?.name || email.split('@')[0] || 'Profissional';
+        const payload = {
+            nome,
+            email,
+            senha_hash: 'auth',
+            cargo: 'proprietario',
+            cor_identificadora: '#2563eb',
+            ativo: true
+        };
+
+        const { data: createdProf, error: createErr } = await supabase
+            .from('profissionais')
+            .insert(payload)
+            .select()
+            .single();
+
+        if (!createErr && createdProf) {
+            localStorage.setItem('active_professional', JSON.stringify(createdProf));
+            return createdProf;
+        }
+
+        if (createErr) {
+            const { data: retryProf } = await supabase
+                .from('profissionais')
+                .select('*')
+                .eq('email', email)
+                .maybeSingle();
+            if (retryProf) {
+                localStorage.setItem('active_professional', JSON.stringify(retryProf));
+                return retryProf;
+            }
+        }
+    } catch (e) {}
+
     return null;
 }
 
@@ -1366,12 +1658,14 @@ export async function deleteAgendamento(id) {
 // --- BUSCA E GERAÇÃO DE NOTIFICAÇÕES (SOLICITAÇÕES E MANUTENÇÕES D-2) ---
 export async function fetchNotificationsList() {
     try {
+        await ensureActiveProfessionalFromSession();
         const { data: agendamentos, error } = await supabase
             .from('agendamentos')
             .select(`
                 id,
                 cliente_id,
                 servico_id,
+                profissional_id,
                 data_hora_inicio,
                 status,
                 is_manutencao,
@@ -1385,12 +1679,14 @@ export async function fetchNotificationsList() {
         if (error) throw error;
         if (!agendamentos) return [];
 
+        const visibleAgendamentos = filterAppointmentsForActiveProfessional(agendamentos);
+
         const now = new Date();
         const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         const notifications = [];
 
-        agendamentos.forEach(ag => {
+        visibleAgendamentos.forEach(ag => {
             const clienteNome = ag.clientes?.nome || 'Cliente';
             const clientePhone = cleanPhone(ag.clientes?.whatsapp || '');
             const servicoNome = ag.servicos?.nome || 'Serviço';
@@ -1576,12 +1872,14 @@ export async function checkUpcoming5MinAppointments() {
     const alertMinutes = getUpcomingAlertMinutes();
 
     try {
+        await ensureActiveProfessionalFromSession();
         const { data: agendamentos, error } = await supabase
             .from('agendamentos')
             .select(`
                 id,
                 cliente_id,
                 servico_id,
+                profissional_id,
                 data_hora_inicio,
                 status,
                 is_manutencao,
@@ -1594,10 +1892,11 @@ export async function checkUpcoming5MinAppointments() {
             .order('data_hora_inicio', { ascending: true });
 
         if (error || !agendamentos) return;
+        const visibleAgendamentos = filterAppointmentsForActiveProfessional(agendamentos);
 
         const nowMs = Date.now();
 
-        for (const ag of agendamentos) {
+        for (const ag of visibleAgendamentos) {
             if (notifiedUpcomingIds.has(ag.id)) continue;
 
             const startMs = new Date(ag.data_hora_inicio).getTime();
@@ -1671,6 +1970,7 @@ export function getServicePrice(servico) {
 export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null, silent = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
+    await ensureActiveProfessionalFromSession();
 
     if (!silent) {
         container.innerHTML = `
@@ -1691,6 +1991,7 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
                 id,
                 cliente_id,
                 servico_id,
+                profissional_id,
                 data_hora_inicio,
                 data_hora_fim,
                 status,
@@ -1710,6 +2011,11 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
                     tabela_precos (
                         valor
                     )
+                ),
+                profissionais (
+                    id,
+                    nome,
+                    cor_identificadora
                 )
             `)
             .order('data_hora_inicio', { ascending: true });
@@ -1733,6 +2039,7 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
                     id: a.id,
                     cliente_id: a.cliente_id,
                     servico_id: a.servico_id,
+                    profissional_id: a.profissional_id || null,
                     data_hora_inicio: a.data_hora_inicio,
                     data_hora_fim: a.data_hora_fim,
                     status: a.status,
@@ -1746,7 +2053,12 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
                         nome: a.servico_nome, 
                         duracao_minutos: a.servico_duracao_minutos,
                         tabela_precos: [{ valor: a.servico_preco || 0 }]
-                    }
+                    },
+                    profissionais: a.profissional_id ? {
+                        id: a.profissional_id,
+                        nome: a.profissional_nome,
+                        cor_identificadora: a.profissional_cor
+                    } : null
                 }));
                 fetchSuccess = true;
             }
@@ -1809,6 +2121,8 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
             return profIdStr === myProfId;
         });
     }
+
+    agendamentos = filterAppointmentsForActiveProfessional(agendamentos);
 
     if (filterDate) {
         agendamentos = agendamentos.filter(a => a.data_hora_inicio && a.data_hora_inicio.startsWith(filterDate));
@@ -2041,6 +2355,25 @@ function renderAgendamentosList(container, agendamentos) {
 }
 
 // --- CRUD DE CLIENTES ---
+export async function createCliente({ nome, whatsapp }) {
+    const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
+    const payload = {
+        nome,
+        whatsapp: cleanPhone(whatsapp),
+        profissional_id: activeProf?.id || null
+    };
+
+    let { error } = await supabase.from('clientes').insert([payload]);
+    if (error && String(error.message || '').includes('profissional_id')) {
+        const { profissional_id, ...fallbackPayload } = payload;
+        const fallback = await supabase.from('clientes').insert([fallbackPayload]);
+        error = fallback.error;
+    }
+
+    if (error) throw error;
+    return true;
+}
+
 export async function updateCliente(id, { nome, whatsapp }) {
     const { error } = await supabase
         .from('clientes')
@@ -2094,6 +2427,7 @@ export async function deleteCliente(id) {
 export async function fetchAndRenderClientes(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
+    await ensureActiveProfessionalFromSession();
 
     container.innerHTML = `
         <div class="flex items-center justify-center py-12">
@@ -2108,7 +2442,7 @@ export async function fetchAndRenderClientes(containerId) {
             .order('nome', { ascending: true });
 
         if (error) throw error;
-        const clientes = data || [];
+        const clientes = filterRecordsForActiveProfessional(data || []);
 
         if (clientes.length === 0) {
             container.innerHTML = `
@@ -2351,11 +2685,13 @@ export async function fetchPagamentoByAgendamentoId(agendamentoId) {
 export async function savePagamentoFluxoCaixa(payload) {
     const isVirtual = payload.id && typeof payload.id === 'string' && payload.id.startsWith('virtual-');
     const realId = isVirtual ? null : payload.id;
+    const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
 
     const dataToSave = {
         agendamento_id: payload.agendamento_id || null,
         cliente_id: payload.cliente_id || null,
         servico_id: payload.servico_id || null,
+        profissional_id: payload.profissional_id || activeProf?.id || null,
         valor_bruto: parseFloat(payload.valor_bruto || 0),
         desconto: parseFloat(payload.desconto || 0),
         valor_final: parseFloat(payload.valor_final || 0),
@@ -2371,27 +2707,50 @@ export async function savePagamentoFluxoCaixa(payload) {
 
     try {
         if (realId && !realId.startsWith('cx-')) {
-            const { error } = await supabase
-                .from('fluxo_caixa')
-                .update(dataToSave)
-                .eq('id', realId);
-            if (!error) savedRemote = true;
+                let { error } = await supabase
+                    .from('fluxo_caixa')
+                    .update(dataToSave)
+                    .eq('id', realId);
+                if (error && String(error.message || '').includes('profissional_id')) {
+                    const { profissional_id, ...fallbackData } = dataToSave;
+                    const fallback = await supabase
+                        .from('fluxo_caixa')
+                        .update(fallbackData)
+                        .eq('id', realId);
+                    error = fallback.error;
+                }
+                if (!error) savedRemote = true;
         } else {
             if (payload.agendamento_id) {
                 const existing = await fetchPagamentoByAgendamentoId(payload.agendamento_id);
                 if (existing && existing.id && !existing.id.startsWith('cx-') && !existing.id.startsWith('virtual-')) {
-                    await supabase
+                    let { error } = await supabase
                         .from('fluxo_caixa')
                         .update(dataToSave)
                         .eq('id', existing.id);
-                    savedRemote = true;
+                    if (error && String(error.message || '').includes('profissional_id')) {
+                        const { profissional_id, ...fallbackData } = dataToSave;
+                        const fallback = await supabase
+                            .from('fluxo_caixa')
+                            .update(fallbackData)
+                            .eq('id', existing.id);
+                        error = fallback.error;
+                    }
+                    if (!error) savedRemote = true;
                 }
             }
             if (!savedRemote) {
-                const { error } = await supabase
-                    .from('fluxo_caixa')
-                    .insert([dataToSave]);
-                if (!error) savedRemote = true;
+                    let { error } = await supabase
+                        .from('fluxo_caixa')
+                        .insert([dataToSave]);
+                    if (error && String(error.message || '').includes('profissional_id')) {
+                        const { profissional_id, ...fallbackData } = dataToSave;
+                        const fallback = await supabase
+                            .from('fluxo_caixa')
+                            .insert([fallbackData]);
+                        error = fallback.error;
+                    }
+                    if (!error) savedRemote = true;
             }
         }
     } catch (e) {
@@ -2416,6 +2775,7 @@ export async function savePagamentoFluxoCaixa(payload) {
 }
 
 export async function fetchTodosPagamentosFluxoCaixa() {
+    await ensureActiveProfessionalFromSession();
     let explicitPagamentos = [];
     let deletedAgendamentoIds = [];
     try {
@@ -2429,7 +2789,7 @@ export async function fetchTodosPagamentosFluxoCaixa() {
                 *,
                 clientes ( id, nome, whatsapp ),
                 servicos ( id, nome ),
-                agendamentos ( id, data_hora_inicio, status )
+                agendamentos ( id, data_hora_inicio, status, profissional_id )
             `)
             .order('criado_em', { ascending: false });
 
@@ -2446,6 +2806,8 @@ export async function fetchTodosPagamentosFluxoCaixa() {
         }
     }
 
+    explicitPagamentos = filterRecordsForActiveProfessional(explicitPagamentos);
+
     const agendamentosProcessados = new Set();
     explicitPagamentos.forEach(p => {
         if (p.agendamento_id) agendamentosProcessados.add(p.agendamento_id);
@@ -2460,6 +2822,7 @@ export async function fetchTodosPagamentosFluxoCaixa() {
                 id,
                 cliente_id,
                 servico_id,
+                profissional_id,
                 data_hora_inicio,
                 status,
                 criado_em,
@@ -2471,7 +2834,8 @@ export async function fetchTodosPagamentosFluxoCaixa() {
             .order('data_hora_inicio', { ascending: false });
 
         if (!error && agendamentos) {
-            agendamentosSemCaixa = agendamentos.filter(ag => !agendamentosProcessados.has(ag.id));
+            agendamentosSemCaixa = filterAppointmentsForActiveProfessional(agendamentos)
+                .filter(ag => !agendamentosProcessados.has(ag.id));
         }
     } catch (e) {
         console.warn("Erro ao buscar agendamentos para fluxo de caixa:", e);
@@ -2483,6 +2847,8 @@ export async function fetchTodosPagamentosFluxoCaixa() {
             agendamentosSemCaixa = localAg.filter(ag => 
                 ag.status !== 'cancelado' && 
                 ag.status !== 'aguardando_confirmacao' && 
+                ag.status !== 'solicitado' &&
+                belongsToActiveProfessional(ag) &&
                 !agendamentosProcessados.has(ag.id)
             );
         } catch (e) {}
@@ -2501,6 +2867,7 @@ export async function fetchTodosPagamentosFluxoCaixa() {
             agendamento_id: ag.id,
             cliente_id: ag.cliente_id,
             servico_id: ag.servico_id,
+            profissional_id: getAppointmentProfessionalId(ag),
             valor_bruto: precoServico,
             desconto: 0.00,
             valor_final: precoServico,
@@ -2563,6 +2930,7 @@ export async function updateStatusPagamentoFluxoCaixa(id, novoStatus) {
                     agendamento_id: realAgendamentoId,
                     cliente_id: ag?.cliente_id || null,
                     servico_id: ag?.servico_id || null,
+                    profissional_id: ag?.profissional_id || getActiveProfessionalId() || null,
                     valor_bruto: preco,
                     desconto: 0.00,
                     valor_final: preco,

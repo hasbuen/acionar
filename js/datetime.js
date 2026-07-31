@@ -24,7 +24,8 @@ export function addDaysToDateInput(dateValue, days) {
     const base = parseDateInputValue(dateValue);
     if (!base) return dateValue;
     const target = new Date(base.getFullYear(), base.getMonth(), base.getDate());
-    target.setDate(target.getDate() + Number(days || 0));
+    const amount = Number(days || 0);
+    target.setDate(target.getDate() + (amount > 0 ? amount + 1 : amount));
     return formatDateInputValue(target);
 }
 
