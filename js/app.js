@@ -924,7 +924,6 @@ async function fetchActiveProfessionalExternalAcceptance() {
 function canActiveProfessionalHandleLocation(agendamento) {
     const tipo = (agendamento?.tipo_atendimento || 'salao').toLowerCase();
     if (tipo !== 'cliente' && tipo !== 'externo') return true;
-    if (activeProfessionalExternalAcceptanceCache === null) return true;
     return activeProfessionalExternalAcceptanceCache === true;
 }
 
