@@ -3052,8 +3052,8 @@ function renderAgendamentosList(container, agendamentos) {
             : '';
 
         const item = document.createElement('div');
-        item.className = `group p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all rounded-2xl animate-fade-in ${
-            isManutencao ? 'bg-purple-500/[0.02] dark:bg-purple-500/[0.04]' : ''
+        item.className = `group p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border border-white/80 dark:border-slate-800/60 bg-white/72 dark:bg-slate-950/20 hover:bg-white/90 dark:hover:bg-slate-800/30 shadow-[0_14px_36px_rgba(15,23,42,0.08)] hover:shadow-[0_18px_44px_rgba(37,99,235,0.12)] backdrop-blur-sm transition-all rounded-3xl animate-fade-in ${
+            isManutencao ? 'ring-1 ring-purple-200/70 dark:ring-purple-500/15' : ''
         }`;
         
         item.innerHTML = `
@@ -3099,7 +3099,7 @@ function renderAgendamentosList(container, agendamentos) {
             </div>
 
             <!-- Ações do agendamento -->
-            <div class="w-full sm:w-auto sm:min-w-[250px] shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-200/80 dark:border-slate-800/40">
+            <div class="w-full sm:w-auto sm:min-w-[250px] shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-200/45 dark:border-slate-800/40">
                 ${isAguardando ? `
                     <div class="grid grid-cols-2 gap-2 mb-2">
                         <button type="button" class="btn-aceitar-agendamento btn-animated flex items-center justify-center gap-2 h-10 rounded-2xl bg-emerald-600 text-white font-extrabold border border-emerald-500 shadow-sm shadow-emerald-500/20 shrink-0"
