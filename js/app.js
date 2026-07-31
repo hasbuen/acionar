@@ -800,6 +800,7 @@ function getAppointmentProfessionalId(agendamento) {
 
 let activeProfessionalServiceIdsCache = null;
 let activeProfessionalSubserviceIdsCache = null;
+let activeProfessionalHorarioConfigCache = null;
 
 async function fetchActiveProfessionalServiceIds() {
     const activeProfId = getActiveProfessionalId();
@@ -844,6 +845,62 @@ function canActiveProfessionalHandleService(servicoId, subservicoId = null) {
         return activeProfessionalSubserviceIdsCache.has(subservicoId);
     }
     return true;
+}
+
+async function fetchActiveProfessionalHorarioConfig() {
+    const activeProfId = getActiveProfessionalId();
+    if (!activeProfId) {
+        activeProfessionalHorarioConfigCache = null;
+        return null;
+    }
+
+    try {
+        activeProfessionalHorarioConfigCache = await fetchConfiguracaoHorarios(activeProfId);
+        return activeProfessionalHorarioConfigCache;
+    } catch (err) {
+        console.warn('Configuracao de horario do profissional indisponivel:', err);
+        activeProfessionalHorarioConfigCache = null;
+        return null;
+    }
+}
+
+function horarioToMinutes(value) {
+    const [hours, minutes] = String(value || '').slice(0, 5).split(':').map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    return (hours * 60) + minutes;
+}
+
+function canActiveProfessionalAttendAppointment(agendamento) {
+    const activeProfId = getActiveProfessionalId();
+    if (!activeProfId || !activeProfessionalHorarioConfigCache) return true;
+
+    const range = getAgendamentoRangeMs(agendamento);
+    if (!range) return false;
+
+    const startDate = new Date(range.start);
+    const endDate = new Date(range.end);
+    if (
+        Number.isNaN(startDate.getTime()) ||
+        Number.isNaN(endDate.getTime()) ||
+        startDate.toDateString() !== endDate.toDateString()
+    ) {
+        return false;
+    }
+
+    const dayConfig = activeProfessionalHorarioConfigCache?.dias?.[String(startDate.getDay())];
+    if (!dayConfig?.ativo || !Array.isArray(dayConfig.turnos) || dayConfig.turnos.length === 0) {
+        return false;
+    }
+
+    const startMinutes = (startDate.getHours() * 60) + startDate.getMinutes();
+    const endMinutes = (endDate.getHours() * 60) + endDate.getMinutes();
+
+    return dayConfig.turnos.some(turno => {
+        const turnoStart = horarioToMinutes(turno?.inicio);
+        const turnoEnd = horarioToMinutes(turno?.fim);
+        if (turnoStart === null || turnoEnd === null || turnoEnd <= turnoStart) return false;
+        return startMinutes >= turnoStart && endMinutes <= turnoEnd;
+    });
 }
 
 function belongsToActiveProfessional(record, columnName = 'profissional_id') {
@@ -910,6 +967,9 @@ function canActiveProfessionalSeeSharedRequest(agendamento, allAgendamentos) {
     if (!canActiveProfessionalHandleService(agendamento?.servico_id || agendamento?.servicos?.id, agendamento?.subservico_id)) {
         return false;
     }
+    if (!canActiveProfessionalAttendAppointment(agendamento)) {
+        return false;
+    }
     return !professionalHasConflictWithAppointment(agendamento, allAgendamentos, activeProfId);
 }
 
@@ -930,6 +990,13 @@ async function assertProfessionalCanClaimAppointment(agendamentoId, currentAgend
     await fetchActiveProfessionalServiceIds();
     if (!canActiveProfessionalHandleService(currentAgendamento?.servico_id, currentAgendamento?.subservico_id)) {
         const err = new Error('Este profissional nao esta habilitado para este servico.');
+        err.isNotAllowed = true;
+        throw err;
+    }
+
+    await fetchActiveProfessionalHorarioConfig();
+    if (!canActiveProfessionalAttendAppointment(currentAgendamento)) {
+        const err = new Error('Este profissional nao atende neste dia ou horario.');
         err.isNotAllowed = true;
         throw err;
     }
@@ -1889,6 +1956,7 @@ export async function fetchNotificationsList() {
         if (!agendamentos) return [];
 
         await fetchActiveProfessionalServiceIds();
+        await fetchActiveProfessionalHorarioConfig();
         const visibleAgendamentos = filterAppointmentsForActiveProfessional(agendamentos);
 
         const now = new Date();
@@ -2104,6 +2172,7 @@ export async function checkUpcoming5MinAppointments() {
 
         if (error || !agendamentos) return;
         await fetchActiveProfessionalServiceIds();
+        await fetchActiveProfessionalHorarioConfig();
         const visibleAgendamentos = filterAppointmentsForActiveProfessional(agendamentos);
 
         const nowMs = Date.now();
@@ -2321,6 +2390,7 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
     }
 
     await fetchActiveProfessionalServiceIds();
+    await fetchActiveProfessionalHorarioConfig();
     agendamentos = filterAppointmentsForActiveProfessional(agendamentos);
 
     // DETECÇÃO DE NOVO AGENDAMENTO PARA DISPARAR SOM DE ALARME
