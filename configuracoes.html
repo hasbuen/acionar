@@ -423,7 +423,7 @@
             escapeHtml,
             getActiveProfessional,
             performLogout
-        } from './js/app.js?v=2.4';
+        } from './js/app.js?v=2.5';
 
         initTheme();
 
@@ -773,7 +773,10 @@
 
             currentConfig = await fetchConfiguracaoHorarios();
 
-            document.getElementById('selectIntervalo').value = currentConfig.intervalo_minutos || 30;
+            const selectIntervalo = document.getElementById('selectIntervalo');
+            if (selectIntervalo) {
+                selectIntervalo.value = currentConfig?.intervalo_minutos || 30;
+            }
 
             container.innerHTML = '';
 
