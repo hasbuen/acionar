@@ -54,6 +54,9 @@ export function initTheme() {
     // Iniciar checagem em segundo plano de agendamentos prestes a iniciar (5 minutos antes)
     try {
         hydrateHeaderIdentity();
+        if ('Notification' in window && Notification.permission === 'granted' && isAlarmEnabled()) {
+            registerWebPushSubscription().catch((err) => console.warn('Web Push indisponível na inicialização:', err));
+        }
         startUpcoming5MinChecker();
     } catch (e) {}
 }
@@ -110,11 +113,95 @@ let knownAgendamentoIds = new Set();
 let isInitialLoadDone = false;
 
 export function isAlarmEnabled() {
-    return localStorage.getItem('alarm-enabled') !== 'false';
+    return localStorage.getItem('alarm-enabled') === 'true';
 }
 
 export function setAlarmEnabled(enabled) {
     localStorage.setItem('alarm-enabled', enabled ? 'true' : 'false');
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+async function fetchWebPushPublicKey() {
+    const localKey = localStorage.getItem('web_push_public_key');
+    if (localKey) return localKey;
+
+    try {
+        const { data } = await supabase
+            .from('parametros')
+            .select('valor')
+            .eq('nome', 'web_push_public_key')
+            .maybeSingle();
+        if (data?.valor) return String(data.valor);
+    } catch (e) {}
+
+    try {
+        const { data } = await supabase
+            .from('configuracoes')
+            .select('valor')
+            .eq('chave', 'web_push_public_key')
+            .maybeSingle();
+        if (data?.valor) return String(data.valor);
+    } catch (e) {}
+
+    return '';
+}
+
+async function registerWebPushSubscription() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.warn('Web Push não está disponível neste navegador/PWA.');
+        return null;
+    }
+
+    const publicKey = await fetchWebPushPublicKey();
+    if (!publicKey) {
+        console.warn('Chave web_push_public_key não configurada. Notificações com app fechado exigem Web Push.');
+        return null;
+    }
+
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+    }
+
+    const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
+    const json = subscription.toJSON();
+    const endpoint = json.endpoint || subscription.endpoint;
+    const payload = {
+        endpoint,
+        p256dh: json.keys?.p256dh || null,
+        auth: json.keys?.auth || null,
+        profissional_id: activeProf?.id || null,
+        user_agent: navigator.userAgent,
+        plataforma: /iphone|ipad|ipod/i.test(navigator.userAgent) ? 'ios' : /android/i.test(navigator.userAgent) ? 'android' : 'web',
+        ativo: true,
+        atualizado_em: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+        .from('push_subscriptions')
+        .upsert(payload, { onConflict: 'endpoint' });
+
+    if (error) {
+        console.warn('Não foi possível salvar PushSubscription. Crie a tabela push_subscriptions no Supabase.', error);
+        return subscription;
+    }
+
+    localStorage.setItem('web_push_registered', 'true');
+    return subscription;
 }
 
 export function initAudioContext() {
@@ -190,15 +277,31 @@ export function toggleAlarmState(callback) {
     initAudioContext();
     const currentState = isAlarmEnabled();
     const newState = !currentState;
-    setAlarmEnabled(newState);
 
     if (newState) {
-        requestNotificationPermission((granted) => {
-            playNotificationSound();
-            showToast('Alarme sonoro ATIVADO com sucesso!', 'success');
-            if (callback) callback(true);
+        requestNotificationPermission(async (granted) => {
+            if (granted) {
+                setAlarmEnabled(true);
+                const subscription = await registerWebPushSubscription().catch((err) => {
+                    console.warn('Registro Web Push não concluído:', err);
+                    return null;
+                });
+                playNotificationSound();
+                showToast(
+                    subscription
+                        ? 'Notificações ativadas neste dispositivo.'
+                        : 'Alerta local ativado. Para app fechado, configure Web Push no Supabase.',
+                    subscription ? 'success' : 'info'
+                );
+                if (callback) callback(true);
+            } else {
+                setAlarmEnabled(false);
+                showToast('Permissão de notificação não foi liberada neste dispositivo.', 'error');
+                if (callback) callback(false);
+            }
         });
     } else {
+        setAlarmEnabled(false);
         showToast('Alarme sonoro DESATIVADO.', 'info');
         if (callback) callback(false);
     }
@@ -209,12 +312,19 @@ export function requestNotificationPermission(callback) {
     registerServiceWorker();
 
     if (!('Notification' in window)) {
-        if (callback) callback(true);
+        showToast('Este navegador não oferece notificação nativa para este PWA.', 'error');
+        if (callback) callback(false);
         return;
     }
 
     if (Notification.permission === 'granted') {
         if (callback) callback(true);
+        return;
+    }
+
+    if (Notification.permission === 'denied') {
+        showToast('Notificações estão bloqueadas. Libere nas configurações do navegador/sistema.', 'error');
+        if (callback) callback(false);
         return;
     }
 
@@ -235,7 +345,25 @@ export function requestNotificationPermission(callback) {
     }
 }
 
-export function triggerSystemNotification(title, body) {
+function normalizeNotificationPayload(titleOrPayload, body = '') {
+    if (titleOrPayload && typeof titleOrPayload === 'object') {
+        return {
+            title: titleOrPayload.title || 'Novo agendamento',
+            body: titleOrPayload.body || '',
+            tag: titleOrPayload.tag || 'acionar-notificacao',
+            data: titleOrPayload.data || { url: './dashboard.html' }
+        };
+    }
+    return {
+        title: titleOrPayload || 'Novo agendamento',
+        body: body || '',
+        tag: 'acionar-notificacao',
+        data: { url: './dashboard.html' }
+    };
+}
+
+export function triggerSystemNotification(titleOrPayload, body = '') {
+    const payload = normalizeNotificationPayload(titleOrPayload, body);
     playNotificationSound();
 
     if ('Notification' in window && Notification.permission === 'granted' && isAlarmEnabled()) {
@@ -244,24 +372,25 @@ export function triggerSystemNotification(title, body) {
             if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
                     type: 'SHOW_NOTIFICATION',
-                    title,
-                    body
+                    ...payload
                 });
             } else if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.ready.then((reg) => {
-                    reg.showNotification(title, {
-                        body,
+                    reg.showNotification(payload.title, {
+                        body: payload.body,
                         icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f514.png',
                         badge: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f514.png',
                         vibrate: [300, 100, 300],
-                        tag: 'novo-agendamento',
-                        renotify: true
+                        tag: payload.tag,
+                        renotify: true,
+                        requireInteraction: true,
+                        data: payload.data
                     });
                 }).catch(() => {
-                    new Notification(title, { body });
+                    new Notification(payload.title, { body: payload.body, data: payload.data });
                 });
             } else {
-                new Notification(title, { body });
+                new Notification(payload.title, { body: payload.body, data: payload.data });
             }
         } catch (e) {
             console.warn("Erro ao emitir notificação nativa:", e);
@@ -281,10 +410,7 @@ export function subscribeToAgendamentos(callback) {
                     console.log('⚡ Atualização em tempo real detectada:', payload);
 
                     if (payload.eventType === 'INSERT') {
-                        triggerSystemNotification(
-                            '🔔 NOVO AGENDAMENTO RECEBIDO!',
-                            'Um novo cliente acabou de solicitar um horário na sua agenda!'
-                        );
+                        notifyInsertedAppointment(payload.new?.id);
                     }
 
                     if (callback) callback(payload);
@@ -298,6 +424,68 @@ export function subscribeToAgendamentos(callback) {
     } catch (err) {
         console.warn("Erro ao assinar canal Realtime no Supabase:", err);
         return null;
+    }
+}
+
+async function fetchAppointmentNotificationRecord(id) {
+    if (!id) return null;
+    const { data, error } = await supabase
+        .from('agendamentos')
+        .select(`
+            id,
+            cliente_id,
+            servico_id,
+            subservico_id,
+            profissional_id,
+            data_hora_inicio,
+            data_hora_fim,
+            status,
+            tipo_atendimento,
+            endereco_atendimento,
+            clientes ( id, nome, whatsapp ),
+            servicos ( id, nome, duracao_minutos )
+        `)
+        .eq('id', id)
+        .maybeSingle();
+
+    if (error) {
+        console.warn('Erro ao buscar detalhes da notificação:', error);
+        return null;
+    }
+    return data || null;
+}
+
+async function notifyInsertedAppointment(id) {
+    try {
+        await ensureActiveProfessionalFromSession();
+        await fetchActiveProfessionalServiceIds();
+        await fetchActiveProfessionalExternalAcceptance();
+        await fetchActiveProfessionalHorarioConfig();
+
+        const agendamento = await fetchAppointmentNotificationRecord(id);
+        if (!agendamento) return;
+
+        const start = new Date(agendamento.data_hora_inicio);
+        let relatedAgendamentos = [agendamento];
+        if (!Number.isNaN(start.getTime())) {
+            const inicioDia = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0).toISOString();
+            const fimDia = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59, 59).toISOString();
+            const { data: dayItems } = await supabase
+                .from('agendamentos')
+                .select('id, data_hora_inicio, data_hora_fim, status, profissional_id, servico_id, subservico_id, tipo_atendimento, servicos(duracao_minutos)')
+                .gte('data_hora_inicio', inicioDia)
+                .lte('data_hora_inicio', fimDia)
+                .neq('status', 'cancelado');
+            if (Array.isArray(dayItems) && dayItems.length > 0) {
+                relatedAgendamentos = dayItems.map(item => item.id === agendamento.id ? { ...agendamento, ...item } : item);
+            }
+        }
+
+        if (!filterAppointmentsForActiveProfessional(relatedAgendamentos).some(item => item.id === agendamento.id)) return;
+
+        triggerSystemNotification(buildAppointmentNotificationPayload(agendamento, 'new'));
+    } catch (err) {
+        console.warn('Erro ao notificar novo agendamento:', err);
     }
 }
 
@@ -809,6 +997,72 @@ export function applyPhoneMask(inputElement) {
 
 export function cleanPhone(formatted) {
     return (formatted || '').replace(/\D/g, '');
+}
+
+function formatPhoneDisplay(value) {
+    const digits = cleanPhone(value);
+    if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    return value || digits || 'Não informado';
+}
+
+function getAppointmentCustomerName(agendamento) {
+    return agendamento?.clientes?.nome || agendamento?.cliente_nome || 'Cliente';
+}
+
+function getAppointmentCustomerPhone(agendamento) {
+    return agendamento?.clientes?.whatsapp || agendamento?.cliente_whatsapp || '';
+}
+
+function getAppointmentServiceName(agendamento) {
+    return agendamento?.servicos?.nome || agendamento?.servico_nome || 'Serviço';
+}
+
+function getAppointmentDateParts(agendamento) {
+    const date = new Date(agendamento?.data_hora_inicio);
+    if (Number.isNaN(date.getTime())) {
+        return { date, dateStr: 'Data não informada', timeStr: 'Horário não informado' };
+    }
+    return {
+        date,
+        dateStr: date.toLocaleDateString('pt-BR'),
+        timeStr: date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    };
+}
+
+function getAppointmentLocationLabel(agendamento) {
+    const tipo = (agendamento?.tipo_atendimento || 'salao').toLowerCase();
+    if (tipo === 'cliente' || tipo === 'externo') return 'No local do cliente';
+    return 'No salão';
+}
+
+export function buildAppointmentNotificationPayload(agendamento, kind = 'new') {
+    const clienteNome = getAppointmentCustomerName(agendamento);
+    const telefone = formatPhoneDisplay(getAppointmentCustomerPhone(agendamento));
+    const servicoNome = getAppointmentServiceName(agendamento);
+    const { dateStr, timeStr } = getAppointmentDateParts(agendamento);
+    const local = getAppointmentLocationLabel(agendamento);
+
+    const title = kind === 'upcoming'
+        ? `Atendimento em breve: ${clienteNome}`
+        : `Novo agendamento: ${clienteNome}`;
+
+    return {
+        title,
+        body: `WhatsApp: ${telefone}\nServiço: ${servicoNome}\nData: ${dateStr} às ${timeStr}\nLocal: ${local}`,
+        tag: `${kind}-agendamento-${agendamento?.id || Date.now()}`,
+        data: {
+            url: './dashboard.html',
+            agendamentoId: agendamento?.id || null,
+            clienteNome,
+            telefone,
+            servicoNome,
+            data: dateStr,
+            hora: timeStr,
+            local,
+            kind
+        }
+    };
 }
 
 function isMissingColumnError(error, columnName) {
@@ -2322,15 +2576,11 @@ export async function checkUpcoming5MinAppointments() {
                     localStorage.setItem('notified_5min_ids', JSON.stringify(Array.from(notifiedUpcomingIds)));
                 } catch (e) {}
 
-                const clienteNome = ag.clientes?.nome || 'Cliente';
-                const servicoNome = ag.servicos?.nome || 'Serviço';
-                const d = new Date(ag.data_hora_inicio);
-                const horaInicio = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-                triggerSystemNotification(
-                    `⏰ ATENDIMENTO EM ${alertMinutes} MINUTOS!`,
-                    `${clienteNome} — ${servicoNome} às ${horaInicio}.`
-                );
+                const upcomingPayload = buildAppointmentNotificationPayload(ag, 'upcoming');
+                triggerSystemNotification({
+                    ...upcomingPayload,
+                    title: `Atendimento em ${alertMinutes} min: ${upcomingPayload.data.clienteNome}`
+                });
 
                 showUpcomingAppointmentModal({
                     agendamento: ag,
@@ -2536,12 +2786,9 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
     // DETECÇÃO DE NOVO AGENDAMENTO PARA DISPARAR SOM DE ALARME
     // O alerta usa a mesma lista filtrada da agenda, evitando avisar profissionais com conflito.
     if (isInitialLoadDone && fetchSuccess) {
-        const hasNewBooking = agendamentos.some(ag => !knownAgendamentoIds.has(ag.id));
-        if (hasNewBooking) {
-            triggerSystemNotification(
-                '🔔 NOVO AGENDAMENTO RECEBIDO!',
-                'Um novo agendamento acabou de entrar no seu sistema!'
-            );
+        const newBooking = agendamentos.find(ag => !knownAgendamentoIds.has(ag.id) && isRequestStatus(ag.status));
+        if (newBooking) {
+            triggerSystemNotification(buildAppointmentNotificationPayload(newBooking, 'new'));
         }
     }
 
