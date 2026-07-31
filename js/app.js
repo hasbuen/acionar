@@ -53,9 +53,35 @@ export function initTheme() {
 
     // Iniciar checagem em segundo plano de agendamentos prestes a iniciar (5 minutos antes)
     try {
-        ensureActiveProfessionalFromSession();
+        hydrateHeaderIdentity();
         startUpcoming5MinChecker();
     } catch (e) {}
+}
+
+function getSessionDisplayName(session) {
+    const meta = session?.user?.user_metadata || {};
+    const email = session?.user?.email || '';
+    return meta.nome || meta.name || meta.full_name || email.split('@')[0] || 'Profissional';
+}
+
+export async function hydrateHeaderIdentity() {
+    const avatarEl = document.getElementById('headerUserAvatar');
+    const nameEl = document.getElementById('headerUserName');
+    const desktopLabel = document.getElementById('userLabelDesktop');
+
+    try {
+        const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
+        const { data: { session } = { session: null } } = await supabase.auth.getSession();
+        const displayName = activeProf?.nome || getSessionDisplayName(session);
+        const initial = (displayName || 'P').trim().charAt(0).toUpperCase() || 'P';
+
+        if (avatarEl) avatarEl.textContent = initial;
+        if (nameEl) nameEl.textContent = displayName;
+        if (desktopLabel) desktopLabel.textContent = activeProf?.email || session?.user?.email || '';
+    } catch (e) {
+        if (avatarEl) avatarEl.textContent = 'P';
+        if (nameEl) nameEl.textContent = 'Profissional';
+    }
 }
 
 function updateThemeIcons() {

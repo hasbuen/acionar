@@ -106,17 +106,17 @@
     <header class="sticky top-0 z-40 w-full border-b border-slate-300/80 bg-[#eef3f8]/95 pt-safe-top backdrop-blur-xl transition-colors duration-300 dark:border-slate-800/80 dark:bg-[#020617]/80">
         <div class="px-4 sm:px-6 py-3.5 max-w-7xl mx-auto flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="h-9 w-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white font-black text-lg shadow-md shadow-blue-500/20">
+                <div id="headerUserAvatar" class="h-9 w-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white font-black text-lg shadow-md shadow-blue-500/20">
                     A
                 </div>
                 <div class="flex flex-col">
                     <div class="flex items-center gap-1.5">
-                        <span class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Painel Principal</span>
+                        <span id="headerAppName" class="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Acionar Online</span>
                         <span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span> AO VIVO
                         </span>
                     </div>
-                    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Agenda de Atendimentos</h1>
+                    <h1 id="headerUserName" class="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl">Profissional</h1>
                 </div>
             </div>
 
@@ -1831,15 +1831,6 @@
                 targetBtn.className = activeFilterClasses[targetBtn.id] || activeFilterClasses.filterAll;
             }
         }
-
-        // Autenticação
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user?.email) {
-                const desktopLabel = document.getElementById('userLabelDesktop');
-                if (desktopLabel) desktopLabel.textContent = session.user.email;
-            }
-        } catch (e) {}
 
         const handleLogout = async () => {
             await performLogout();
