@@ -326,9 +326,11 @@
             createCliente,
             updateCliente,
             deleteCliente,
+            fetchProfissionais,
+            replicarClienteParaProfissional,
             fetchTodosPagamentosFluxoCaixa,
             savePagamentoFluxoCaixa
-        } from './js/app.js?v=2.9';
+        } from './js/app.js?v=3.0';
 
         initTheme();
 
@@ -481,9 +483,70 @@
             }
         };
 
+        async function escolherProfissionalDestino(titulo = 'Escolher profissional') {
+            const profissionais = (await fetchProfissionais()).filter(p => p.ativo);
+            let activeProfId = null;
+            try {
+                activeProfId = JSON.parse(localStorage.getItem('active_professional') || '{}')?.id || null;
+            } catch (e) {}
+            const destinos = profissionais.filter(p => p.id !== activeProfId);
+            if (destinos.length === 0) {
+                showToast('Nenhum outro profissional ativo encontrado.', 'error');
+                return null;
+            }
+
+            return new Promise((resolve) => {
+                const modalDestino = document.createElement('div');
+                modalDestino.className = 'fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-slate-950/75 backdrop-blur-md p-0 sm:p-4';
+                modalDestino.innerHTML = `
+                    <div class="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2rem] sm:rounded-[2rem] p-5 shadow-2xl space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                            <div>
+                                <h3 class="text-base font-extrabold text-slate-900 dark:text-white">${titulo}</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Selecione quem tambem tera acesso ao cliente.</p>
+                            </div>
+                            <button type="button" class="btn-close-destino h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-100"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <select class="select-destino w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm font-bold text-slate-900 dark:text-white">
+                            ${destinos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('')}
+                        </select>
+                        <div class="flex justify-end gap-2 pt-2">
+                            <button type="button" class="btn-cancel-destino px-5 py-2.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">Cancelar</button>
+                            <button type="button" class="btn-confirm-destino px-6 py-2.5 rounded-full text-xs font-extrabold bg-indigo-600 text-white shadow-lg shadow-indigo-600/20">Replicar</button>
+                        </div>
+                    </div>
+                `;
+                const close = (value = null) => {
+                    modalDestino.remove();
+                    resolve(value);
+                };
+                modalDestino.querySelector('.btn-close-destino')?.addEventListener('click', () => close(null));
+                modalDestino.querySelector('.btn-cancel-destino')?.addEventListener('click', () => close(null));
+                modalDestino.querySelector('.btn-confirm-destino')?.addEventListener('click', () => {
+                    close(modalDestino.querySelector('.select-destino')?.value || null);
+                });
+                document.body.appendChild(modalDestino);
+            });
+        }
+
         // EVENTOS DE CLIQUE NO CONTAINER DE CLIENTES
         const container = document.getElementById('clientesContainer');
         container?.addEventListener('click', async (e) => {
+            const btnReplicar = e.target.closest('.btn-replicar-cliente');
+            if (btnReplicar) {
+                const clienteId = btnReplicar.dataset.id;
+                const clienteNome = btnReplicar.dataset.nome || 'cliente';
+                const destinoId = await escolherProfissionalDestino('Replicar cliente');
+                if (!destinoId) return;
+                try {
+                    await replicarClienteParaProfissional(clienteId, destinoId);
+                    showToast(`Cliente ${clienteNome} replicado com sucesso!`, 'success');
+                } catch (err) {
+                    showToast('Erro ao replicar cliente: ' + err.message, 'error');
+                }
+                return;
+            }
+
             const btnFin = e.target.closest('.btn-cliente-financeiro');
             if (btnFin) {
                 const cId = btnFin.dataset.clienteId;

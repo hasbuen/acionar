@@ -801,6 +801,7 @@ function getAppointmentProfessionalId(agendamento) {
 let activeProfessionalServiceIdsCache = null;
 let activeProfessionalSubserviceIdsCache = null;
 let activeProfessionalHorarioConfigCache = null;
+let activeProfessionalExternalAcceptanceCache = null;
 
 async function fetchActiveProfessionalServiceIds() {
     const activeProfId = getActiveProfessionalId();
@@ -862,6 +863,37 @@ async function fetchActiveProfessionalHorarioConfig() {
         activeProfessionalHorarioConfigCache = null;
         return null;
     }
+}
+
+async function fetchActiveProfessionalExternalAcceptance() {
+    const activeProfId = getActiveProfessionalId();
+    if (!activeProfId) {
+        activeProfessionalExternalAcceptanceCache = null;
+        return null;
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('profissionais')
+            .select('aceita_atendimento_externo')
+            .eq('id', activeProfId)
+            .maybeSingle();
+
+        if (error) throw error;
+        activeProfessionalExternalAcceptanceCache = Boolean(data?.aceita_atendimento_externo);
+        return activeProfessionalExternalAcceptanceCache;
+    } catch (err) {
+        console.warn('Parametro de atendimento externo indisponivel:', err);
+        activeProfessionalExternalAcceptanceCache = null;
+        return null;
+    }
+}
+
+function canActiveProfessionalHandleLocation(agendamento) {
+    const tipo = (agendamento?.tipo_atendimento || 'salao').toLowerCase();
+    if (tipo !== 'cliente' && tipo !== 'externo') return true;
+    if (activeProfessionalExternalAcceptanceCache === null) return true;
+    return activeProfessionalExternalAcceptanceCache === true;
 }
 
 function horarioToMinutes(value) {
@@ -967,6 +999,9 @@ function canActiveProfessionalSeeSharedRequest(agendamento, allAgendamentos) {
     if (!canActiveProfessionalHandleService(agendamento?.servico_id || agendamento?.servicos?.id, agendamento?.subservico_id)) {
         return false;
     }
+    if (!canActiveProfessionalHandleLocation(agendamento)) {
+        return false;
+    }
     if (!canActiveProfessionalAttendAppointment(agendamento)) {
         return false;
     }
@@ -990,6 +1025,13 @@ async function assertProfessionalCanClaimAppointment(agendamentoId, currentAgend
     await fetchActiveProfessionalServiceIds();
     if (!canActiveProfessionalHandleService(currentAgendamento?.servico_id, currentAgendamento?.subservico_id)) {
         const err = new Error('Este profissional nao esta habilitado para este servico.');
+        err.isNotAllowed = true;
+        throw err;
+    }
+
+    await fetchActiveProfessionalExternalAcceptance();
+    if (!canActiveProfessionalHandleLocation(currentAgendamento)) {
+        const err = new Error('Este profissional nao aceita atendimento no local do cliente.');
         err.isNotAllowed = true;
         throw err;
     }
@@ -1813,7 +1855,7 @@ export async function performLogout() {
     window.location.href = './index.html';
 }
 
-export async function saveProfissional({ id, nome, email, senha, cargo = 'auxiliar', cor_identificadora = '#8b5cf6', ativo = true }) {
+export async function saveProfissional({ id, nome, email, senha, cargo = 'auxiliar', cor_identificadora = '#8b5cf6', ativo = true, aceita_atendimento_externo = false }) {
     // Validação estrita do e-mail no domínio @acionar.online
     const cleanEmail = (email || '').trim().toLowerCase();
     if (!cleanEmail.endsWith('@acionar.online')) {
@@ -1825,7 +1867,8 @@ export async function saveProfissional({ id, nome, email, senha, cargo = 'auxili
         email: cleanEmail,
         cargo,
         cor_identificadora,
-        ativo
+        ativo,
+        aceita_atendimento_externo: Boolean(aceita_atendimento_externo)
     };
 
     if (senha && senha.trim() !== '') {
@@ -1852,21 +1895,44 @@ export async function saveProfissional({ id, nome, email, senha, cargo = 'auxili
     }
 
     if (id) {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
             .from('profissionais')
             .update(payload)
             .eq('id', id)
             .select()
             .single();
 
+        if (error && String(error.message || '').includes('aceita_atendimento_externo')) {
+            const { aceita_atendimento_externo, ...fallbackPayload } = payload;
+            const fallback = await supabase
+                .from('profissionais')
+                .update(fallbackPayload)
+                .eq('id', id)
+                .select()
+                .single();
+            data = fallback.data;
+            error = fallback.error;
+        }
+
         if (error) throw error;
         return data;
     } else {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
             .from('profissionais')
             .insert(payload)
             .select()
             .single();
+
+        if (error && String(error.message || '').includes('aceita_atendimento_externo')) {
+            const { aceita_atendimento_externo, ...fallbackPayload } = payload;
+            const fallback = await supabase
+                .from('profissionais')
+                .insert(fallbackPayload)
+                .select()
+                .single();
+            data = fallback.data;
+            error = fallback.error;
+        }
 
         if (error) throw error;
         return data;
@@ -1893,6 +1959,34 @@ export async function deleteProfissional(id) {
 
     if (error) throw error;
     return true;
+}
+
+export async function replicarClienteParaProfissional(clienteId, profissionalDestinoId) {
+    if (!clienteId || !profissionalDestinoId) {
+        throw new Error('Informe o cliente e o profissional de destino.');
+    }
+
+    const { data, error } = await supabase.rpc('replicar_cliente_profissional', {
+        p_cliente_id: clienteId,
+        p_profissional_destino_id: profissionalDestinoId
+    });
+
+    if (error) throw error;
+    return data;
+}
+
+export async function transferirAgendamentoParaProfissional(agendamentoId, profissionalDestinoId) {
+    if (!agendamentoId || !profissionalDestinoId) {
+        throw new Error('Informe o agendamento e o profissional de destino.');
+    }
+
+    const { data, error } = await supabase.rpc('transferir_agendamento_profissional', {
+        p_agendamento_id: agendamentoId,
+        p_profissional_destino_id: profissionalDestinoId
+    });
+
+    if (error) throw error;
+    return data;
 }
 
 export async function updateAgendamento(id, { servico_id, data_hora_inicio, observacoes, status }) {
@@ -1944,6 +2038,8 @@ export async function fetchNotificationsList() {
                 data_hora_inicio,
                 data_hora_fim,
                 status,
+                tipo_atendimento,
+                endereco_atendimento,
                 is_manutencao,
                 observacoes,
                 clientes ( id, nome, whatsapp ),
@@ -1956,6 +2052,7 @@ export async function fetchNotificationsList() {
         if (!agendamentos) return [];
 
         await fetchActiveProfessionalServiceIds();
+        await fetchActiveProfessionalExternalAcceptance();
         await fetchActiveProfessionalHorarioConfig();
         const visibleAgendamentos = filterAppointmentsForActiveProfessional(agendamentos);
 
@@ -2161,6 +2258,8 @@ export async function checkUpcoming5MinAppointments() {
                 profissional_id,
                 data_hora_inicio,
                 status,
+                tipo_atendimento,
+                endereco_atendimento,
                 is_manutencao,
                 clientes ( id, nome, whatsapp ),
                 servicos ( id, nome, duracao_minutos )
@@ -2172,6 +2271,7 @@ export async function checkUpcoming5MinAppointments() {
 
         if (error || !agendamentos) return;
         await fetchActiveProfessionalServiceIds();
+        await fetchActiveProfessionalExternalAcceptance();
         await fetchActiveProfessionalHorarioConfig();
         const visibleAgendamentos = filterAppointmentsForActiveProfessional(agendamentos);
 
@@ -2278,6 +2378,10 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
                 data_hora_fim,
                 status,
                 observacoes,
+                tipo_atendimento,
+                endereco_atendimento,
+                latitude_atendimento,
+                longitude_atendimento,
                 is_manutencao,
                 agendamento_pai_id,
                 periodicidade_dias,
@@ -2327,6 +2431,10 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
                     data_hora_fim: a.data_hora_fim,
                     status: a.status,
                     observacoes: a.observacoes,
+                    tipo_atendimento: a.tipo_atendimento || 'salao',
+                    endereco_atendimento: a.endereco_atendimento || null,
+                    latitude_atendimento: a.latitude_atendimento || null,
+                    longitude_atendimento: a.longitude_atendimento || null,
                     is_manutencao: a.is_manutencao,
                     agendamento_pai_id: a.agendamento_pai_id,
                     periodicidade_dias: a.periodicidade_dias,
@@ -2390,6 +2498,7 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
     }
 
     await fetchActiveProfessionalServiceIds();
+    await fetchActiveProfessionalExternalAcceptance();
     await fetchActiveProfessionalHorarioConfig();
     agendamentos = filterAppointmentsForActiveProfessional(agendamentos);
 
@@ -2495,6 +2604,12 @@ function renderAgendamentosList(container, agendamentos) {
         const agendamentoJson = escapeHtml(JSON.stringify(ag));
         const profNome = ag.profissional_nome || ag.profissionais?.nome || '';
         const profCor = ag.profissional_cor || ag.profissionais?.cor_identificadora || '#8b5cf6';
+        const tipoAtendimento = (ag.tipo_atendimento || 'salao').toLowerCase();
+        const isAtendimentoExterno = tipoAtendimento === 'cliente' || tipoAtendimento === 'externo';
+        const enderecoAtendimento = ag.endereco_atendimento || '';
+        const localBadgeHtml = isAtendimentoExterno
+            ? `<span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-300 border border-orange-500/20"><i class="fa-solid fa-location-dot text-[9px]"></i> No local do cliente</span>`
+            : `<span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-300 border border-slate-500/20"><i class="fa-solid fa-store text-[9px]"></i> No salao</span>`;
         const profBadgeHtml = profNome 
             ? `<span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full text-white shadow-sm shrink-0" style="background-color: ${profCor}">
                 <i class="fa-solid fa-user-check text-[9px]"></i> ${escapeHtml(profNome)}
@@ -2523,6 +2638,7 @@ function renderAgendamentosList(container, agendamentos) {
                             ${statusLabel}
                         </span>
                         ${profBadgeHtml}
+                        ${localBadgeHtml}
                         ${isManutencao ? `
                             <span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20">
                                 <i class="fa-solid fa-wrench text-[10px]"></i> Retorno de Manutenção
@@ -2543,6 +2659,7 @@ function renderAgendamentosList(container, agendamentos) {
                             ${dataFormatada}
                         </span>
                         ${ag.observacoes ? `<span class="italic text-slate-400 dark:text-slate-500 max-w-[180px] truncate" title="${escapeHtml(ag.observacoes)}">Obs: ${escapeHtml(ag.observacoes)}</span>` : ''}
+                        ${isAtendimentoExterno && enderecoAtendimento ? `<span class="flex items-center gap-1 text-orange-500 dark:text-orange-300 max-w-[220px] truncate" title="${escapeHtml(enderecoAtendimento)}"><i class="fa-solid fa-map-location-dot text-xs"></i>${escapeHtml(enderecoAtendimento)}</span>` : ''}
                     </div>
                 </div>
             </div>
@@ -2623,6 +2740,12 @@ function renderAgendamentosList(container, agendamentos) {
                     data-preco="${precoStr}">
                     <i class="fa-solid fa-dollar-sign text-xs"></i>
                 </button>
+
+                ${!isSolicitacao && statusLower !== 'cancelado' ? `
+                    <button class="btn-transfer-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-500/20 border border-indigo-500/20 shrink-0" data-id="${ag.id}" data-agendamento='${agendamentoJson}' title="Transferir para outro profissional">
+                        <i class="fa-solid fa-right-left text-xs"></i>
+                    </button>
+                ` : ''}
 
                 <button class="btn-edit-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200/50 dark:border-slate-800 shrink-0" data-agendamento='${agendamentoJson}' title="Editar Agendamento">
                     <i class="fa-solid fa-pen-to-square text-xs"></i>
@@ -2782,6 +2905,9 @@ export async function fetchAndRenderClientes(containerId) {
                         class="btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 shrink-0" title="Conversar no WhatsApp">
                         <i class="fa-brands fa-whatsapp text-sm"></i>
                     </a>
+                    <button class="btn-replicar-cliente btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20 shrink-0" data-id="${cliente.id}" data-nome="${escapeHtml(cliente.nome)}" title="Replicar para outro profissional">
+                        <i class="fa-solid fa-user-plus text-xs"></i>
+                    </button>
                     <button class="btn-edit-cliente btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200/50 dark:border-slate-800 shrink-0" data-cliente='${JSON.stringify(cliente)}' title="Editar Cliente">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>

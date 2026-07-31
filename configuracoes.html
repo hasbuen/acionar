@@ -230,6 +230,14 @@
                         </div>
                     </div>
 
+                    <label class="flex items-start gap-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 cursor-pointer">
+                        <input type="checkbox" id="inputProfAtendimentoExterno" class="mt-1 h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500">
+                        <span class="min-w-0">
+                            <span class="block text-xs font-extrabold text-slate-900 dark:text-white">Atende no local do cliente</span>
+                            <span class="block text-[11px] text-slate-500 dark:text-slate-400">Permite que este profissional receba solicitacoes para atendimento no endereco informado pelo cliente.</span>
+                        </span>
+                    </label>
+
                     <div class="flex items-center justify-end gap-2 pt-2">
                         <button type="button" id="btnCancelEditProf" class="hidden px-4 py-2.5 rounded-full text-xs font-bold text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
                             Cancelar Edição
@@ -423,7 +431,7 @@
             escapeHtml,
             getActiveProfessional,
             performLogout
-        } from './js/app.js?v=2.9';
+        } from './js/app.js?v=3.0';
 
         initTheme();
 
@@ -522,6 +530,7 @@
         const btnSaveProfText = document.getElementById('btnSaveProfText');
         const formProfTitle = document.getElementById('formProfTitle');
         const profissionaisListContainer = document.getElementById('profissionaisListContainer');
+        const inputProfAtendimentoExterno = document.getElementById('inputProfAtendimentoExterno');
 
         let profissionaisData = [];
 
@@ -529,6 +538,7 @@
             if (formProfissional) formProfissional.reset();
             if (inputProfId) inputProfId.value = '';
             if (inputProfCor) inputProfCor.value = '#8b5cf6';
+            if (inputProfAtendimentoExterno) inputProfAtendimentoExterno.checked = false;
             if (btnCancelEditProf) btnCancelEditProf.classList.add('hidden');
             if (btnSaveProfText) btnSaveProfText.textContent = 'Salvar Auxiliar';
             if (formProfTitle) formProfTitle.innerHTML = `<i class="fa-solid fa-user-plus text-xs"></i> Cadastrar Novo Auxiliar / Membro da Equipe`;
@@ -580,6 +590,11 @@
                                 </span>
                             </h4>
                             <p class="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">${escapeHtml(p.email)}</p>
+                            ${p.aceita_atendimento_externo ? `
+                                <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-300 border border-orange-500/20 text-[9px] font-black uppercase">
+                                    <i class="fa-solid fa-location-dot text-[9px]"></i> Atende externo
+                                </span>
+                            ` : ''}
                         </div>
                     </div>
 
@@ -610,6 +625,7 @@
                         inputProfSenha.required = false;
                         inputProfSenha.placeholder = 'Digite a nova senha se desejar alterar';
                         inputProfCor.value = p.cor_identificadora || '#8b5cf6';
+                        if (inputProfAtendimentoExterno) inputProfAtendimentoExterno.checked = Boolean(p.aceita_atendimento_externo);
                         
                         btnCancelEditProf?.classList.remove('hidden');
                         if (btnSaveProfText) btnSaveProfText.textContent = 'Salvar Alterações / Nova Senha';
@@ -672,7 +688,8 @@
                     senha: inputProfSenha.value,
                     cargo: 'auxiliar',
                     cor_identificadora: inputProfCor.value,
-                    ativo: true
+                    ativo: true,
+                    aceita_atendimento_externo: Boolean(inputProfAtendimentoExterno?.checked)
                 });
                 showToast(id ? `Dados e senha do auxiliar ${inputProfNome.value} atualizados!` : `Auxiliar ${inputProfNome.value} cadastrado com sucesso!`, 'success');
                 resetFormProfissional();
