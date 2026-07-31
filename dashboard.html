@@ -597,6 +597,7 @@
             showConfirmModal,
             showChangeStatusModal,
             showManutencaoPromptModal,
+            showConflictModalWithSuggestions,
             criarAgendamentoManutencao,
             isAlarmEnabled,
             toggleAlarmState,
@@ -616,8 +617,9 @@
             generateWhatsAppConfirmMessage,
             generateWhatsAppManutencaoMessage,
             cleanPhone
-        } from './js/app.js?v=1.2';
+        } from './js/app.js?v=1.3';
         import { supabase } from './js/supabase.js';
+        import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './js/datetime.js';
 
         initTheme();
         registerServiceWorker();
@@ -1112,7 +1114,7 @@
                 return;
             }
 
-            const dataHoraInicioISO = `${dataVal}T${horaVal}:00.000Z`;
+            const dataHoraInicioISO = toLocalDateTimeISO(dataVal, horaVal);
             const submitBtn = document.getElementById('btnSubmitForm');
             submitBtn.disabled = true;
 
@@ -1271,8 +1273,39 @@
                     id,
                     currentStatus,
                     clienteNome,
-                    servicoNome,
                     onSelect: async (newStatus) => {
+                        const handleScheduleManutencao = async (params) => {
+                            try {
+                                await criarAgendamentoManutencao({
+                                    clienteId: params.clienteId,
+                                    servicoId: params.servicoId,
+                                    dataHoraInicioISO: params.dataHoraInicioISO,
+                                    parentId: params.parentId,
+                                    periodicidadeDias: params.periodicidadeDias,
+                                    observacoes: params.observacoes
+                                });
+                                showToast('Manutenção periódica agendada com sucesso!', 'success');
+                                refreshAgenda(true);
+                            } catch (mErr) {
+                                if (mErr.isConflict) {
+                                    showConflictModalWithSuggestions({
+                                        message: mErr.message,
+                                        dateStrISO: mErr.dateStrISO,
+                                        sugestoes: mErr.sugestoes,
+                                        onSelectTime: (newTime) => {
+                                            const newISO = toLocalDateTimeISO(mErr.dateStrISO, newTime);
+                                            handleScheduleManutencao({
+                                                ...params,
+                                                dataHoraInicioISO: newISO
+                                            });
+                                        }
+                                    });
+                                } else {
+                                    showToast('Erro ao agendar manutenção: ' + mErr.message, 'error');
+                                }
+                            }
+                        };
+
                         try {
                             if (newStatus === 'agendar_manutencao') {
                                 showManutencaoPromptModal({
@@ -1284,21 +1317,15 @@
                                         servicoNome,
                                         data_hora_inicio: dataIso
                                     },
-                                    onSchedule: async ({ periodicidadeDias, dataHoraInicioISO, observacoes }) => {
-                                        try {
-                                            await criarAgendamentoManutencao({
-                                                clienteId,
-                                                servicoId,
-                                                dataHoraInicioISO,
-                                                parentId: id,
-                                                periodicidadeDias,
-                                                observacoes
-                                            });
-                                            showToast('Manutenção periódica agendada com sucesso!', 'success');
-                                            refreshAgenda(true);
-                                        } catch (mErr) {
-                                            showToast('Erro ao agendar manutenção: ' + mErr.message, 'error');
-                                        }
+                                    onSchedule: async (data) => {
+                                        await handleScheduleManutencao({
+                                            clienteId,
+                                            servicoId,
+                                            dataHoraInicioISO: data.dataHoraInicioISO,
+                                            parentId: id,
+                                            periodicidadeDias: data.periodicidadeDias,
+                                            observacoes: data.observacoes
+                                        });
                                     },
                                     onSkip: () => refreshAgenda(true)
                                 });
@@ -1320,22 +1347,15 @@
                                         servicoNome,
                                         data_hora_inicio: dataIso
                                     },
-                                    onSchedule: async ({ periodicidadeDias, dataHoraInicioISO, observacoes }) => {
-                                        try {
-                                            await criarAgendamentoManutencao({
-                                                clienteId,
-                                                servicoId,
-                                                dataHoraInicioISO,
-                                                parentId: id,
-                                                periodicidadeDias,
-                                                observacoes
-                                            });
-                                            showToast('Manutenção periódica agendada com sucesso!', 'success');
-                                            refreshAgenda(true);
-                                        } catch (mErr) {
-                                            console.error('Erro ao agendar manutenção:', mErr);
-                                            showToast('Erro ao agendar manutenção: ' + mErr.message, 'error');
-                                        }
+                                    onSchedule: async (data) => {
+                                        await handleScheduleManutencao({
+                                            clienteId,
+                                            servicoId,
+                                            dataHoraInicioISO: data.dataHoraInicioISO,
+                                            parentId: id,
+                                            periodicidadeDias: data.periodicidadeDias,
+                                            observacoes: data.observacoes
+                                        });
                                     },
                                     onSkip: () => {
                                         refreshAgenda(true);
@@ -1369,21 +1389,45 @@
                         servicoNome,
                         data_hora_inicio: dataIso
                     },
-                    onSchedule: async ({ periodicidadeDias, dataHoraInicioISO, observacoes }) => {
+                    onSchedule: async (data) => {
                         try {
                             await criarAgendamentoManutencao({
                                 clienteId,
                                 servicoId,
-                                dataHoraInicioISO,
+                                dataHoraInicioISO: data.dataHoraInicioISO,
                                 parentId: id,
-                                periodicidadeDias,
-                                observacoes
+                                periodicidadeDias: data.periodicidadeDias,
+                                observacoes: data.observacoes
                             });
-                            showToast('Manutenção agendada com sucesso!', 'success');
+                            showToast('Manutenção periódica agendada com sucesso!', 'success');
                             refreshAgenda(true);
                         } catch (mErr) {
-                            console.error('Erro ao agendar manutenção:', mErr);
-                            showToast('Erro ao agendar manutenção: ' + mErr.message, 'error');
+                            if (mErr.isConflict) {
+                                showConflictModalWithSuggestions({
+                                    message: mErr.message,
+                                    dateStrISO: mErr.dateStrISO,
+                                    sugestoes: mErr.sugestoes,
+                                    onSelectTime: async (newTime) => {
+                                        const newISO = toLocalDateTimeISO(mErr.dateStrISO, newTime);
+                                        try {
+                                            await criarAgendamentoManutencao({
+                                                clienteId,
+                                                servicoId,
+                                                dataHoraInicioISO: newISO,
+                                                parentId: id,
+                                                periodicidadeDias: data.periodicidadeDias,
+                                                observacoes: data.observacoes
+                                            });
+                                            showToast('Manutenção periódica agendada com sucesso!', 'success');
+                                            refreshAgenda(true);
+                                        } catch (retryErr) {
+                                            showToast('Erro ao agendar manutenção: ' + retryErr.message, 'error');
+                                        }
+                                    }
+                                });
+                            } else {
+                                showToast('Erro ao agendar manutenção: ' + mErr.message, 'error');
+                            }
                         }
                     },
                     onSkip: () => {}
@@ -1424,8 +1468,8 @@
                 });
 
                 const d = new Date(ag.data_hora_inicio);
-                document.getElementById('editInputData').value = d.toISOString().split('T')[0];
-                document.getElementById('editInputHora').value = d.toTimeString().slice(0, 5);
+                document.getElementById('editInputData').value = formatDateInputValue(d);
+                document.getElementById('editInputHora').value = formatTimeInputValue(d);
                 document.getElementById('editInputObservacoes').value = ag.observacoes || '';
 
                 updateEditStatusChips(ag.status || 'aguardando_confirmacao');
@@ -1461,7 +1505,7 @@
                 const offset = parseInt(btn.dataset.offset || 0);
                 const d = new Date();
                 d.setDate(d.getDate() + offset);
-                document.getElementById('editInputData').value = d.toISOString().split('T')[0];
+                document.getElementById('editInputData').value = formatDateInputValue(d);
             });
         });
 
@@ -1484,7 +1528,7 @@
             const status = document.getElementById('editSelectStatus').value;
             const observacoes = document.getElementById('editInputObservacoes').value.trim();
 
-            const data_hora_inicio = `${dataVal}T${horaVal}:00.000Z`;
+            const data_hora_inicio = toLocalDateTimeISO(dataVal, horaVal);
 
             try {
                 await updateAgendamento(id, { servico_id, data_hora_inicio, observacoes, status });

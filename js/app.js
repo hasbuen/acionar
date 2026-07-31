@@ -1,5 +1,6 @@
 // Lógica da Aplicação Principal - Acionar Agendamentos
 import { supabase } from './supabase.js';
+import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './datetime.js';
 
 // --- REGISTRO DE SERVICE WORKER PARA NOTIFICAÇÕES EM SEGUNDO PLANO (ANDROID & IOS PWA) ---
 export async function registerServiceWorker() {
@@ -48,7 +49,10 @@ export function initTheme() {
             }
             updateThemeIcons();
         });
-    }
+    // Iniciar checagem em segundo plano de agendamentos prestes a iniciar (5 minutos antes)
+    try {
+        startUpcoming5MinChecker();
+    } catch (e) {}
 }
 
 function updateThemeIcons() {
@@ -468,10 +472,10 @@ export function showManutencaoPromptModal({ agendamento, onSchedule, onSkip }) {
                 <div class="space-y-2">
                     <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tempo para Retorno / Manutenção</label>
                     <div class="grid grid-cols-3 gap-2" id="manutencao-chips-container">
-                        <button type="button" data-days="15" class="chip-periodicity p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-xs font-extrabold text-slate-700 dark:text-slate-300 transition-all text-center">
+                        <button type="button" data-days="15" class="chip-periodicity active p-2.5 rounded-xl border-2 border-purple-600 bg-purple-500/10 text-xs font-black text-purple-600 dark:text-purple-400 transition-all text-center">
                             15 Dias
                         </button>
-                        <button type="button" data-days="30" class="chip-periodicity active p-2.5 rounded-xl border-2 border-purple-600 bg-purple-500/10 text-xs font-black text-purple-600 dark:text-purple-400 transition-all text-center">
+                        <button type="button" data-days="30" class="chip-periodicity p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-xs font-extrabold text-slate-700 dark:text-slate-300 transition-all text-center">
                             30 Dias (1 Mês)
                         </button>
                         <button type="button" data-days="45" class="chip-periodicity p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-xs font-extrabold text-slate-700 dark:text-slate-300 transition-all text-center">
@@ -537,21 +541,20 @@ export function showManutencaoPromptModal({ agendamento, onSchedule, onSkip }) {
 
     const baseDate = agendamento.data_hora_inicio ? new Date(agendamento.data_hora_inicio) : new Date();
     
-    let selectedDays = 30;
+    let selectedDays = 15;
     function applyDays(days) {
-        selectedDays = days;
+        const parsedDays = Number.parseInt(days, 10) || 15;
+        selectedDays = parsedDays;
         const targetDate = new Date(baseDate.getTime());
-        targetDate.setDate(targetDate.getDate() + days);
-        inputData.value = targetDate.toISOString().split('T')[0];
+        targetDate.setDate(targetDate.getDate() + parsedDays);
+        inputData.value = formatDateInputValue(targetDate);
     }
     
-    applyDays(30);
+    applyDays(15);
 
     if (agendamento.data_hora_inicio) {
         const d = new Date(agendamento.data_hora_inicio);
-        const hrs = String(d.getHours()).padStart(2, '0');
-        const mins = String(d.getMinutes()).padStart(2, '0');
-        inputHora.value = `${hrs}:${mins}`;
+        inputHora.value = formatTimeInputValue(d);
     } else {
         inputHora.value = '09:00';
     }
@@ -566,7 +569,7 @@ export function showManutencaoPromptModal({ agendamento, onSchedule, onSkip }) {
             
             const daysAttr = chip.dataset.days;
             if (daysAttr !== 'custom') {
-                const days = parseInt(daysAttr);
+                const days = Number.parseInt(daysAttr, 10);
                 applyDays(days);
             }
         };
@@ -594,13 +597,21 @@ export function showManutencaoPromptModal({ agendamento, onSchedule, onSkip }) {
             showToast('Por favor, selecione a data e horário para a manutenção.', 'error');
             return;
         }
-        const dataHoraInicioISO = `${dateVal}T${timeVal}:00.000Z`;
+
+        // Calcular dias exatos entre a data base e a data escolhida
+        const [y, m, d] = dateVal.split('-').map(Number);
+        const chosenDate = new Date(y, m - 1, d);
+        const baseDateZero = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+        const diffDaysCalculated = Math.max(1, Math.round((chosenDate.getTime() - baseDateZero.getTime()) / (1000 * 60 * 60 * 24)));
+        const finalPeriodicidade = selectedDays || diffDaysCalculated || 15;
+
+        const dataHoraInicioISO = toLocalDateTimeISO(dateVal, timeVal);
         const obs = inputObs.value.trim() || `Manutenção Periódica de ${servicoNome}`;
 
         closeModal();
         if (onSchedule) {
             onSchedule({
-                periodicidadeDias: selectedDays,
+                periodicidadeDias: finalPeriodicidade,
                 dataHoraInicioISO,
                 observacoes: obs
             });
@@ -1007,11 +1018,49 @@ export async function criarAgendamentoCliente({ nomeCliente, whatsappCliente, se
 }
 
 export async function criarAgendamentoManutencao({ clienteId, servicoId, dataHoraInicioISO, parentId, periodicidadeDias, observacoes }) {
-    const { data: servico } = await supabase.from('servicos').select('duracao_minutos').eq('id', servicoId).single();
+    const { data: servico } = await supabase.from('servicos').select('duracao_minutos, nome').eq('id', servicoId).single();
     const duracao = servico?.duracao_minutos || 30;
 
-    const dataInicio = new Date(dataHoraInicioISO);
-    const dataFim = new Date(dataInicio.getTime() + duracao * 60000);
+    const startMs = new Date(dataHoraInicioISO).getTime();
+    const endMs = startMs + duracao * 60000;
+    const dateStrISO = dataHoraInicioISO.slice(0, 10);
+
+    // CHECAGEM DE CONFLITO DE HORÁRIO COM OUTROS AGENDAMENTOS ATIVOS NO DIA
+    const { data: agsDia } = await supabase
+        .from('agendamentos')
+        .select('id, data_hora_inicio, data_hora_fim, status, clientes(nome), servicos(nome, duracao_minutos)')
+        .neq('status', 'cancelado')
+        .gte('data_hora_inicio', `${dateStrISO}T00:00:00.000Z`)
+        .lte('data_hora_inicio', `${dateStrISO}T23:59:59.999Z`);
+
+    if (agsDia && agsDia.length > 0) {
+        const conflito = agsDia.find(a => {
+            if (parentId && a.id === parentId) return false;
+            const aStart = new Date(a.data_hora_inicio).getTime();
+            const aDur = a.servicos?.duracao_minutos || 30;
+            const aEnd = a.data_hora_fim ? new Date(a.data_hora_fim).getTime() : aStart + aDur * 60000;
+
+            return (startMs < aEnd && endMs > aStart);
+        });
+
+        if (conflito) {
+            const clienteConflito = conflito.clientes?.nome || 'outro cliente';
+            const servicoConflito = conflito.servicos?.nome || 'outro atendimento';
+            const horaConflito = new Date(conflito.data_hora_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+            // Buscar sugestões de horários livres no dia
+            const slotsData = await getAvailableTimeSlots(dateStrISO, duracao);
+            const disponiveis = slotsData.closed ? [] : (slotsData.slots || []).filter(s => s.available).map(s => s.time);
+
+            const err = new Error(`Já existe um agendamento com ${clienteConflito} (${servicoConflito}) às ${horaConflito}.`);
+            err.isConflict = true;
+            err.sugestoes = disponiveis;
+            err.dateStrISO = dateStrISO;
+            throw err;
+        }
+    }
+
+    const dataFim = new Date(endMs);
 
     const payload = {
         cliente_id: clienteId,
@@ -1033,6 +1082,71 @@ export async function criarAgendamentoManutencao({ clienteId, servicoId, dataHor
 
     if (error) throw error;
     return data;
+}
+
+export function showConflictModalWithSuggestions({ message, dateStrISO, sugestoes, onSelectTime }) {
+    let modal = document.getElementById('global-conflict-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'global-conflict-modal';
+        modal.className = 'fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 transition-all duration-300 hidden overflow-y-auto';
+        modal.innerHTML = `
+            <div class="bg-white dark:bg-slate-900 border-2 border-rose-500/50 rounded-[2.5rem] w-full max-w-md p-6 sm:p-7 shadow-2xl space-y-5 text-center my-auto animate-scale-in">
+                <div class="h-16 w-16 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto border border-rose-500/20">
+                    <i class="fa-solid fa-calendar-xmark text-2xl"></i>
+                </div>
+
+                <div class="space-y-1.5">
+                    <span class="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                        Horário Indisponível
+                    </span>
+                    <h3 class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">Conflito de Horário!</h3>
+                    <p id="conflict-message" class="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed"></p>
+                </div>
+
+                <div class="space-y-2 text-left">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-purple-600 dark:text-purple-400">Sugestões de Horários Livres no Dia:</label>
+                    <div id="conflict-suggestions-container" class="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" id="btn-conflict-close" class="w-full py-3 rounded-full text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        Escolher Outra Data / Fechar
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    const msgEl = document.getElementById('conflict-message');
+    const container = document.getElementById('conflict-suggestions-container');
+    const closeBtn = document.getElementById('btn-conflict-close');
+
+    msgEl.textContent = message;
+
+    if (!sugestoes || sugestoes.length === 0) {
+        container.innerHTML = `<p class="col-span-full text-xs text-slate-400 font-medium text-center py-2">Nenhum outro horário livre encontrado nesta data.</p>`;
+    } else {
+        container.innerHTML = '';
+        sugestoes.forEach(time => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn-animated p-2 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-300 text-xs font-black hover:bg-purple-500/20 text-center';
+            btn.textContent = time;
+            btn.onclick = () => {
+                modal.classList.add('hidden');
+                if (onSelectTime) onSelectTime(time);
+            };
+            container.appendChild(btn);
+        });
+    }
+
+    modal.classList.remove('hidden');
+
+    closeBtn.onclick = () => modal.classList.add('hidden');
 }
 
 export async function updateAgendamentoStatus(id, newStatus) {
@@ -1163,6 +1277,181 @@ export async function fetchNotificationsList() {
         console.error("Erro ao buscar notificações:", err);
         return [];
     }
+}
+
+// --- SISTEMA DE ALERTA DE ATENDIMENTO PRÓXIMO (5 MINUTOS ANTES) ---
+let notifiedUpcomingIds = new Set(JSON.parse(localStorage.getItem('notified_5min_ids') || '[]'));
+
+export function showUpcomingAppointmentModal({ agendamento, onStartAtendimento }) {
+    let modal = document.getElementById('global-upcoming-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'global-upcoming-modal';
+        modal.className = 'fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 transition-all duration-300 hidden overflow-y-auto';
+        modal.innerHTML = `
+            <div class="bg-white dark:bg-slate-900 border-2 border-amber-500/50 rounded-[2.5rem] w-full max-w-md p-6 sm:p-7 shadow-2xl space-y-5 text-center my-auto animate-scale-in">
+                <div class="relative mx-auto h-20 w-20 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center border-2 border-amber-500/30 animate-pulse">
+                    <i class="fa-solid fa-bell text-3xl"></i>
+                    <span class="absolute -top-1 -right-1 flex h-4 w-4">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-4 w-4 bg-amber-500"></span>
+                    </span>
+                </div>
+
+                <div class="space-y-1.5">
+                    <span class="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                        ⚡ Atendimento Em Instantes
+                    </span>
+                    <h3 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Faltam 5 Minutos!</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Seu próximo cliente está agendado para iniciar em breve.</p>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-left space-y-3">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 shrink-0 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 font-extrabold flex items-center justify-center text-sm border border-amber-500/20" id="upcoming-avatar">
+                            U
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h4 id="upcoming-cliente-nome" class="font-extrabold text-slate-900 dark:text-white text-sm truncate">Cliente</h4>
+                            <p id="upcoming-whatsapp-link" class="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                                <i class="fa-brands fa-whatsapp text-emerald-500"></i>
+                                <span id="upcoming-phone">--</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <span class="block text-[10px] font-bold text-slate-400 uppercase">Horário:</span>
+                            <span id="upcoming-horario" class="font-black text-slate-900 dark:text-white text-sm">--:--</span>
+                        </div>
+                        <div>
+                            <span class="block text-[10px] font-bold text-slate-400 uppercase">Serviço:</span>
+                            <span id="upcoming-servico" class="font-bold text-amber-600 dark:text-amber-400 truncate block">Serviço</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center gap-2.5 pt-1">
+                    <button type="button" id="btn-upcoming-start" class="w-full sm:flex-1 py-3.5 rounded-2xl text-xs font-black text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play text-xs"></i>
+                        <span>Iniciar Atendimento Agora</span>
+                    </button>
+                    <button type="button" id="btn-upcoming-close" class="w-full sm:w-auto px-5 py-3.5 rounded-2xl text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        Entendido
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    const clienteNome = agendamento.clientes?.nome || agendamento.clienteNome || 'Cliente';
+    const phone = cleanPhone(agendamento.clientes?.whatsapp || agendamento.clientePhone || '');
+    const servicoNome = agendamento.servicos?.nome || agendamento.servicoNome || 'Serviço';
+    const duracao = agendamento.servicos?.duracao_minutos || 30;
+    
+    const d = new Date(agendamento.data_hora_inicio);
+    const horaInicio = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    document.getElementById('upcoming-avatar').textContent = clienteNome.charAt(0).toUpperCase();
+    document.getElementById('upcoming-cliente-nome').textContent = clienteNome;
+    document.getElementById('upcoming-phone').textContent = phone ? phone : 'Sem WhatsApp';
+    document.getElementById('upcoming-horario').textContent = `${horaInicio} (${duracao} min)`;
+    document.getElementById('upcoming-servico').textContent = servicoNome;
+
+    const startBtn = document.getElementById('btn-upcoming-start');
+    const closeBtn = document.getElementById('btn-upcoming-close');
+
+    modal.classList.remove('hidden');
+
+    const closeModal = () => modal.classList.add('hidden');
+
+    closeBtn.onclick = closeModal;
+
+    startBtn.onclick = async () => {
+        closeModal();
+        if (onStartAtendimento) {
+            await onStartAtendimento(agendamento);
+        }
+    };
+}
+
+export async function checkUpcoming5MinAppointments() {
+    try {
+        const { data: agendamentos, error } = await supabase
+            .from('agendamentos')
+            .select(`
+                id,
+                cliente_id,
+                servico_id,
+                data_hora_inicio,
+                status,
+                is_manutencao,
+                clientes ( id, nome, whatsapp ),
+                servicos ( id, nome, duracao_minutos )
+            `)
+            .neq('status', 'cancelado')
+            .neq('status', 'concluido')
+            .neq('status', 'atendido')
+            .order('data_hora_inicio', { ascending: true });
+
+        if (error || !agendamentos) return;
+
+        const nowMs = Date.now();
+
+        for (const ag of agendamentos) {
+            if (notifiedUpcomingIds.has(ag.id)) continue;
+
+            const startMs = new Date(ag.data_hora_inicio).getTime();
+            const diffMs = startMs - nowMs;
+            const diffMinutes = diffMs / (1000 * 60);
+
+            // Alerta quando o agendamento estiver entre 0 e 5.5 minutos para iniciar
+            if (diffMinutes >= -1 && diffMinutes <= 5.5) {
+                notifiedUpcomingIds.add(ag.id);
+                try {
+                    localStorage.setItem('notified_5min_ids', JSON.stringify(Array.from(notifiedUpcomingIds)));
+                } catch (e) {}
+
+                const clienteNome = ag.clientes?.nome || 'Cliente';
+                const servicoNome = ag.servicos?.nome || 'Serviço';
+                const d = new Date(ag.data_hora_inicio);
+                const horaInicio = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                triggerSystemNotification(
+                    `⏰ ATENDIMENTO EM 5 MINUTOS!`,
+                    `${clienteNome} — ${servicoNome} às ${horaInicio}.`
+                );
+
+                showUpcomingAppointmentModal({
+                    agendamento: ag,
+                    onStartAtendimento: async (item) => {
+                        try {
+                            await updateAgendamentoStatus(item.id, 'em_atendimento');
+                            showToast('Atendimento iniciado com sucesso!', 'success');
+                            if (typeof window.refreshAgenda === 'function') {
+                                window.refreshAgenda(true);
+                            }
+                        } catch (err) {
+                            showToast('Erro ao iniciar atendimento: ' + err.message, 'error');
+                        }
+                    }
+                });
+                break;
+            }
+        }
+    } catch (e) {
+        console.warn("Erro ao checar agendamentos em 5 min:", e);
+    }
+}
+
+let isUpcomingCheckerStarted = false;
+export function startUpcoming5MinChecker() {
+    if (isUpcomingCheckerStarted) return;
+    isUpcomingCheckerStarted = true;
+    checkUpcoming5MinAppointments();
+    setInterval(checkUpcoming5MinAppointments, 25000);
 }
 
 export function getServicePrice(servico) {
