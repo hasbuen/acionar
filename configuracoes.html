@@ -168,6 +168,74 @@
                 </div>
             </section>
 
+            <!-- CONFIGURAÇÃO 0.8: GESTÃO DE EQUIPE & PROFISSIONAIS AUXILIARES -->
+            <section class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-6 backdrop-blur-md">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 flex-wrap gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-users text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Gestão de Equipe & Auxiliares</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Cadastre auxiliares com e-mail obrigatoriamente no domínio @acionar.online</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulário de Cadastro de Auxiliar -->
+                <form id="formProfissional" class="p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-purple-500/20 dark:border-purple-500/30 space-y-4">
+                    <h4 class="text-xs font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus text-xs"></i> Cadastrar Novo Auxiliar / Membro da Equipe
+                    </h4>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label for="inputProfNome" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nome Completo</label>
+                            <input type="text" id="inputProfNome" required placeholder="Ex: Maria Santos"
+                                class="w-full rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-3 text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+
+                        <div>
+                            <label for="inputProfEmailPrefix" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">E-mail Corporativo (@acionar.online)</label>
+                            <div class="flex items-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden focus-within:ring-2 focus-within:ring-purple-500">
+                                <input type="text" id="inputProfEmailPrefix" required placeholder="maria"
+                                    class="w-full bg-transparent px-4 py-3 text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none">
+                                <span class="bg-purple-500/10 text-purple-600 dark:text-purple-400 px-3 py-3 text-xs font-black shrink-0 border-l border-slate-200 dark:border-slate-700">@acionar.online</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="inputProfSenha" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Senha de Acesso</label>
+                            <input type="password" id="inputProfSenha" required placeholder="••••••••"
+                                class="w-full rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-3 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+
+                        <div>
+                            <label for="inputProfCor" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Cor do Selo de Identificação</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" id="inputProfCor" value="#8b5cf6" class="h-10 w-14 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700 p-1 bg-white dark:bg-slate-900">
+                                <span class="text-xs text-slate-500 font-medium">Usado nos selos dos agendamentos</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" id="btnSaveProfissional" class="flex items-center gap-2 px-6 py-3 rounded-full text-xs font-extrabold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/20 transition-all active:scale-95">
+                            <i class="fa-solid fa-user-check text-xs"></i>
+                            <span>Salvar Auxiliar</span>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Tabela de Auxiliares Cadastrados -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Membros da Equipe Cadastrados</label>
+                    <div id="profissionaisListContainer" class="space-y-2">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+            </section>
+
             <!-- CONFIGURAÇÃO 1: MENSAGEM DO WHATSAPP & ENDEREÇO -->
             <section class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-6 backdrop-blur-md">
                 <div class="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -345,8 +413,13 @@
             isUpcomingAlertEnabled,
             setUpcomingAlertEnabled,
             getUpcomingAlertMinutes,
-            setUpcomingAlertMinutes
-        } from './js/app.js?v=1.6';
+            setUpcomingAlertMinutes,
+            fetchProfissionais,
+            saveProfissional,
+            toggleProfissionalAtivo,
+            deleteProfissional,
+            escapeHtml
+        } from './js/app.js?v=1.7';
 
         initTheme();
 
@@ -422,6 +495,129 @@
             const selectedVal = selectUpcomingMinutes.value;
             setUpcomingAlertMinutes(selectedVal);
             showToast(`Antecedência do alerta salva: ${selectedVal} minutos antes!`, 'success');
+        });
+
+        // --- GESTÃO DE PROFISSIONAIS E AUXILIARES ---
+        const formProfissional = document.getElementById('formProfissional');
+        const inputProfNome = document.getElementById('inputProfNome');
+        const inputProfEmailPrefix = document.getElementById('inputProfEmailPrefix');
+        const inputProfSenha = document.getElementById('inputProfSenha');
+        const inputProfCor = document.getElementById('inputProfCor');
+        const profissionaisListContainer = document.getElementById('profissionaisListContainer');
+
+        let profissionaisData = [];
+
+        async function loadProfissionais() {
+            if (!profissionaisListContainer) return;
+            profissionaisListContainer.innerHTML = `<div class="py-4 text-center text-xs text-slate-400 font-medium">Carregando membros da equipe...</div>`;
+
+            profissionaisData = await fetchProfissionais();
+            renderProfissionaisList();
+        }
+
+        function renderProfissionaisList() {
+            if (!profissionaisListContainer) return;
+
+            if (!profissionaisData || profissionaisData.length === 0) {
+                profissionaisListContainer.innerHTML = `
+                    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-center space-y-1">
+                        <p class="text-xs font-bold text-slate-700 dark:text-slate-300">Nenhum auxiliar cadastrado ainda</p>
+                        <p class="text-[11px] text-slate-400">Preencha o formulário acima para adicionar membros à equipe.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            profissionaisListContainer.innerHTML = '';
+            profissionaisData.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between gap-3 flex-wrap';
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="h-9 w-9 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-sm shrink-0" style="background-color: ${p.cor_identificadora || '#8b5cf6'}">
+                            ${p.nome.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                ${escapeHtml(p.nome)}
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${p.cargo === 'proprietario' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'}">
+                                    ${p.cargo === 'proprietario' ? 'Proprietário' : 'Auxiliar'}
+                                </span>
+                            </h4>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">${escapeHtml(p.email)}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="button" class="btn-toggle-prof-status px-3 py-1.5 rounded-xl text-[11px] font-bold ${p.ativo ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}" data-id="${p.id}" data-ativo="${p.ativo}">
+                            ${p.ativo ? '🟢 Ativo' : '⚪ Inativo'}
+                        </button>
+                        <button type="button" class="btn-delete-prof p-2 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors" data-id="${p.id}">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                `;
+                profissionaisListContainer.appendChild(card);
+            });
+
+            // Event Listeners para botões da lista
+            profissionaisListContainer.querySelectorAll('.btn-toggle-prof-status').forEach(btn => {
+                btn.onclick = async () => {
+                    const id = btn.dataset.id;
+                    const atualAtivo = btn.dataset.ativo === 'true';
+                    try {
+                        await toggleProfissionalAtivo(id, !atualAtivo);
+                        showToast(!atualAtivo ? 'Profissional ativado!' : 'Profissional inativado.', 'info');
+                        loadProfissionais();
+                    } catch (err) {
+                        showToast('Erro ao alterar status: ' + err.message, 'error');
+                    }
+                };
+            });
+
+            profissionaisListContainer.querySelectorAll('.btn-delete-prof').forEach(btn => {
+                btn.onclick = async () => {
+                    const id = btn.dataset.id;
+                    if (!confirm('Deseja realmente remover este auxiliar da equipe?')) return;
+                    try {
+                        await deleteProfissional(id);
+                        showToast('Auxiliar removido com sucesso!', 'success');
+                        loadProfissionais();
+                    } catch (err) {
+                        showToast('Erro ao remover auxiliar: ' + err.message, 'error');
+                    }
+                };
+            });
+        }
+
+        loadProfissionais();
+
+        formProfissional?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const prefix = (inputProfEmailPrefix.value || '').trim().replace(/@.*$/, '');
+            if (!prefix) {
+                showToast('Informe o nome de usuário do e-mail corporativo.', 'error');
+                return;
+            }
+
+            const fullEmail = `${prefix}@acionar.online`;
+
+            try {
+                await saveProfissional({
+                    nome: inputProfNome.value,
+                    email: fullEmail,
+                    senha: inputProfSenha.value,
+                    cargo: 'auxiliar',
+                    cor_identificadora: inputProfCor.value,
+                    ativo: true
+                });
+                showToast(`Auxiliar ${inputProfNome.value} cadastrado com sucesso!`, 'success');
+                formProfissional.reset();
+                inputProfCor.value = '#8b5cf6';
+                loadProfissionais();
+            } catch (err) {
+                showToast('Erro ao salvar auxiliar: ' + err.message, 'error');
+            }
         });
 
         const NOMES_DIAS = {

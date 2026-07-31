@@ -822,26 +822,34 @@ export async function saveConfiguracaoHorarios(configValor) {
 
 // --- CÁLCULO INTELIGENTE DE HORÁRIOS DISPONÍVEIS COM BASE NA DURAÇÃO DO SERVIÇO ---
 export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
-    const config = await fetchConfiguracaoHorarios();
-    
+    if (!dateStr) return { closed: true, slots: [] };
+
     const [year, month, day] = dateStr.split('-').map(Number);
-    const dateObj = new Date(year, month - 1, day);
-    const dayOfWeek = dateObj.getDay();
+    const selectedDate = new Date(year, month - 1, day);
+    const dayOfWeek = selectedDate.getDay().toString();
 
-    const intervaloConfig = config.intervalo_minutos || 15;
-    // slotStep: gera slots a cada 15 min para aceitar serviços de qualquer duração (15m, 30m, 45m, 60m, 90m, 120m, etc.)
-    const slotStep = Math.min(intervaloConfig, 15);
+    // 1. Obter número de profissionais ativos no estabelecimento
+    let totalProfissionais = 1;
+    try {
+        const { data: profs } = await supabase.from('profissionais').select('id').eq('ativo', true);
+        if (profs && profs.length > 0) {
+            totalProfissionais = profs.length;
+        }
+    } catch (e) {}
 
+    const config = await fetchConfiguracaoHorarios();
     let dayConfig = null;
 
-    if (config.dias && config.dias[dayOfWeek.toString()]) {
-        dayConfig = config.dias[dayOfWeek.toString()];
-    } else if (config.dias_semana) {
+    if (config && config.dias_semana_turnos && config.dias_semana_turnos[dayOfWeek]) {
+        dayConfig = config.dias_semana_turnos[dayOfWeek];
+    } else if (config && config.dias_semana) {
         const isAtivo = config.dias_semana.includes(dayOfWeek);
         dayConfig = {
             ativo: isAtivo,
             turnos: isAtivo ? [{ inicio: config.hora_inicio || "08:00", fim: config.hora_fim || "18:00" }] : []
         };
+    } else if (config.dias && config.dias[dayOfWeek]) {
+        dayConfig = config.dias[dayOfWeek];
     }
 
     if (!dayConfig || !dayConfig.ativo || !dayConfig.turnos || dayConfig.turnos.length === 0) {
@@ -850,7 +858,6 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
 
     let occupiedRanges = [];
     try {
-        // Buscar todos os agendamentos que não estejam cancelados
         const { data: agendamentos, error } = await supabase
             .from('agendamentos')
             .select(`
@@ -871,7 +878,6 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
                     e = new Date(s.getTime() + durMin * 60000);
                 }
 
-                // Filtrar agendamentos do dia consultado
                 if (s.getFullYear() === year && s.getMonth() === month - 1 && s.getDate() === day) {
                     const startMin = s.getHours() * 60 + s.getMinutes();
                     const endMin = e.getHours() * 60 + e.getMinutes();
@@ -885,6 +891,7 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
 
     const slots = [];
     const requestedDuration = Math.max(parseInt(servicoDuracao || 30), 15);
+    const slotStep = parseInt(config?.intervalo_minutos || 30, 10);
 
     dayConfig.turnos.forEach(turno => {
         if (!turno.inicio || !turno.fim) return;
@@ -894,7 +901,6 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
         let currentMinutes = startH * 60 + startM;
         const endMinutes = endH * 60 + endM;
 
-        // O horário só estará disponível se o atendimento (currentMinutes + requestedDuration) couber integralmente dentro do expediente
         while (currentMinutes + requestedDuration <= endMinutes) {
             const h = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
             const m = (currentMinutes % 60).toString().padStart(2, '0');
@@ -903,10 +909,11 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
             const slotStart = currentMinutes;
             const slotEnd = currentMinutes + requestedDuration;
 
-            // REGRA DE CONFLITO INTELIGENTE:
-            // O horário é marcado como INDISPONÍVEL se a janela do serviço desejado [slotStart, slotEnd] 
-            // colidir com qualquer intervalo já agendado [ocupado.start, ocupado.end].
-            const isOccupied = occupiedRanges.some(r => (slotStart < r.end && slotEnd > r.start));
+            // REGRA DE CAPACIDADE MULTI-PROFISSIONAL:
+            // O horário só é considerado INDISPONÍVEL se a quantidade de atendimentos simultâneos
+            // for maior ou igual ao número total de profissionais ativos no estabelecimento.
+            const concurrentCount = occupiedRanges.filter(r => (slotStart < r.end && slotEnd > r.start)).length;
+            const isOccupied = concurrentCount >= totalProfissionais;
 
             if (!slots.some(s => s.time === timeStr)) {
                 slots.push({
@@ -1151,10 +1158,94 @@ export function showConflictModalWithSuggestions({ message, dateStrISO, sugestoe
     closeBtn.onclick = () => modal.classList.add('hidden');
 }
 
-export async function updateAgendamentoStatus(id, newStatus) {
+export async function updateAgendamentoStatus(id, newStatus, profissionalId = null) {
+    const updatePayload = { status: newStatus };
+    if (profissionalId) {
+        updatePayload.profissional_id = profissionalId;
+    }
+
     const { error } = await supabase
         .from('agendamentos')
-        .update({ status: newStatus })
+        .update(updatePayload)
+        .eq('id', id);
+
+    if (error) throw error;
+    return true;
+}
+
+// --- GESTÃO DE PROFISSIONAIS E AUXILIARES ---
+export async function fetchProfissionais() {
+    try {
+        const { data, error } = await supabase
+            .from('profissionais')
+            .select('*')
+            .order('criado_em', { ascending: true });
+
+        if (error) {
+            console.warn("Tabela profissionais não encontrada ou erro:", error.message);
+            return [];
+        }
+        return data || [];
+    } catch (e) {
+        console.warn("Erro ao buscar profissionais:", e);
+        return [];
+    }
+}
+
+export async function saveProfissional({ id, nome, email, senha, cargo = 'auxiliar', cor_identificadora = '#8b5cf6', ativo = true }) {
+    // Validação estrita do e-mail no domínio @acionar.online
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail.endsWith('@acionar.online')) {
+        throw new Error("O e-mail do auxiliar deve obrigatoriamente utilizar o domínio @acionar.online (Ex: maria@acionar.online)");
+    }
+
+    const payload = {
+        nome: (nome || '').trim(),
+        email: cleanEmail,
+        senha_hash: senha || '123456',
+        cargo,
+        cor_identificadora,
+        ativo
+    };
+
+    if (id) {
+        const { data, error } = await supabase
+            .from('profissionais')
+            .update(payload)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    } else {
+        const { data, error } = await supabase
+            .from('profissionais')
+            .insert(payload)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+}
+
+export async function toggleProfissionalAtivo(id, novoStatusAtivo) {
+    const { data, error } = await supabase
+        .from('profissionais')
+        .update({ ativo: novoStatusAtivo })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+export async function deleteProfissional(id) {
+    const { error } = await supabase
+        .from('profissionais')
+        .delete()
         .eq('id', id);
 
     if (error) throw error;
@@ -1703,7 +1794,13 @@ function renderAgendamentosList(container, agendamentos) {
         const precoStr = getServicePrice(ag.servicos);
         const waMsgStatus = isManutencao ? 'true' : 'false';
         const showManutencaoBtn = !isSolicitacao && statusLower !== 'cancelado';
-        const agendamentoJson = escapeHtml(JSON.stringify(ag));
+        const profNome = ag.profissional_nome || ag.profissionais?.nome || '';
+        const profCor = ag.profissional_cor || ag.profissionais?.cor_identificadora || '#8b5cf6';
+        const profBadgeHtml = profNome 
+            ? `<span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full text-white shadow-sm shrink-0" style="background-color: ${profCor}">
+                <i class="fa-solid fa-user-check text-[9px]"></i> ${escapeHtml(profNome)}
+               </span>`
+            : '';
 
         const item = document.createElement('div');
         item.className = `group p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all rounded-2xl animate-fade-in ${
@@ -1726,6 +1823,7 @@ function renderAgendamentosList(container, agendamentos) {
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${statusClass} shrink-0">
                             ${statusLabel}
                         </span>
+                        ${profBadgeHtml}
                         ${isManutencao ? `
                             <span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20">
                                 <i class="fa-solid fa-wrench text-[10px]"></i> Retorno de Manutenção
