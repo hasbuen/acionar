@@ -49,6 +49,8 @@ export function initTheme() {
             }
             updateThemeIcons();
         });
+    }
+
     // Iniciar checagem em segundo plano de agendamentos prestes a iniciar (5 minutos antes)
     try {
         startUpcoming5MinChecker();
