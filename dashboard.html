@@ -635,6 +635,7 @@
             showToast, 
             showConfirmModal,
             showChangeStatusModal,
+            showAppointmentNotesModal,
             showManutencaoPromptModal,
             showConflictModalWithSuggestions,
             criarAgendamentoManutencao,
@@ -654,6 +655,7 @@
             transferirAgendamentoParaProfissional,
             updateAgendamentoStatus,
             updateAgendamento,
+            updateAgendamentoObservacoes,
             deleteAgendamento,
             getAvailableTimeSlots,
             subscribeToAgendamentos,
@@ -1641,6 +1643,27 @@
                         }
                     },
                     onSkip: () => {}
+                });
+                return;
+            }
+
+            // OBSERVACOES DO AGENDAMENTO
+            const btnNotes = e.target.closest('.btn-open-notes-modal');
+            if (btnNotes) {
+                const ag = JSON.parse(btnNotes.dataset.agendamento);
+                const clienteNome = ag.clientes?.nome || ag.cliente_nome || 'Cliente';
+                const servicoNome = ag.servicos?.nome || ag.servico_nome || 'Servico';
+
+                showAppointmentNotesModal({
+                    id: ag.id,
+                    clienteNome,
+                    servicoNome,
+                    observacoes: ag.observacoes || '',
+                    onSave: async (observacoes) => {
+                        await updateAgendamentoObservacoes(ag.id, observacoes);
+                        showToast(observacoes ? 'Observacao salva.' : 'Observacao removida.', 'success');
+                        refreshAgenda(true);
+                    }
                 });
                 return;
             }

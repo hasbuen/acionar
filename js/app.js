@@ -679,6 +679,94 @@ export function showChangeStatusModal({ id, currentStatus, clienteNome, servicoN
 }
 
 // --- MODAL DE AGENDAMENTO DE MANUTENÇÃO PERIÓDICA ---
+// --- MODAL DE OBSERVACOES DO AGENDAMENTO ---
+export function showAppointmentNotesModal({ id, clienteNome, servicoNome, observacoes = '', onSave }) {
+    let modal = document.getElementById('global-appointment-notes-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'global-appointment-notes-modal';
+        modal.className = 'fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md p-0 sm:p-4 transition-all duration-200 hidden';
+        modal.innerHTML = `
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-md p-6 shadow-2xl space-y-4 my-0 sm:my-auto">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="h-10 w-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-note-sticky text-base"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Observacoes</h3>
+                            <p id="appointment-notes-subtitle" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[260px]"></p>
+                        </div>
+                    </div>
+                    <button id="appointment-notes-close" class="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+                    </button>
+                </div>
+
+                <div id="appointment-notes-original-wrap" class="hidden rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 p-3">
+                    <div class="flex items-center gap-2 text-[10px] font-black uppercase text-amber-700 dark:text-amber-300 mb-1">
+                        <i class="fa-solid fa-circle-info text-xs"></i>
+                        Observacao atual
+                    </div>
+                    <p id="appointment-notes-original" class="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words"></p>
+                </div>
+
+                <label class="block space-y-2">
+                    <span class="text-[11px] font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Anotacoes do profissional</span>
+                    <textarea id="appointment-notes-textarea" rows="6" maxlength="1000" class="w-full resize-none rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500" placeholder="Digite uma observacao ou complemento interno..."></textarea>
+                </label>
+
+                <div class="flex items-center justify-between gap-3 pt-1">
+                    <button id="appointment-notes-clear" type="button" class="h-11 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-extrabold hover:bg-slate-200 dark:hover:bg-slate-700">
+                        Limpar
+                    </button>
+                    <button id="appointment-notes-save" type="button" class="h-11 px-5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-extrabold shadow-lg shadow-amber-500/20">
+                        Salvar observacao
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    const subtitleEl = document.getElementById('appointment-notes-subtitle');
+    const originalWrap = document.getElementById('appointment-notes-original-wrap');
+    const originalEl = document.getElementById('appointment-notes-original');
+    const textarea = document.getElementById('appointment-notes-textarea');
+    const closeBtn = document.getElementById('appointment-notes-close');
+    const clearBtn = document.getElementById('appointment-notes-clear');
+    const saveBtn = document.getElementById('appointment-notes-save');
+    const currentNotes = String(observacoes || '').trim();
+
+    subtitleEl.textContent = `${clienteNome || 'Cliente'} - ${servicoNome || 'Servico'}`;
+    textarea.value = currentNotes;
+    originalEl.textContent = currentNotes;
+    originalWrap.classList.toggle('hidden', !currentNotes);
+
+    const close = () => modal.classList.add('hidden');
+    closeBtn.onclick = close;
+    clearBtn.onclick = () => {
+        textarea.value = '';
+        textarea.focus();
+    };
+    saveBtn.onclick = async () => {
+        if (!id || !onSave) return;
+        const nextValue = textarea.value.trim();
+        saveBtn.disabled = true;
+        saveBtn.classList.add('opacity-70', 'cursor-wait');
+        try {
+            await onSave(nextValue);
+            close();
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove('opacity-70', 'cursor-wait');
+        }
+    };
+
+    modal.classList.remove('hidden');
+    setTimeout(() => textarea.focus(), 50);
+}
+
 export function showManutencaoPromptModal({ agendamento, onSchedule, onSkip }) {
     let modal = document.getElementById('global-manutencao-modal');
     if (!modal) {
@@ -2353,6 +2441,16 @@ export async function updateAgendamento(id, { servico_id, data_hora_inicio, obse
     return true;
 }
 
+export async function updateAgendamentoObservacoes(id, observacoes) {
+    const { error } = await supabase
+        .from('agendamentos')
+        .update({ observacoes: String(observacoes || '').trim() || null })
+        .eq('id', id);
+
+    if (error) throw error;
+    return true;
+}
+
 export async function deleteAgendamento(id) {
     const { error } = await supabase
         .from('agendamentos')
@@ -2940,6 +3038,10 @@ function renderAgendamentosList(container, agendamentos) {
         const tipoAtendimento = (ag.tipo_atendimento || 'salao').toLowerCase();
         const isAtendimentoExterno = tipoAtendimento === 'cliente' || tipoAtendimento === 'externo';
         const enderecoAtendimento = ag.endereco_atendimento || '';
+        const observacoesAtendimento = String(ag.observacoes || '').trim();
+        const notesButtonClass = observacoesAtendimento
+            ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/20 border border-amber-200 dark:border-amber-500/20 shadow-sm shadow-amber-500/10'
+            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-800';
         const localBadgeHtml = isAtendimentoExterno
             ? `<span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-300 border border-orange-500/20"><i class="fa-solid fa-location-dot text-[9px]"></i> No local do cliente</span>`
             : `<span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-300 border border-slate-500/20"><i class="fa-solid fa-store text-[9px]"></i> No salao</span>`;
@@ -2991,7 +3093,6 @@ function renderAgendamentosList(container, agendamentos) {
                             <i class="fa-regular fa-calendar-check text-xs"></i>
                             ${dataFormatada}
                         </span>
-                        ${ag.observacoes ? `<span class="italic text-slate-400 dark:text-slate-500 max-w-[180px] truncate" title="${escapeHtml(ag.observacoes)}">Obs: ${escapeHtml(ag.observacoes)}</span>` : ''}
                         ${isAtendimentoExterno && enderecoAtendimento ? `<span class="flex items-center gap-1 text-orange-500 dark:text-orange-300 max-w-[220px] truncate" title="${escapeHtml(enderecoAtendimento)}"><i class="fa-solid fa-map-location-dot text-xs"></i>${escapeHtml(enderecoAtendimento)}</span>` : ''}
                     </div>
                 </div>
@@ -3044,6 +3145,13 @@ function renderAgendamentosList(container, agendamentos) {
                 `}
 
                 <div class="grid grid-cols-5 gap-1.5 sm:flex sm:flex-wrap sm:justify-end sm:gap-1.5">
+                <button type="button" class="btn-open-notes-modal btn-animated relative flex items-center justify-center h-10 rounded-2xl sm:h-9 sm:w-9 ${notesButtonClass} shrink-0"
+                    title="${observacoesAtendimento ? 'Ver e editar observacoes' : 'Adicionar observacao'}"
+                    data-agendamento='${agendamentoJson}'>
+                    <i class="fa-solid fa-note-sticky text-xs"></i>
+                    ${observacoesAtendimento ? '<span class="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900"></span>' : ''}
+                </button>
+
                 ${clienteWhatsapp ? `
                     <button type="button" class="btn-send-wa-agendamento btn-animated flex items-center justify-center h-10 rounded-2xl sm:h-9 sm:w-9 ${
                         isManutencao 
