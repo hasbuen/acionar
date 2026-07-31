@@ -3041,7 +3041,7 @@ function renderAgendamentosList(container, agendamentos) {
         const observacoesAtendimento = String(ag.observacoes || '').trim();
         const notesButtonClass = observacoesAtendimento
             ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/20 border border-amber-200 dark:border-amber-500/20 shadow-sm shadow-amber-500/10'
-            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-800';
+            : 'bg-amber-50/90 text-amber-700 dark:bg-amber-400/10 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-400/20 border border-amber-200/80 dark:border-amber-300/20 shadow-lg shadow-amber-400/10 backdrop-blur-sm';
         const localBadgeHtml = isAtendimentoExterno
             ? `<span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-300 border border-orange-500/20"><i class="fa-solid fa-location-dot text-[9px]"></i> No local do cliente</span>`
             : `<span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-300 border border-slate-500/20"><i class="fa-solid fa-store text-[9px]"></i> No salao</span>`;
