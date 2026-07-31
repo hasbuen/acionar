@@ -1281,10 +1281,28 @@ export async function fetchNotificationsList() {
     }
 }
 
-// --- SISTEMA DE ALERTA DE ATENDIMENTO PRÓXIMO (5 MINUTOS ANTES) ---
+// --- SISTEMA DE ALERTA DE ATENDIMENTO PRÓXIMO (CONFIGURÁVEL) ---
 let notifiedUpcomingIds = new Set(JSON.parse(localStorage.getItem('notified_5min_ids') || '[]'));
 
-export function showUpcomingAppointmentModal({ agendamento, onStartAtendimento }) {
+export function isUpcomingAlertEnabled() {
+    return localStorage.getItem('upcoming-alert-enabled') !== 'false';
+}
+
+export function setUpcomingAlertEnabled(enabled) {
+    localStorage.setItem('upcoming-alert-enabled', enabled ? 'true' : 'false');
+}
+
+export function getUpcomingAlertMinutes() {
+    const val = Number.parseInt(localStorage.getItem('upcoming-alert-minutes') || '5', 10);
+    return Number.isNaN(val) || val <= 0 ? 5 : val;
+}
+
+export function setUpcomingAlertMinutes(minutes) {
+    const val = Number.parseInt(minutes, 10);
+    localStorage.setItem('upcoming-alert-minutes', String(Number.isNaN(val) || val <= 0 ? 5 : val));
+}
+
+export function showUpcomingAppointmentModal({ agendamento, alertMinutes = 5, onStartAtendimento }) {
     let modal = document.getElementById('global-upcoming-modal');
     if (!modal) {
         modal = document.createElement('div');
@@ -1304,7 +1322,7 @@ export function showUpcomingAppointmentModal({ agendamento, onStartAtendimento }
                     <span class="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                         ⚡ Atendimento Em Instantes
                     </span>
-                    <h3 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Faltam 5 Minutos!</h3>
+                    <h3 id="upcoming-modal-title" class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Faltam 5 Minutos!</h3>
                     <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Seu próximo cliente está agendado para iniciar em breve.</p>
                 </div>
 
@@ -1356,6 +1374,11 @@ export function showUpcomingAppointmentModal({ agendamento, onStartAtendimento }
     const d = new Date(agendamento.data_hora_inicio);
     const horaInicio = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
+    const titleEl = document.getElementById('upcoming-modal-title');
+    if (titleEl) {
+        titleEl.textContent = alertMinutes === 1 ? `Falta 1 Minuto!` : `Faltam ${alertMinutes} Minutos!`;
+    }
+
     document.getElementById('upcoming-avatar').textContent = clienteNome.charAt(0).toUpperCase();
     document.getElementById('upcoming-cliente-nome').textContent = clienteNome;
     document.getElementById('upcoming-phone').textContent = phone ? phone : 'Sem WhatsApp';
@@ -1380,6 +1403,10 @@ export function showUpcomingAppointmentModal({ agendamento, onStartAtendimento }
 }
 
 export async function checkUpcoming5MinAppointments() {
+    if (!isUpcomingAlertEnabled()) return;
+
+    const alertMinutes = getUpcomingAlertMinutes();
+
     try {
         const { data: agendamentos, error } = await supabase
             .from('agendamentos')
@@ -1409,8 +1436,8 @@ export async function checkUpcoming5MinAppointments() {
             const diffMs = startMs - nowMs;
             const diffMinutes = diffMs / (1000 * 60);
 
-            // Alerta quando o agendamento estiver entre 0 e 5.5 minutos para iniciar
-            if (diffMinutes >= -1 && diffMinutes <= 5.5) {
+            // Alerta quando o agendamento estiver na janela de antecedência configurada (ex: entre 0 e alertMinutes + 0.5)
+            if (diffMinutes >= -1 && diffMinutes <= (alertMinutes + 0.5)) {
                 notifiedUpcomingIds.add(ag.id);
                 try {
                     localStorage.setItem('notified_5min_ids', JSON.stringify(Array.from(notifiedUpcomingIds)));
@@ -1422,12 +1449,13 @@ export async function checkUpcoming5MinAppointments() {
                 const horaInicio = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
                 triggerSystemNotification(
-                    `⏰ ATENDIMENTO EM 5 MINUTOS!`,
+                    `⏰ ATENDIMENTO EM ${alertMinutes} MINUTOS!`,
                     `${clienteNome} — ${servicoNome} às ${horaInicio}.`
                 );
 
                 showUpcomingAppointmentModal({
                     agendamento: ag,
+                    alertMinutes,
                     onStartAtendimento: async (item) => {
                         try {
                             await updateAgendamentoStatus(item.id, 'em_atendimento');
@@ -1444,7 +1472,7 @@ export async function checkUpcoming5MinAppointments() {
             }
         }
     } catch (e) {
-        console.warn("Erro ao checar agendamentos em 5 min:", e);
+        console.warn("Erro ao checar agendamentos próximos:", e);
     }
 }
 

@@ -123,6 +123,51 @@
                 </div>
             </section>
 
+            <!-- CONFIGURAÇÃO 0.5: ALERTA POPUP DE ATENDIMENTO PRÓXIMO -->
+            <section class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-5 backdrop-blur-md">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 flex-wrap gap-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="h-10 w-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-clock text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Alerta Pop-up de Atendimento Próximo</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Exibe modal na tela e toca sinal sonoro antes do início de cada atendimento</p>
+                        </div>
+                    </div>
+
+                    <button id="btnToggleUpcomingAlert" type="button" class="flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-xs font-extrabold transition-all shadow-sm shrink-0">
+                        <i id="iconUpcomingAlert" class="fa-solid fa-bell"></i>
+                        <span id="btnToggleUpcomingAlertText">Alerta Pop-up Ativado</span>
+                    </button>
+                </div>
+
+                <div id="upcomingAlertConfigBody" class="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <label for="selectUpcomingMinutes" class="block text-xs font-extrabold text-slate-900 dark:text-white">Tempo de Antecedência do Alerta</label>
+                            <span class="block text-[11px] text-slate-500 dark:text-slate-400">Escolha com quantos minutos de antecedência o aviso pop-up deve estourar na tela</span>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <select id="selectUpcomingMinutes" class="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                <option value="5">5 Minutos antes (Padrão)</option>
+                                <option value="10">10 Minutos antes</option>
+                                <option value="15">15 Minutos antes</option>
+                                <option value="20">20 Minutos antes</option>
+                                <option value="30">30 Minutos antes</option>
+                                <option value="60">1 Hora antes</option>
+                            </select>
+
+                            <button type="button" id="btnSaveUpcomingMinutes" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold text-white bg-amber-600 hover:bg-amber-500 shadow-md transition-all shrink-0">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Salvar</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- CONFIGURAÇÃO 1: MENSAGEM DO WHATSAPP & ENDEREÇO -->
             <section class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-6 backdrop-blur-md">
                 <div class="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -296,8 +341,12 @@
             MENSAGEM_WHATSAPP_PADRAO,
             MENSAGEM_MANUTENCAO_PADRAO,
             isAlarmEnabled,
-            toggleAlarmState
-        } from './js/app.js?v=1.5';
+            toggleAlarmState,
+            isUpcomingAlertEnabled,
+            setUpcomingAlertEnabled,
+            getUpcomingAlertMinutes,
+            setUpcomingAlertMinutes
+        } from './js/app.js?v=1.6';
 
         initTheme();
 
@@ -327,6 +376,52 @@
             toggleAlarmState(() => {
                 updateAlarmButtonUI();
             });
+        });
+
+        // --- CONTROLE DE ALERTA POPUP DE ATENDIMENTO PRÓXIMO ---
+        const btnToggleUpcomingAlert = document.getElementById('btnToggleUpcomingAlert');
+        const btnToggleUpcomingAlertText = document.getElementById('btnToggleUpcomingAlertText');
+        const iconUpcomingAlert = document.getElementById('iconUpcomingAlert');
+        const selectUpcomingMinutes = document.getElementById('selectUpcomingMinutes');
+        const btnSaveUpcomingMinutes = document.getElementById('btnSaveUpcomingMinutes');
+        const upcomingAlertConfigBody = document.getElementById('upcomingAlertConfigBody');
+
+        function updateUpcomingAlertUI() {
+            const enabled = isUpcomingAlertEnabled();
+            const minutes = getUpcomingAlertMinutes();
+
+            if (btnToggleUpcomingAlertText) {
+                btnToggleUpcomingAlertText.textContent = enabled ? 'Alerta Pop-up Ativado 🔔' : 'Alerta Pop-up Desativado 🔕';
+            }
+            if (btnToggleUpcomingAlert) {
+                btnToggleUpcomingAlert.className = enabled
+                    ? 'flex items-center justify-center gap-2 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-5 py-3 text-xs font-extrabold transition-all shadow-sm shrink-0'
+                    : 'flex items-center justify-center gap-2 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 px-5 py-3 text-xs font-extrabold transition-all opacity-80 shrink-0';
+            }
+            if (iconUpcomingAlert) {
+                iconUpcomingAlert.className = enabled ? 'fa-solid fa-bell text-amber-500' : 'fa-solid fa-bell-slash text-slate-400';
+            }
+            if (upcomingAlertConfigBody) {
+                upcomingAlertConfigBody.style.display = enabled ? 'block' : 'none';
+            }
+            if (selectUpcomingMinutes) {
+                selectUpcomingMinutes.value = String(minutes);
+            }
+        }
+
+        updateUpcomingAlertUI();
+
+        btnToggleUpcomingAlert?.addEventListener('click', () => {
+            const current = isUpcomingAlertEnabled();
+            setUpcomingAlertEnabled(!current);
+            updateUpcomingAlertUI();
+            showToast(!current ? 'Alerta pop-up ativado!' : 'Alerta pop-up desativado.', !current ? 'success' : 'info');
+        });
+
+        btnSaveUpcomingMinutes?.addEventListener('click', () => {
+            const selectedVal = selectUpcomingMinutes.value;
+            setUpcomingAlertMinutes(selectedVal);
+            showToast(`Antecedência do alerta salva: ${selectedVal} minutos antes!`, 'success');
         });
 
         const NOMES_DIAS = {
