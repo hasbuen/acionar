@@ -11,12 +11,14 @@ function normalizeNotificationPayload(raw = {}) {
     const dataLabel = data.data || raw.dataLabel || '';
     const hora = data.hora || raw.hora || '';
     const local = data.local || raw.local || '';
+    const observacoes = data.observacoes || raw.observacoes || '';
 
     const body = raw.body || [
         `WhatsApp: ${telefone}`,
         `Serviço: ${servicoNome}`,
         dataLabel || hora ? `Data: ${dataLabel}${hora ? ` às ${hora}` : ''}` : '',
-        local ? `Local: ${local}` : ''
+        local ? `Local: ${local}` : '',
+        observacoes ? `Obs: ${observacoes}` : ''
     ].filter(Boolean).join('\n');
 
     return {

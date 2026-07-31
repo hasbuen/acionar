@@ -113,7 +113,11 @@ let knownAgendamentoIds = new Set();
 let isInitialLoadDone = false;
 
 export function isAlarmEnabled() {
-    return localStorage.getItem('alarm-enabled') === 'true';
+    const savedState = localStorage.getItem('alarm-enabled');
+    if (savedState === null && 'Notification' in window) {
+        return Notification.permission === 'granted';
+    }
+    return savedState === 'true';
 }
 
 export function setAlarmEnabled(enabled) {
@@ -366,15 +370,28 @@ export function triggerSystemNotification(titleOrPayload, body = '') {
     const payload = normalizeNotificationPayload(titleOrPayload, body);
     playNotificationSound();
 
+    const options = {
+        body: payload.body,
+        icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f514.png',
+        badge: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f514.png',
+        vibrate: [300, 100, 300],
+        tag: payload.tag,
+        renotify: true,
+        requireInteraction: true,
+        data: payload.data
+    };
+
     if ('Notification' in window && Notification.permission === 'granted' && isAlarmEnabled()) {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready
+                .then((reg) => reg.showNotification(payload.title, options))
+                .catch(() => new Notification(payload.title, options));
+            return;
+        }
+
         try {
             // Emite notificação nativa através do Service Worker (compatível com Android e iOS PWA em segundo plano)
-            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({
-                    type: 'SHOW_NOTIFICATION',
-                    ...payload
-                });
-            } else if ('serviceWorker' in navigator) {
+            if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.ready.then((reg) => {
                     reg.showNotification(payload.title, {
                         body: payload.body,
@@ -442,6 +459,7 @@ async function fetchAppointmentNotificationRecord(id) {
             status,
             tipo_atendimento,
             endereco_atendimento,
+            observacoes,
             clientes ( id, nome, whatsapp ),
             servicos ( id, nome, duracao_minutos )
         `)
@@ -1036,12 +1054,17 @@ function getAppointmentLocationLabel(agendamento) {
     return 'No salão';
 }
 
+function getAppointmentObservation(agendamento) {
+    return String(agendamento?.observacoes || agendamento?.observacao || '').trim();
+}
+
 export function buildAppointmentNotificationPayload(agendamento, kind = 'new') {
     const clienteNome = getAppointmentCustomerName(agendamento);
     const telefone = formatPhoneDisplay(getAppointmentCustomerPhone(agendamento));
     const servicoNome = getAppointmentServiceName(agendamento);
     const { dateStr, timeStr } = getAppointmentDateParts(agendamento);
     const local = getAppointmentLocationLabel(agendamento);
+    const observacoes = getAppointmentObservation(agendamento);
 
     const title = kind === 'upcoming'
         ? `Atendimento em breve: ${clienteNome}`
@@ -1049,7 +1072,13 @@ export function buildAppointmentNotificationPayload(agendamento, kind = 'new') {
 
     return {
         title,
-        body: `WhatsApp: ${telefone}\nServiço: ${servicoNome}\nData: ${dateStr} às ${timeStr}\nLocal: ${local}`,
+        body: [
+            `WhatsApp: ${telefone}`,
+            `Servico: ${servicoNome}`,
+            `Data: ${dateStr} as ${timeStr}`,
+            `Local: ${local}`,
+            observacoes ? `Obs: ${observacoes}` : ''
+        ].filter(Boolean).join('\n'),
         tag: `${kind}-agendamento-${agendamento?.id || Date.now()}`,
         data: {
             url: './dashboard.html',
@@ -1060,6 +1089,7 @@ export function buildAppointmentNotificationPayload(agendamento, kind = 'new') {
             data: dateStr,
             hora: timeStr,
             local,
+            observacoes,
             kind
         }
     };
