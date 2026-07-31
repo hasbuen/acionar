@@ -1085,7 +1085,10 @@ function getAppointmentProfessionalId(agendamento) {
 }
 
 let activeProfessionalServiceIdsCache = null;
+let activeProfessionalServiceRuleIdsCache = null;
 let activeProfessionalSubserviceIdsCache = null;
+let activeProfessionalSubserviceRuleIdsCache = null;
+let activeProfessionalDisabledSubserviceIdsCache = null;
 let activeProfessionalHorarioConfigCache = null;
 let activeProfessionalExternalAcceptanceCache = null;
 
@@ -1093,7 +1096,10 @@ async function fetchActiveProfessionalServiceIds() {
     const activeProfId = getActiveProfessionalId();
     if (!activeProfId) {
         activeProfessionalServiceIdsCache = null;
+        activeProfessionalServiceRuleIdsCache = null;
         activeProfessionalSubserviceIdsCache = null;
+        activeProfessionalSubserviceRuleIdsCache = null;
+        activeProfessionalDisabledSubserviceIdsCache = null;
         return null;
     }
 
@@ -1101,35 +1107,51 @@ async function fetchActiveProfessionalServiceIds() {
         const [servicesRes, subservicesRes] = await Promise.all([
             supabase
                 .from('profissional_servicos')
-                .select('servico_id')
-                .eq('profissional_id', activeProfId)
-                .eq('ativo', true),
+                .select('servico_id, ativo')
+                .eq('profissional_id', activeProfId),
             supabase
                 .from('profissional_subservicos')
-                .select('subservico_id')
+                .select('subservico_id, ativo')
                 .eq('profissional_id', activeProfId)
-                .eq('ativo', true)
         ]);
 
         if (servicesRes.error) throw servicesRes.error;
         if (subservicesRes.error) throw subservicesRes.error;
 
-        activeProfessionalServiceIdsCache = new Set((servicesRes.data || []).map(row => row.servico_id).filter(Boolean));
-        activeProfessionalSubserviceIdsCache = new Set((subservicesRes.data || []).map(row => row.subservico_id).filter(Boolean));
+        const serviceRows = servicesRes.data || [];
+        const subserviceRows = subservicesRes.data || [];
+
+        activeProfessionalServiceRuleIdsCache = new Set(serviceRows.map(row => row.servico_id).filter(Boolean));
+        activeProfessionalServiceIdsCache = new Set(serviceRows.filter(row => row.ativo !== false).map(row => row.servico_id).filter(Boolean));
+        activeProfessionalSubserviceRuleIdsCache = new Set(subserviceRows.map(row => row.subservico_id).filter(Boolean));
+        activeProfessionalSubserviceIdsCache = new Set(subserviceRows.filter(row => row.ativo !== false).map(row => row.subservico_id).filter(Boolean));
+        activeProfessionalDisabledSubserviceIdsCache = new Set(subserviceRows.filter(row => row.ativo === false).map(row => row.subservico_id).filter(Boolean));
         return activeProfessionalServiceIdsCache;
     } catch (err) {
         console.warn('Tabelas de habilitacao profissional indisponiveis, usando catalogo legado.', err);
         activeProfessionalServiceIdsCache = null;
+        activeProfessionalServiceRuleIdsCache = null;
         activeProfessionalSubserviceIdsCache = null;
+        activeProfessionalSubserviceRuleIdsCache = null;
+        activeProfessionalDisabledSubserviceIdsCache = null;
         return null;
     }
 }
 
 function canActiveProfessionalHandleService(servicoId, subservicoId = null) {
-    if (!servicoId || !activeProfessionalServiceIdsCache) return true;
-    if (!activeProfessionalServiceIdsCache.has(servicoId)) return false;
-    if (subservicoId && activeProfessionalSubserviceIdsCache) {
-        return activeProfessionalSubserviceIdsCache.has(subservicoId);
+    if (!servicoId) return true;
+    if (
+        activeProfessionalServiceRuleIdsCache &&
+        activeProfessionalServiceRuleIdsCache.size > 0 &&
+        !activeProfessionalServiceIdsCache?.has(servicoId)
+    ) {
+        return false;
+    }
+    if (subservicoId && activeProfessionalDisabledSubserviceIdsCache?.has(subservicoId)) {
+        return false;
+    }
+    if (subservicoId && activeProfessionalSubserviceRuleIdsCache?.has(subservicoId)) {
+        return activeProfessionalSubserviceIdsCache?.has(subservicoId) === true;
     }
     return true;
 }
@@ -1603,11 +1625,14 @@ export async function fetchServicosAtivos() {
             .eq('profissional_id', activeProfId);
 
         if (habilitadosErr) throw habilitadosErr;
-        const enabledIds = new Set((habilitados || []).filter(row => row.ativo !== false).map(row => row.servico_id));
+        const rows = habilitados || [];
+        const hasExplicitServiceConfig = rows.length > 0;
+        const enabledIds = new Set(rows.filter(row => row.ativo !== false).map(row => row.servico_id));
         activeProfessionalServiceIdsCache = enabledIds;
+        activeProfessionalServiceRuleIdsCache = new Set(rows.map(row => row.servico_id).filter(Boolean));
         return services.map(servico => ({
             ...servico,
-            habilitado_profissional: enabledIds.has(servico.id)
+            habilitado_profissional: hasExplicitServiceConfig ? enabledIds.has(servico.id) : true
         }));
     } catch (err) {
         return services.map(servico => ({ ...servico, habilitado_profissional: true }));
@@ -3302,11 +3327,14 @@ export async function fetchSubservicosByServicoId(servicoId) {
             .in('subservico_id', subservicos.map(sub => sub.id));
 
         if (habilitadosErr) throw habilitadosErr;
+        const explicitRows = new Map((habilitados || []).map(row => [row.subservico_id, row.ativo !== false]));
         const enabledIds = new Set((habilitados || []).filter(row => row.ativo !== false).map(row => row.subservico_id));
         activeProfessionalSubserviceIdsCache = enabledIds;
+        activeProfessionalSubserviceRuleIdsCache = new Set((habilitados || []).map(row => row.subservico_id).filter(Boolean));
+        activeProfessionalDisabledSubserviceIdsCache = new Set((habilitados || []).filter(row => row.ativo === false).map(row => row.subservico_id).filter(Boolean));
         return subservicos.map(sub => ({
             ...sub,
-            habilitado_profissional: enabledIds.has(sub.id)
+            habilitado_profissional: explicitRows.has(sub.id) ? explicitRows.get(sub.id) : true
         }));
     } catch (err) {
         return subservicos.map(sub => ({ ...sub, habilitado_profissional: true }));
