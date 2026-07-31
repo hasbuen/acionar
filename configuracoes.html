@@ -251,7 +251,7 @@
             </section>
 
             <!-- CONFIGURAÇÃO 1: MENSAGEM DO WHATSAPP & ENDEREÇO -->
-            <section class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-6 backdrop-blur-md">
+            <section id="sectionWhatsapp" class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-6 backdrop-blur-md">
                 <div class="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
                     <div class="h-10 w-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
@@ -423,7 +423,7 @@
             escapeHtml,
             getActiveProfessional,
             performLogout
-        } from './js/app.js?v=2.5';
+        } from './js/app.js?v=2.6';
 
         initTheme();
 
@@ -431,9 +431,11 @@
         const activeProf = getActiveProfessional();
         const isAuxiliar = activeProf && activeProf.cargo === 'auxiliar';
         const sectionGestaoEquipe = document.getElementById('sectionGestaoEquipe');
+        const sectionWhatsapp = document.getElementById('sectionWhatsapp');
 
-        if (sectionGestaoEquipe && isAuxiliar) {
-            sectionGestaoEquipe.style.display = 'none';
+        if (isAuxiliar) {
+            if (sectionGestaoEquipe) sectionGestaoEquipe.style.display = 'none';
+            if (sectionWhatsapp) sectionWhatsapp.style.display = 'none';
         }
 
         // --- CONTROLE DE ALARME SONORO ---

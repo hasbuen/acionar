@@ -779,7 +779,26 @@ export function cleanPhone(formatted) {
 }
 
 // --- GESTÃO DE CONFIGURAÇÕES DE HORÁRIO DE FUNCIONAMENTO ---
-export async function fetchConfiguracaoHorarios() {
+export async function fetchConfiguracaoHorarios(profissionalId = null) {
+    const activeProf = getActiveProfessional();
+    const targetProfId = profissionalId || (activeProf && activeProf.cargo === 'auxiliar' ? activeProf.id : null);
+
+    if (targetProfId) {
+        try {
+            const { data, error } = await supabase
+                .from('configuracoes')
+                .select('valor')
+                .eq('chave', `horario_funcionamento_${targetProfId}`)
+                .maybeSingle();
+
+            if (!error && data && data.valor) {
+                return data.valor;
+            }
+        } catch (err) {
+            console.warn(`Erro ao buscar horário individual do profissional ${targetProfId}:`, err);
+        }
+    }
+
     try {
         const { data, error } = await supabase
             .from('configuracoes')
@@ -808,12 +827,16 @@ export async function fetchConfiguracaoHorarios() {
 }
 
 export async function saveConfiguracaoHorarios(configValor) {
+    const activeProf = getActiveProfessional();
+    const targetProfId = activeProf && activeProf.cargo === 'auxiliar' ? activeProf.id : null;
+    const chave = targetProfId ? `horario_funcionamento_${targetProfId}` : 'horario_funcionamento';
+
     const { error } = await supabase
         .from('configuracoes')
         .upsert({
-            chave: 'horario_funcionamento',
+            chave: chave,
             valor: configValor,
-            descricao: 'Configuração avançada de turnos e horários por dia da semana'
+            descricao: targetProfId ? `Horário individual do auxiliar ${activeProf.nome || targetProfId}` : 'Configuração avançada de turnos e horários por dia da semana'
         }, { onConflict: 'chave' });
 
     if (error) throw error;
@@ -828,31 +851,35 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
     const selectedDate = new Date(year, month - 1, day);
     const dayOfWeek = selectedDate.getDay().toString();
 
-    // 1. Obter número de profissionais ativos no estabelecimento
-    let totalProfissionais = 1;
+    // 1. Obter profissionais ativos e carregar horários individuais
+    let activeProfs = [];
     try {
-        const { data: profs } = await supabase.from('profissionais').select('id').eq('ativo', true);
+        const { data: profs } = await supabase.from('profissionais').select('id, nome').eq('ativo', true);
         if (profs && profs.length > 0) {
-            totalProfissionais = profs.length;
+            activeProfs = profs;
         }
     } catch (e) {}
 
-    const config = await fetchConfiguracaoHorarios();
-    let dayConfig = null;
-
-    if (config && config.dias_semana_turnos && config.dias_semana_turnos[dayOfWeek]) {
-        dayConfig = config.dias_semana_turnos[dayOfWeek];
-    } else if (config && config.dias_semana) {
-        const isAtivo = config.dias_semana.includes(dayOfWeek);
-        dayConfig = {
-            ativo: isAtivo,
-            turnos: isAtivo ? [{ inicio: config.hora_inicio || "08:00", fim: config.hora_fim || "18:00" }] : []
-        };
-    } else if (config.dias && config.dias[dayOfWeek]) {
-        dayConfig = config.dias[dayOfWeek];
+    let profConfigs = [];
+    if (activeProfs.length > 0) {
+        for (const p of activeProfs) {
+            const cfg = await fetchConfiguracaoHorarios(p.id);
+            const dCfg = cfg && cfg.dias && cfg.dias[dayOfWeek] ? cfg.dias[dayOfWeek] : null;
+            if (dCfg && dCfg.ativo && dCfg.turnos && dCfg.turnos.length > 0) {
+                profConfigs.push({ profId: p.id, turnos: dCfg.turnos });
+            }
+        }
     }
 
-    if (!dayConfig || !dayConfig.ativo || !dayConfig.turnos || dayConfig.turnos.length === 0) {
+    if (profConfigs.length === 0) {
+        const globalCfg = await fetchConfiguracaoHorarios();
+        const dCfg = globalCfg && globalCfg.dias && globalCfg.dias[dayOfWeek] ? globalCfg.dias[dayOfWeek] : null;
+        if (dCfg && dCfg.ativo && dCfg.turnos && dCfg.turnos.length > 0) {
+            profConfigs.push({ profId: 'global', turnos: dCfg.turnos });
+        }
+    }
+
+    if (profConfigs.length === 0) {
         return { closed: true, slots: [] };
     }
 
@@ -891,39 +918,47 @@ export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30) {
 
     const slots = [];
     const requestedDuration = Math.max(parseInt(servicoDuracao || 30), 15);
-    const slotStep = parseInt(config?.intervalo_minutos || 30, 10);
+    const slotStep = 15;
 
-    dayConfig.turnos.forEach(turno => {
-        if (!turno.inicio || !turno.fim) return;
-        const [startH, startM] = turno.inicio.split(':').map(Number);
-        const [endH, endM] = turno.fim.split(':').map(Number);
+    profConfigs.forEach(pc => {
+        pc.turnos.forEach(turno => {
+            if (!turno.inicio || !turno.fim) return;
+            const [startH, startM] = turno.inicio.split(':').map(Number);
+            const [endH, endM] = turno.fim.split(':').map(Number);
 
-        let currentMinutes = startH * 60 + startM;
-        const endMinutes = endH * 60 + endM;
+            let currentMinutes = startH * 60 + startM;
+            const endMinutes = endH * 60 + endM;
 
-        while (currentMinutes + requestedDuration <= endMinutes) {
-            const h = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
-            const m = (currentMinutes % 60).toString().padStart(2, '0');
-            const timeStr = `${h}:${m}`;
+            while (currentMinutes + requestedDuration <= endMinutes) {
+                const h = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
+                const m = (currentMinutes % 60).toString().padStart(2, '0');
+                const timeStr = `${h}:${m}`;
 
-            const slotStart = currentMinutes;
-            const slotEnd = currentMinutes + requestedDuration;
+                const slotStart = currentMinutes;
+                const slotEnd = currentMinutes + requestedDuration;
 
-            // REGRA DE CAPACIDADE MULTI-PROFISSIONAL:
-            // O horário só é considerado INDISPONÍVEL se a quantidade de atendimentos simultâneos
-            // for maior ou igual ao número total de profissionais ativos no estabelecimento.
-            const concurrentCount = occupiedRanges.filter(r => (slotStart < r.end && slotEnd > r.start)).length;
-            const isOccupied = concurrentCount >= totalProfissionais;
+                // Conta quantos profissionais estão em turno ativo neste exato intervalo
+                const openProfsCount = profConfigs.filter(pCfg => {
+                    return pCfg.turnos.some(t => {
+                        if (!t.inicio || !t.fim) return false;
+                        const [sH, sM] = t.inicio.split(':').map(Number);
+                        const [eH, eM] = t.fim.split(':').map(Number);
+                        return slotStart >= (sH * 60 + sM) && slotEnd <= (eH * 60 + eM);
+                    });
+                }).length;
 
-            if (!slots.some(s => s.time === timeStr)) {
-                slots.push({
-                    time: timeStr,
-                    available: !isOccupied
-                });
+                const concurrentCount = occupiedRanges.filter(r => (slotStart < r.end && slotEnd > r.start)).length;
+                const isOccupied = openProfsCount === 0 || concurrentCount >= openProfsCount;
+
+                if (!slots.some(s => s.time === timeStr)) {
+                    slots.push({
+                        time: timeStr,
+                        occupied: isOccupied
+                    });
+                }
+                currentMinutes += slotStep;
             }
-
-            currentMinutes += slotStep;
-        }
+        });
     });
 
     slots.sort((a, b) => a.time.localeCompare(b.time));
