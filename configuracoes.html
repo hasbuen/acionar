@@ -331,19 +331,7 @@
                     </button>
                 </div>
 
-                <!-- Intervalo dos Encaixes -->
-                <div class="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                        <span class="block text-xs font-extrabold text-slate-900 dark:text-white">Intervalo entre Horários na Agenda</span>
-                        <span class="block text-[11px] text-slate-500 dark:text-slate-400">Passo de minutos para exibição dos encaixes na tela do cliente</span>
-                    </div>
-                    <select id="selectIntervalo" class="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="15">A cada 15 minutos</option>
-                        <option value="30" selected>A cada 30 minutos</option>
-                        <option value="45">A cada 45 minutos</option>
-                        <option value="60">A cada 1 hora</option>
-                    </select>
-                </div>
+
 
                 <!-- Lista de Dias da Semana com Suporte a Multi-Turnos -->
                 <div id="diasSemanaContainer" class="space-y-4">
@@ -429,7 +417,7 @@
             toggleProfissionalAtivo,
             deleteProfissional,
             escapeHtml
-        } from './js/app.js?v=2.0';
+        } from './js/app.js?v=2.1';
 
         initTheme();
 
@@ -817,7 +805,7 @@
 
         async function saveAllHorarios() {
             const configPayload = {
-                intervalo_minutos: parseInt(document.getElementById('selectIntervalo').value || 30),
+                intervalo_minutos: currentConfig?.intervalo_minutos || 15,
                 dias: {}
             };
 
