@@ -179,7 +179,7 @@
             </section>
 
             <!-- CONFIGURAÇÃO 0.8: GESTÃO DE EQUIPE & PROFISSIONAIS AUXILIARES -->
-            <section class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-6 backdrop-blur-md">
+            <section id="sectionGestaoEquipe" class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-6 backdrop-blur-md">
                 <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 flex-wrap gap-4">
                     <div class="flex items-center gap-3">
                         <div class="h-10 w-10 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
@@ -416,10 +416,20 @@
             saveProfissional,
             toggleProfissionalAtivo,
             deleteProfissional,
-            escapeHtml
-        } from './js/app.js?v=2.1';
+            escapeHtml,
+            getActiveProfessional
+        } from './js/app.js?v=2.2';
 
         initTheme();
+
+        // --- VERIFICAÇÃO DE PERMISSÃO PARA AUXILIARES ---
+        const activeProf = getActiveProfessional();
+        const isAuxiliar = activeProf && activeProf.cargo === 'auxiliar';
+        const sectionGestaoEquipe = document.getElementById('sectionGestaoEquipe');
+
+        if (sectionGestaoEquipe && isAuxiliar) {
+            sectionGestaoEquipe.style.display = 'none';
+        }
 
         // --- CONTROLE DE ALARME SONORO ---
         const btnEnableNotifications = document.getElementById('btnEnableNotifications');

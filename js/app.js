@@ -1735,6 +1735,27 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
         isInitialLoadDone = true;
     }
 
+    // REGRAS DE PRIVACIDADE DO AUXILIAR:
+    // Se um auxiliar estiver logado (cargo === 'auxiliar'), ele vê apenas:
+    // 1. Solicitações pendentes/sem profissional atribuído (para poder aceitar).
+    // 2. Os agendamentos que foram atribuídos especificamente a ele mesmo!
+    const activeProf = getActiveProfessional();
+    if (activeProf && activeProf.cargo === 'auxiliar') {
+        const myProfId = activeProf.id;
+        agendamentos = agendamentos.filter(a => {
+            const statusLower = (a.status || '').toLowerCase();
+            const profIdStr = a.profissional_id || a.profissionais?.id;
+
+            // Solicitação pendente não atribuída -> fica visível para todos os auxiliares aceitarem
+            if ((statusLower === 'aguardando_confirmacao' || statusLower === 'solicitado') && !profIdStr) {
+                return true;
+            }
+
+            // Agendamento confirmado/em atendimento/concluído -> visível APENAS para o profissional responsável
+            return profIdStr === myProfId;
+        });
+    }
+
     if (filterDate) {
         agendamentos = agendamentos.filter(a => a.data_hora_inicio && a.data_hora_inicio.startsWith(filterDate));
     }
