@@ -39,6 +39,13 @@
     <style>
         * { -webkit-tap-highlight-color: transparent; }
         ::-webkit-scrollbar { width: 0px; background: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x;
+        }
         input[type="date"], select {
             min-height: 48px;
             -webkit-appearance: none;
@@ -180,7 +187,7 @@
             </div>
 
             <!-- Filtros de Data e Status -->
-            <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+            <div class="filter-scroll-container flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar whitespace-nowrap w-full max-w-full touch-pan-x cursor-grab select-none">
                 <button id="filterAll" class="filter-btn active px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm shrink-0">
                     Todos
                 </button>
@@ -620,7 +627,7 @@
             generateWhatsAppManutencaoMessage,
             cleanPhone,
             performLogout
-        } from './js/app.js?v=2.6';
+        } from './js/app.js?v=2.7';
         import { supabase } from './js/supabase.js';
         import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './js/datetime.js';
 
@@ -1614,7 +1621,33 @@
             await performLogout();
         };
 
-        document.getElementById('btnLogout')?.addEventListener('click', handleLogout);
+        document.querySelectorAll('.overflow-x-auto').forEach(container => {
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            container.addEventListener('mousedown', (e) => {
+                isDown = true;
+                container.classList.add('cursor-grabbing');
+                startX = e.pageX - container.offsetLeft;
+                scrollLeft = container.scrollLeft;
+            });
+            container.addEventListener('mouseleave', () => {
+                isDown = false;
+                container.classList.remove('cursor-grabbing');
+            });
+            container.addEventListener('mouseup', () => {
+                isDown = false;
+                container.classList.remove('cursor-grabbing');
+            });
+            container.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - container.offsetLeft;
+                const walk = (x - startX) * 2;
+                container.scrollLeft = scrollLeft - walk;
+            });
+        });
 
         refreshAgenda();
         if (window.lucide) window.lucide.createIcons();
