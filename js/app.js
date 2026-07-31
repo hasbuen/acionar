@@ -794,9 +794,12 @@ function getAppointmentProfessionalId(agendamento) {
 }
 
 function belongsToActiveProfessional(record, columnName = 'profissional_id') {
-    const activeProfId = getActiveProfessionalId();
+    const activeProf = getActiveProfessional();
+    const activeProfId = activeProf?.id || null;
     const recordProfId = record?.[columnName] || record?.profissionais?.id || record?.agendamentos?.profissional_id || null;
-    return activeProfId ? recordProfId === activeProfId : !recordProfId;
+    if (!activeProfId) return !recordProfId;
+    if (recordProfId) return recordProfId === activeProfId;
+    return activeProf?.cargo !== 'auxiliar';
 }
 
 function hasProfessionalMarker(record, columnName = 'profissional_id') {
