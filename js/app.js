@@ -64,6 +64,12 @@ function getSessionDisplayName(session) {
     return meta.nome || meta.name || meta.full_name || email.split('@')[0] || 'Profissional';
 }
 
+function capitalizeDisplayName(name) {
+    const text = String(name || '').trim();
+    if (!text) return 'Profissional';
+    return text.charAt(0).toLocaleUpperCase('pt-BR') + text.slice(1);
+}
+
 export async function hydrateHeaderIdentity() {
     const avatarEl = document.getElementById('headerUserAvatar');
     const nameEl = document.getElementById('headerUserName');
@@ -72,7 +78,7 @@ export async function hydrateHeaderIdentity() {
     try {
         const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
         const { data: { session } = { session: null } } = await supabase.auth.getSession();
-        const displayName = activeProf?.nome || getSessionDisplayName(session);
+        const displayName = capitalizeDisplayName(activeProf?.nome || getSessionDisplayName(session));
         const initial = (displayName || 'P').trim().charAt(0).toUpperCase() || 'P';
 
         if (avatarEl) avatarEl.textContent = initial;
