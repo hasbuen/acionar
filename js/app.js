@@ -1794,6 +1794,7 @@ function renderAgendamentosList(container, agendamentos) {
         const precoStr = getServicePrice(ag.servicos);
         const waMsgStatus = isManutencao ? 'true' : 'false';
         const showManutencaoBtn = !isSolicitacao && statusLower !== 'cancelado';
+        const agendamentoJson = escapeHtml(JSON.stringify(ag));
         const profNome = ag.profissional_nome || ag.profissionais?.nome || '';
         const profCor = ag.profissional_cor || ag.profissionais?.cor_identificadora || '#8b5cf6';
         const profBadgeHtml = profNome 
