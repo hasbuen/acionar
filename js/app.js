@@ -2664,30 +2664,34 @@ function renderAgendamentosList(container, agendamentos) {
                 </div>
             </div>
 
-            <!-- BOTÕES DE AÇÃO HORIZONTAIS COMPACTOS -->
-            <div class="flex flex-row items-center justify-end gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/40">
+            <!-- Ações do agendamento -->
+            <div class="w-full sm:w-auto sm:min-w-[250px] shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-200/80 dark:border-slate-800/40">
                 ${isAguardando ? `
-                    <button type="button" class="btn-aceitar-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold border border-emerald-500/20 shrink-0" 
-                        title="Aceitar Agendamento"
-                        data-id="${ag.id}"
-                        data-cliente-id="${clienteIdStr}"
-                        data-servico-id="${servicoIdStr}"
-                        data-cliente-nome="${escapeHtml(clienteNome)}"
-                        data-servico-nome="${escapeHtml(servicoNome)}"
-                        data-whatsapp="${cleanPhone(clienteWhatsapp)}"
-                        data-data-formatada="${dataFormatada}"
-                        data-hora-inicio="${horaInicio}"
-                        data-data-iso="${ag.data_hora_inicio}">
-                        <i class="fa-solid fa-check text-sm"></i>
-                    </button>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <button type="button" class="btn-aceitar-agendamento btn-animated flex items-center justify-center gap-2 h-10 rounded-2xl bg-emerald-600 text-white font-extrabold border border-emerald-500 shadow-sm shadow-emerald-500/20 shrink-0"
+                            title="Aceitar Agendamento"
+                            data-id="${ag.id}"
+                            data-cliente-id="${clienteIdStr}"
+                            data-servico-id="${servicoIdStr}"
+                            data-cliente-nome="${escapeHtml(clienteNome)}"
+                            data-servico-nome="${escapeHtml(servicoNome)}"
+                            data-whatsapp="${cleanPhone(clienteWhatsapp)}"
+                            data-data-formatada="${dataFormatada}"
+                            data-hora-inicio="${horaInicio}"
+                            data-data-iso="${ag.data_hora_inicio}">
+                            <i class="fa-solid fa-check text-sm"></i>
+                            <span class="text-xs">Aceitar</span>
+                        </button>
 
-                    <button type="button" class="btn-recusar-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 font-extrabold border border-rose-500/20 shrink-0" 
-                        title="Recusar Agendamento"
-                        data-id="${ag.id}">
-                        <i class="fa-solid fa-xmark text-sm"></i>
-                    </button>
+                        <button type="button" class="btn-recusar-agendamento btn-animated flex items-center justify-center gap-2 h-10 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 dark:text-rose-400 font-extrabold border border-rose-200 dark:border-rose-500/20 shrink-0"
+                            title="Recusar Agendamento"
+                            data-id="${ag.id}">
+                            <i class="fa-solid fa-xmark text-sm"></i>
+                            <span class="text-xs">Recusar</span>
+                        </button>
+                    </div>
                 ` : `
-                    <button type="button" class="btn-open-status-modal btn-animated flex items-center justify-between h-9 px-2.5 rounded-xl text-xs font-black border ${statusClass} flex-1 min-w-0" 
+                    <button type="button" class="btn-open-status-modal btn-animated flex w-full items-center justify-between gap-3 min-h-11 px-3 rounded-2xl text-left border ${statusClass} shadow-sm mb-2"
                         data-id="${ag.id}"
                         data-cliente-id="${clienteIdStr}"
                         data-servico-id="${servicoIdStr}"
@@ -2695,16 +2699,23 @@ function renderAgendamentosList(container, agendamentos) {
                         data-cliente-nome="${escapeHtml(clienteNome)}"
                         data-servico-nome="${escapeHtml(servicoNome)}"
                         data-data-iso="${ag.data_hora_inicio}">
-                        <span class="truncate">${statusLabel}</span>
-                        <i class="fa-solid fa-chevron-down text-[10px] opacity-70 ml-1 shrink-0"></i>
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/70 dark:bg-slate-950/30">
+                            <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                        </span>
+                        <span class="min-w-0 flex-1 leading-tight">
+                            <span class="block text-[9px] font-black uppercase tracking-wide opacity-70">Alterar status</span>
+                            <span class="block truncate text-xs font-black">${statusLabel}</span>
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-xs opacity-70 shrink-0"></i>
                     </button>
                 `}
 
+                <div class="grid grid-cols-5 gap-1.5 sm:flex sm:flex-wrap sm:justify-end sm:gap-1.5">
                 ${clienteWhatsapp ? `
-                    <button type="button" class="btn-send-wa-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl ${
+                    <button type="button" class="btn-send-wa-agendamento btn-animated flex items-center justify-center h-10 rounded-2xl sm:h-9 sm:w-9 ${
                         isManutencao 
-                            ? 'bg-purple-500/10 text-purple-600 dark:text-purple-300 hover:bg-purple-500/20 border border-purple-500/20' 
-                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20'
+                            ? 'bg-purple-50 text-purple-700 dark:bg-purple-500/10 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-500/20 border border-purple-200 dark:border-purple-500/20'
+                            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/20'
                     } shrink-0" 
                         title="${isManutencao ? 'Enviar Lembrete de Manutenção no WhatsApp' : 'Conversar no WhatsApp'}"
                         data-whatsapp="${cleanPhone(clienteWhatsapp)}"
@@ -2718,7 +2729,7 @@ function renderAgendamentosList(container, agendamentos) {
                 ` : ''}
 
                 ${showManutencaoBtn ? `
-                    <button type="button" class="btn-schedule-manutencao btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-extrabold border border-purple-500/20 shrink-0" 
+                    <button type="button" class="btn-schedule-manutencao btn-animated flex items-center justify-center h-10 rounded-2xl sm:h-9 sm:w-9 bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 dark:text-purple-400 font-extrabold border border-purple-200 dark:border-purple-500/20 shrink-0"
                         title="Agendar Retorno de Manutenção"
                         data-id="${ag.id}"
                         data-cliente-id="${clienteIdStr}"
@@ -2730,7 +2741,7 @@ function renderAgendamentosList(container, agendamentos) {
                     </button>
                 ` : ''}
 
-                <button type="button" class="btn-open-payment-modal btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold border border-emerald-500/20 shrink-0" 
+                <button type="button" class="btn-open-payment-modal btn-animated flex items-center justify-center h-10 rounded-2xl sm:h-9 sm:w-9 bg-teal-50 hover:bg-teal-100 text-teal-700 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 dark:text-emerald-400 font-extrabold border border-teal-200 dark:border-emerald-500/20 shrink-0"
                     title="Registrar / Ver Pagamento (Caixa)"
                     data-agendamento-id="${ag.id}"
                     data-cliente-id="${clienteIdStr}"
@@ -2742,18 +2753,19 @@ function renderAgendamentosList(container, agendamentos) {
                 </button>
 
                 ${!isSolicitacao && statusLower !== 'cancelado' ? `
-                    <button class="btn-transfer-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-500/20 border border-indigo-500/20 shrink-0" data-id="${ag.id}" data-agendamento='${agendamentoJson}' title="Transferir para outro profissional">
+                    <button class="btn-transfer-agendamento btn-animated flex items-center justify-center h-10 rounded-2xl sm:h-9 sm:w-9 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/20 shrink-0" data-id="${ag.id}" data-agendamento='${agendamentoJson}' title="Transferir para outro profissional">
                         <i class="fa-solid fa-right-left text-xs"></i>
                     </button>
                 ` : ''}
 
-                <button class="btn-edit-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200/50 dark:border-slate-800 shrink-0" data-agendamento='${agendamentoJson}' title="Editar Agendamento">
+                <button class="btn-edit-agendamento btn-animated flex items-center justify-center h-10 rounded-2xl sm:h-9 sm:w-9 bg-sky-50 dark:bg-slate-800 text-sky-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-400 hover:bg-sky-100 dark:hover:bg-blue-950/40 border border-sky-200 dark:border-slate-800 shrink-0" data-agendamento='${agendamentoJson}' title="Editar Agendamento">
                     <i class="fa-solid fa-pen-to-square text-xs"></i>
                 </button>
 
-                <button class="btn-delete-agendamento btn-animated flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200/50 dark:border-slate-800 shrink-0" data-id="${ag.id}" title="Excluir Agendamento">
+                <button class="btn-delete-agendamento btn-animated flex items-center justify-center h-10 rounded-2xl sm:h-9 sm:w-9 bg-rose-50 dark:bg-slate-800 text-rose-700 dark:text-slate-300 hover:text-rose-700 dark:hover:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-slate-800 shrink-0" data-id="${ag.id}" title="Excluir Agendamento">
                     <i class="fa-solid fa-trash-can text-xs"></i>
                 </button>
+                </div>
             </div>
         `;
 
