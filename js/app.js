@@ -779,6 +779,11 @@ export function cleanPhone(formatted) {
     return (formatted || '').replace(/\D/g, '');
 }
 
+function isMissingColumnError(error, columnName) {
+    const text = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`;
+    return text.includes(columnName);
+}
+
 function isRequestStatus(status) {
     const statusLower = (status || '').toLowerCase();
     return statusLower === 'aguardando_confirmacao' || statusLower === 'solicitado';
@@ -791,6 +796,54 @@ function getActiveProfessionalId() {
 
 function getAppointmentProfessionalId(agendamento) {
     return agendamento?.profissional_id || agendamento?.profissionais?.id || null;
+}
+
+let activeProfessionalServiceIdsCache = null;
+let activeProfessionalSubserviceIdsCache = null;
+
+async function fetchActiveProfessionalServiceIds() {
+    const activeProfId = getActiveProfessionalId();
+    if (!activeProfId) {
+        activeProfessionalServiceIdsCache = null;
+        activeProfessionalSubserviceIdsCache = null;
+        return null;
+    }
+
+    try {
+        const [servicesRes, subservicesRes] = await Promise.all([
+            supabase
+                .from('profissional_servicos')
+                .select('servico_id')
+                .eq('profissional_id', activeProfId)
+                .eq('ativo', true),
+            supabase
+                .from('profissional_subservicos')
+                .select('subservico_id')
+                .eq('profissional_id', activeProfId)
+                .eq('ativo', true)
+        ]);
+
+        if (servicesRes.error) throw servicesRes.error;
+        if (subservicesRes.error) throw subservicesRes.error;
+
+        activeProfessionalServiceIdsCache = new Set((servicesRes.data || []).map(row => row.servico_id).filter(Boolean));
+        activeProfessionalSubserviceIdsCache = new Set((subservicesRes.data || []).map(row => row.subservico_id).filter(Boolean));
+        return activeProfessionalServiceIdsCache;
+    } catch (err) {
+        console.warn('Tabelas de habilitacao profissional indisponiveis, usando catalogo legado.', err);
+        activeProfessionalServiceIdsCache = null;
+        activeProfessionalSubserviceIdsCache = null;
+        return null;
+    }
+}
+
+function canActiveProfessionalHandleService(servicoId, subservicoId = null) {
+    if (!servicoId || !activeProfessionalServiceIdsCache) return true;
+    if (!activeProfessionalServiceIdsCache.has(servicoId)) return false;
+    if (subservicoId && activeProfessionalSubserviceIdsCache) {
+        return activeProfessionalSubserviceIdsCache.has(subservicoId);
+    }
+    return true;
 }
 
 function belongsToActiveProfessional(record, columnName = 'profissional_id') {
@@ -816,12 +869,92 @@ function filterRecordsForActiveProfessional(records, columnName = 'profissional_
     return list.filter(record => belongsToActiveProfessional(record, columnName));
 }
 
+function getAgendamentoRangeMs(agendamento) {
+    if (!agendamento?.data_hora_inicio) return null;
+    const start = new Date(agendamento.data_hora_inicio).getTime();
+    if (Number.isNaN(start)) return null;
+
+    let end = agendamento.data_hora_fim ? new Date(agendamento.data_hora_fim).getTime() : NaN;
+    if (Number.isNaN(end) || end <= start) {
+        const duration = Number(
+            agendamento?.servicos?.duracao_minutos ||
+            agendamento?.servico_duracao_minutos ||
+            30
+        );
+        end = start + Math.max(duration || 30, 15) * 60000;
+    }
+
+    return { start, end };
+}
+
+function rangesOverlap(a, b) {
+    return Boolean(a && b && a.start < b.end && a.end > b.start);
+}
+
+function professionalHasConflictWithAppointment(targetAgendamento, allAgendamentos, profissionalId) {
+    if (!targetAgendamento || !profissionalId) return false;
+    const targetRange = getAgendamentoRangeMs(targetAgendamento);
+    if (!targetRange) return false;
+
+    return (allAgendamentos || []).some(ag => {
+        if (!ag || ag.id === targetAgendamento.id) return false;
+        if ((ag.status || '').toLowerCase() === 'cancelado') return false;
+        if ((getAppointmentProfessionalId(ag) || null) !== profissionalId) return false;
+        return rangesOverlap(targetRange, getAgendamentoRangeMs(ag));
+    });
+}
+
+function canActiveProfessionalSeeSharedRequest(agendamento, allAgendamentos) {
+    const activeProfId = getActiveProfessionalId();
+    if (!activeProfId) return true;
+    if (!canActiveProfessionalHandleService(agendamento?.servico_id || agendamento?.servicos?.id, agendamento?.subservico_id)) {
+        return false;
+    }
+    return !professionalHasConflictWithAppointment(agendamento, allAgendamentos, activeProfId);
+}
+
 function filterAppointmentsForActiveProfessional(agendamentos) {
-    return (agendamentos || []).filter(ag => {
+    const list = agendamentos || [];
+    return list.filter(ag => {
         const profId = getAppointmentProfessionalId(ag);
-        if (isRequestStatus(ag.status) && !profId) return true;
+        if (isRequestStatus(ag.status) && !profId) {
+            return canActiveProfessionalSeeSharedRequest(ag, list);
+        }
         return belongsToActiveProfessional(ag);
     });
+}
+
+async function assertProfessionalCanClaimAppointment(agendamentoId, currentAgendamento, profissionalId) {
+    if (!agendamentoId || !profissionalId) return;
+
+    await fetchActiveProfessionalServiceIds();
+    if (!canActiveProfessionalHandleService(currentAgendamento?.servico_id, currentAgendamento?.subservico_id)) {
+        const err = new Error('Este profissional nao esta habilitado para este servico.');
+        err.isNotAllowed = true;
+        throw err;
+    }
+
+    const currentRange = getAgendamentoRangeMs(currentAgendamento);
+    if (!currentRange) return;
+
+    const { data, error } = await supabase
+        .from('agendamentos')
+        .select('id, data_hora_inicio, data_hora_fim, status, profissional_id, servicos(duracao_minutos)')
+        .eq('profissional_id', profissionalId)
+        .neq('status', 'cancelado');
+
+    if (error) throw error;
+
+    const conflito = (data || []).some(ag => {
+        if (ag.id === agendamentoId) return false;
+        return rangesOverlap(currentRange, getAgendamentoRangeMs(ag));
+    });
+
+    if (conflito) {
+        const err = new Error('Este profissional ja possui agendamento neste horario.');
+        err.isConflict = true;
+        throw err;
+    }
 }
 
 async function updateClienteProfessional(clienteId, profissionalId) {
@@ -1064,7 +1197,65 @@ export async function fetchServicosAtivos() {
         .order('nome');
 
     if (error) throw error;
-    return data || [];
+
+    const services = data || [];
+    const activeProfId = getActiveProfessionalId();
+    if (!activeProfId || services.length === 0) return services;
+
+    try {
+        const { data: habilitados, error: habilitadosErr } = await supabase
+            .from('profissional_servicos')
+            .select('servico_id, ativo')
+            .eq('profissional_id', activeProfId);
+
+        if (habilitadosErr) throw habilitadosErr;
+        const enabledIds = new Set((habilitados || []).filter(row => row.ativo !== false).map(row => row.servico_id));
+        activeProfessionalServiceIdsCache = enabledIds;
+        return services.map(servico => ({
+            ...servico,
+            habilitado_profissional: enabledIds.has(servico.id)
+        }));
+    } catch (err) {
+        return services.map(servico => ({ ...servico, habilitado_profissional: true }));
+    }
+}
+
+export async function setProfessionalServiceEnabled(servicoId, enabled) {
+    const activeProfId = getActiveProfessionalId();
+    if (!activeProfId || !servicoId) return false;
+
+    const payload = {
+        profissional_id: activeProfId,
+        servico_id: servicoId,
+        ativo: enabled === true
+    };
+
+    const { error } = await supabase
+        .from('profissional_servicos')
+        .upsert(payload, { onConflict: 'profissional_id,servico_id' });
+
+    if (error) throw error;
+    await fetchActiveProfessionalServiceIds();
+    return true;
+}
+
+export async function setProfessionalSubservicoEnabled(subservicoId, enabled) {
+    const activeProfId = getActiveProfessionalId();
+    if (!activeProfId || !subservicoId) return false;
+
+    const payload = {
+        profissional_id: activeProfId,
+        subservico_id: subservicoId,
+        ativo: enabled === true
+    };
+
+    const { error } = await supabase
+        .from('profissional_subservicos')
+        .upsert(payload, { onConflict: 'profissional_id,subservico_id' });
+
+    if (error) throw error;
+    await fetchActiveProfessionalServiceIds();
+    return true;
 }
 
 export async function populateServicosDropdown(selectId, customComboboxListId = null) {
@@ -1073,7 +1264,7 @@ export async function populateServicosDropdown(selectId, customComboboxListId = 
     
     try {
         const servicos = await fetchServicosAtivos();
-        const ativos = servicos.filter(s => s.ativo !== false);
+        const ativos = servicos.filter(s => s.ativo !== false && s.habilitado_profissional !== false);
 
         if (select) {
             if (!ativos || ativos.length === 0) {
@@ -1397,11 +1588,20 @@ export function showConflictModalWithSuggestions({ message, dateStrISO, sugestoe
 export async function updateAgendamentoStatus(id, newStatus, profissionalId = undefined) {
     let currentAgendamento = null;
     try {
-        const { data } = await supabase
+        let { data, error: currentErr } = await supabase
             .from('agendamentos')
-            .select('cliente_id, status, profissional_id')
+            .select('cliente_id, servico_id, subservico_id, status, profissional_id, data_hora_inicio, data_hora_fim, servicos(duracao_minutos)')
             .eq('id', id)
             .maybeSingle();
+
+        if (currentErr && isMissingColumnError(currentErr, 'subservico_id')) {
+            const fallback = await supabase
+                .from('agendamentos')
+                .select('cliente_id, servico_id, status, profissional_id, data_hora_inicio, data_hora_fim, servicos(duracao_minutos)')
+                .eq('id', id)
+                .maybeSingle();
+            data = fallback.data;
+        }
         currentAgendamento = data || null;
     } catch (e) {}
 
@@ -1420,6 +1620,10 @@ export async function updateAgendamentoStatus(id, newStatus, profissionalId = un
     const updatePayload = { status: newStatus };
     if (targetProfId !== undefined) {
         updatePayload.profissional_id = targetProfId || null;
+    }
+
+    if (shouldClaim && targetProfId) {
+        await assertProfessionalCanClaimAppointment(id, currentAgendamento, targetProfId);
     }
 
     let { error } = await supabase
@@ -1668,8 +1872,10 @@ export async function fetchNotificationsList() {
                 id,
                 cliente_id,
                 servico_id,
+                subservico_id,
                 profissional_id,
                 data_hora_inicio,
+                data_hora_fim,
                 status,
                 is_manutencao,
                 observacoes,
@@ -1682,6 +1888,7 @@ export async function fetchNotificationsList() {
         if (error) throw error;
         if (!agendamentos) return [];
 
+        await fetchActiveProfessionalServiceIds();
         const visibleAgendamentos = filterAppointmentsForActiveProfessional(agendamentos);
 
         const now = new Date();
@@ -1882,6 +2089,7 @@ export async function checkUpcoming5MinAppointments() {
                 id,
                 cliente_id,
                 servico_id,
+                subservico_id,
                 profissional_id,
                 data_hora_inicio,
                 status,
@@ -1895,6 +2103,7 @@ export async function checkUpcoming5MinAppointments() {
             .order('data_hora_inicio', { ascending: true });
 
         if (error || !agendamentos) return;
+        await fetchActiveProfessionalServiceIds();
         const visibleAgendamentos = filterAppointmentsForActiveProfessional(agendamentos);
 
         const nowMs = Date.now();
@@ -1994,6 +2203,7 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
                 id,
                 cliente_id,
                 servico_id,
+                subservico_id,
                 profissional_id,
                 data_hora_inicio,
                 data_hora_fim,
@@ -2042,6 +2252,7 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
                     id: a.id,
                     cliente_id: a.cliente_id,
                     servico_id: a.servico_id,
+                    subservico_id: a.subservico_id || null,
                     profissional_id: a.profissional_id || null,
                     data_hora_inicio: a.data_hora_inicio,
                     data_hora_fim: a.data_hora_fim,
@@ -2088,22 +2299,6 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
         } catch (e) {}
     }
 
-    // DETECÇÃO DE NOVO AGENDAMENTO PARA DISPARAR SOM DE ALARME
-    if (isInitialLoadDone && fetchSuccess) {
-        const hasNewBooking = agendamentos.some(ag => !knownAgendamentoIds.has(ag.id));
-        if (hasNewBooking) {
-            triggerSystemNotification(
-                '🔔 NOVO AGENDAMENTO RECEBIDO!',
-                'Um novo agendamento acabou de entrar no seu sistema!'
-            );
-        }
-    }
-
-    if (fetchSuccess) {
-        knownAgendamentoIds = new Set(agendamentos.map(a => a.id));
-        isInitialLoadDone = true;
-    }
-
     // REGRAS DE PRIVACIDADE DO AUXILIAR:
     // Se um auxiliar estiver logado (cargo === 'auxiliar'), ele vê apenas:
     // 1. Solicitações pendentes/sem profissional atribuído (para poder aceitar).
@@ -2125,7 +2320,25 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
         });
     }
 
+    await fetchActiveProfessionalServiceIds();
     agendamentos = filterAppointmentsForActiveProfessional(agendamentos);
+
+    // DETECÇÃO DE NOVO AGENDAMENTO PARA DISPARAR SOM DE ALARME
+    // O alerta usa a mesma lista filtrada da agenda, evitando avisar profissionais com conflito.
+    if (isInitialLoadDone && fetchSuccess) {
+        const hasNewBooking = agendamentos.some(ag => !knownAgendamentoIds.has(ag.id));
+        if (hasNewBooking) {
+            triggerSystemNotification(
+                '🔔 NOVO AGENDAMENTO RECEBIDO!',
+                'Um novo agendamento acabou de entrar no seu sistema!'
+            );
+        }
+    }
+
+    if (fetchSuccess) {
+        knownAgendamentoIds = new Set(agendamentos.map(a => a.id));
+        isInitialLoadDone = true;
+    }
 
     if (filterDate) {
         agendamentos = agendamentos.filter(a => a.data_hora_inicio && a.data_hora_inicio.startsWith(filterDate));
@@ -2524,9 +2737,11 @@ export async function fetchAndRenderClientes(containerId) {
 
 // --- CRUD DE SERVIÇOS ---
 export async function updateServico(id, { nome, descricao, duracao_minutos, ativo }, valor) {
+    const payload = { nome, descricao, duracao_minutos, ativo };
+
     const { error: sErr } = await supabase
         .from('servicos')
-        .update({ nome, descricao, duracao_minutos, ativo })
+        .update(payload)
         .eq('id', id);
 
     if (sErr) throw sErr;
@@ -2578,24 +2793,37 @@ export async function deleteServico(id) {
 // --- CRUD DE SUBSERVIÇOS / VARIAÇÕES (1 IMAGEM POR SUBSERVIÇO) ---
 export async function fetchSubservicosByServicoId(servicoId) {
     if (!servicoId) return [];
-    try {
-        const { data, error } = await supabase
-            .from('subservicos')
-            .select('*')
-            .eq('servico_id', servicoId)
-            .eq('ativo', true)
-            .order('created_at', { ascending: true });
 
-        if (!error && data) return data;
-    } catch (e) {
-        console.warn("Consulta à tabela subservicos no Supabase falhou, utilizando armazenamento local.", e);
-    }
+    const { data, error } = await supabase
+        .from('subservicos')
+        .select('*')
+        .eq('servico_id', servicoId)
+        .eq('ativo', true)
+        .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    try { localStorage.removeItem('subservicos_data'); } catch (e) {}
+
+    const subservicos = data || [];
+    const activeProfId = getActiveProfessionalId();
+    if (!activeProfId || subservicos.length === 0) return subservicos;
 
     try {
-        const all = JSON.parse(localStorage.getItem('subservicos_data') || '[]');
-        return all.filter(s => s.servico_id === servicoId && s.ativo !== false);
-    } catch (e) {
-        return [];
+        const { data: habilitados, error: habilitadosErr } = await supabase
+            .from('profissional_subservicos')
+            .select('subservico_id, ativo')
+            .eq('profissional_id', activeProfId)
+            .in('subservico_id', subservicos.map(sub => sub.id));
+
+        if (habilitadosErr) throw habilitadosErr;
+        const enabledIds = new Set((habilitados || []).filter(row => row.ativo !== false).map(row => row.subservico_id));
+        activeProfessionalSubserviceIdsCache = enabledIds;
+        return subservicos.map(sub => ({
+            ...sub,
+            habilitado_profissional: enabledIds.has(sub.id)
+        }));
+    } catch (err) {
+        return subservicos.map(sub => ({ ...sub, habilitado_profissional: true }));
     }
 }
 
@@ -2610,31 +2838,29 @@ export async function saveSubservico({ id, servico_id, nome, descricao, preco_ad
         ativo: true
     };
 
-    try {
-        if (id && !id.startsWith('sub-')) {
-            const { data, error } = await supabase
-                .from('subservicos')
-                .update(payload)
-                .eq('id', id);
-        } else {
-            const { data, error } = await supabase
-                .from('subservicos')
-                .insert([payload]);
-        }
-    } catch (e) {
-        console.warn("Falha ao salvar subserviço no Supabase, mantendo LocalStorage.", e);
+    let savedId = id || null;
+    let error = null;
+    if (id && !id.startsWith('sub-')) {
+        const res = await supabase
+            .from('subservicos')
+            .update(payload)
+            .eq('id', id);
+        error = res.error;
+    } else {
+        const res = await supabase
+            .from('subservicos')
+            .insert([payload])
+            .select('id')
+            .single();
+        error = res.error;
+        savedId = res.data?.id || null;
     }
 
-    try {
-        let all = JSON.parse(localStorage.getItem('subservicos_data') || '[]');
-        if (id) {
-            all = all.map(s => s.id === id ? { ...s, ...payload, id } : s);
-        } else {
-            all.push({ ...payload, id: 'sub-' + Date.now() });
-        }
-        localStorage.setItem('subservicos_data', JSON.stringify(all));
-    } catch (e) {}
-
+    if (error) throw error;
+    if (savedId) {
+        try { await setProfessionalSubservicoEnabled(savedId, true); } catch (e) {}
+    }
+    try { localStorage.removeItem('subservicos_data'); } catch (e) {}
     return true;
 }
 

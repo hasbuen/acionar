@@ -292,7 +292,9 @@
             deleteSubservico,
             updateServico,
             deleteServico,
-            escapeHtml
+            escapeHtml,
+            setProfessionalServiceEnabled,
+            setProfessionalSubservicoEnabled
         } from './js/app.js?v=2.9';
         import { supabase } from './js/supabase.js';
 
@@ -390,6 +392,10 @@
                 
                 const precoAdd = parseFloat(sub.preco_adicional || 0);
                 const durAdd = parseInt(sub.duracao_adicional_minutos || 0);
+                const subHabilitado = sub.habilitado_profissional !== false;
+                const subHabilitadoClass = subHabilitado
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700';
 
                 item.innerHTML = `
                     <div class="flex items-center gap-3 min-w-0">
@@ -410,6 +416,10 @@
                     </div>
 
                     <div class="flex items-center gap-1 shrink-0">
+                        <button type="button" class="btn-toggle-subservico-profissional btn-animated h-8 px-2 rounded-xl ${subHabilitadoClass} border text-[10px] font-black flex items-center justify-center gap-1" data-subservico-id="${sub.id}" data-enabled="${subHabilitado ? 'true' : 'false'}" title="${subHabilitado ? 'Desabilitar variação para mim' : 'Habilitar variação para mim'}">
+                            <i class="fa-solid ${subHabilitado ? 'fa-check' : 'fa-plus'} text-[10px]"></i>
+                            <span>${subHabilitado ? 'Atendo' : 'Habilitar'}</span>
+                        </button>
                         <button type="button" class="btn-edit-subservico btn-animated h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-500 flex items-center justify-center" title="Editar Subserviço">
                             <i class="fa-solid fa-pen-to-square text-xs"></i>
                         </button>
@@ -418,6 +428,17 @@
                         </button>
                     </div>
                 `;
+
+                item.querySelector('.btn-toggle-subservico-profissional')?.addEventListener('click', async () => {
+                    const enabled = sub.habilitado_profissional !== false;
+                    try {
+                        await setProfessionalSubservicoEnabled(sub.id, !enabled);
+                        showToast(!enabled ? 'Variação habilitada para você.' : 'Variação desabilitada para você.', 'success');
+                        loadAndRenderSubservicos(servicoId);
+                    } catch (err) {
+                        showToast('Erro ao atualizar habilitação: ' + err.message, 'error');
+                    }
+                });
 
                 item.querySelector('.btn-edit-subservico')?.addEventListener('click', () => {
                     document.getElementById('subservicoId').value = sub.id;
@@ -504,6 +525,12 @@
                 servicos.forEach(servico => {
                     const precoVal = servico.tabela_precos && servico.tabela_precos[0] ? parseFloat(servico.tabela_precos[0].valor) : 0;
                     const preco = `R$ ${precoVal.toFixed(2)}`;
+                    const habilitado = servico.habilitado_profissional !== false;
+                    const habilitadoClass = habilitado
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700';
+                    const habilitadoIcon = habilitado ? 'fa-check' : 'fa-plus';
+                    const habilitadoText = habilitado ? 'Atendo' : 'Habilitar';
 
                     const card = document.createElement('div');
                     card.className = 'bg-white dark:bg-slate-900/60 p-5 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md flex flex-col justify-between gap-4 animate-fade-in';
@@ -522,6 +549,10 @@
 
                         <!-- BOTÕES NA HORIZONTAL -->
                         <div class="flex flex-row items-center justify-end gap-1.5 pt-3 border-t border-slate-100 dark:border-slate-800/60">
+                            <button class="btn-toggle-servico-profissional btn-animated flex items-center justify-center gap-1.5 px-3 h-9 rounded-xl ${habilitadoClass} border text-xs font-bold shrink-0" data-servico-id="${servico.id}" data-enabled="${habilitado ? 'true' : 'false'}" title="${habilitado ? 'Desabilitar este serviço para mim' : 'Habilitar este serviço para mim'}">
+                                <i class="fa-solid ${habilitadoIcon} text-xs"></i>
+                                <span>${habilitadoText}</span>
+                            </button>
                             <button class="btn-subservicos btn-animated flex items-center justify-center gap-1.5 px-3 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 text-xs font-bold shrink-0" data-servico-id="${servico.id}" data-servico-nome="${escapeHtml(servico.nome)}" title="Gerenciar Subserviços">
                                 <i class="fa-solid fa-layer-group text-xs"></i>
                                 <span>Subserviços</span>
@@ -565,13 +596,16 @@
                     await updateServico(id, { nome, descricao, duracao_minutos, ativo: true }, preco);
                     showToast('Serviço atualizado!', 'success');
                 } else {
+                    const servicePayload = { nome, descricao, duracao_minutos, ativo: true };
+
                     const { data: newS, error: sErr } = await supabase
                         .from('servicos')
-                        .insert([{ nome, descricao, duracao_minutos, ativo: true }])
+                        .insert([servicePayload])
                         .select()
                         .single();
 
                     if (sErr) throw sErr;
+                    await setProfessionalServiceEnabled(newS.id, true);
 
                     await supabase
                         .from('tabela_precos')
@@ -588,6 +622,20 @@
 
         const container = document.getElementById('servicosContainer');
         container?.addEventListener('click', async (e) => {
+            const btnToggleServico = e.target.closest('.btn-toggle-servico-profissional');
+            if (btnToggleServico) {
+                const sId = btnToggleServico.dataset.servicoId;
+                const enabled = btnToggleServico.dataset.enabled === 'true';
+                try {
+                    await setProfessionalServiceEnabled(sId, !enabled);
+                    showToast(!enabled ? 'Serviço habilitado para você.' : 'Serviço desabilitado para você.', 'success');
+                    renderServicos();
+                } catch (err) {
+                    showToast('Erro ao atualizar habilitação: ' + err.message, 'error');
+                }
+                return;
+            }
+
             const btnSub = e.target.closest('.btn-subservicos');
             if (btnSub) {
                 const sId = btnSub.dataset.servicoId;
