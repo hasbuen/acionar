@@ -417,8 +417,9 @@
             toggleProfissionalAtivo,
             deleteProfissional,
             escapeHtml,
-            getActiveProfessional
-        } from './js/app.js?v=2.2';
+            getActiveProfessional,
+            performLogout
+        } from './js/app.js?v=2.3';
 
         initTheme();
 
@@ -852,11 +853,7 @@
         document.getElementById('btnSaveHorariosBottom')?.addEventListener('click', saveAllHorarios);
 
         document.getElementById('btnLogoutSettings')?.addEventListener('click', async () => {
-            try {
-                const { supabase } = await import('./js/supabase.js');
-                await supabase.auth.signOut();
-            } catch (e) {}
-            window.location.href = './index.html';
+            await performLogout();
         });
 
         loadWhatsAppConfig();

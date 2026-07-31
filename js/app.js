@@ -1200,6 +1200,18 @@ export function getActiveProfessional() {
     return null;
 }
 
+export async function performLogout() {
+    try {
+        await supabase.auth.signOut();
+    } catch (e) {}
+
+    try {
+        localStorage.removeItem('active_professional');
+    } catch (e) {}
+
+    window.location.href = './index.html';
+}
+
 export async function saveProfissional({ id, nome, email, senha, cargo = 'auxiliar', cor_identificadora = '#8b5cf6', ativo = true }) {
     // Validação estrita do e-mail no domínio @acionar.online
     const cleanEmail = (email || '').trim().toLowerCase();

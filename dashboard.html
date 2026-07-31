@@ -618,8 +618,9 @@
             subscribeToAgendamentos,
             generateWhatsAppConfirmMessage,
             generateWhatsAppManutencaoMessage,
-            cleanPhone
-        } from './js/app.js?v=2.2';
+            cleanPhone,
+            performLogout
+        } from './js/app.js?v=2.3';
         import { supabase } from './js/supabase.js';
         import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './js/datetime.js';
 
@@ -1610,8 +1611,7 @@
         } catch (e) {}
 
         const handleLogout = async () => {
-            try { await supabase.auth.signOut(); } catch (e) {}
-            window.location.href = './index.html';
+            await performLogout();
         };
 
         document.getElementById('btnLogout')?.addEventListener('click', handleLogout);
