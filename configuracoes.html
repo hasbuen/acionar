@@ -194,7 +194,8 @@
 
                 <!-- Formulário de Cadastro de Auxiliar -->
                 <form id="formProfissional" class="p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-purple-500/20 dark:border-purple-500/30 space-y-4">
-                    <h4 class="text-xs font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-2">
+                    <input type="hidden" id="inputProfId" value="">
+                    <h4 id="formProfTitle" class="text-xs font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-2">
                         <i class="fa-solid fa-user-plus text-xs"></i> Cadastrar Novo Auxiliar / Membro da Equipe
                     </h4>
 
@@ -216,7 +217,7 @@
 
                         <div>
                             <label for="inputProfSenha" class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Senha de Acesso</label>
-                            <input type="password" id="inputProfSenha" required placeholder="••••••••"
+                            <input type="password" id="inputProfSenha" placeholder="•••••••• (deixe em branco se não quiser alterar)"
                                 class="w-full rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-3 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
                         </div>
 
@@ -229,10 +230,13 @@
                         </div>
                     </div>
 
-                    <div class="flex justify-end pt-2">
+                    <div class="flex items-center justify-end gap-2 pt-2">
+                        <button type="button" id="btnCancelEditProf" class="hidden px-4 py-2.5 rounded-full text-xs font-bold text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+                            Cancelar Edição
+                        </button>
                         <button type="submit" id="btnSaveProfissional" class="flex items-center gap-2 px-6 py-3 rounded-full text-xs font-extrabold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/20 transition-all active:scale-95">
                             <i class="fa-solid fa-user-check text-xs"></i>
-                            <span>Salvar Auxiliar</span>
+                            <span id="btnSaveProfText">Salvar Auxiliar</span>
                         </button>
                     </div>
                 </form>
@@ -419,7 +423,7 @@
             escapeHtml,
             getActiveProfessional,
             performLogout
-        } from './js/app.js?v=2.3';
+        } from './js/app.js?v=2.4';
 
         initTheme();
 
@@ -506,15 +510,33 @@
             showToast(`Antecedência do alerta salva: ${selectedVal} minutos antes!`, 'success');
         });
 
-        // --- GESTÃO DE PROFISSIONAIS E AUXILIARES ---
         const formProfissional = document.getElementById('formProfissional');
+        const inputProfId = document.getElementById('inputProfId');
         const inputProfNome = document.getElementById('inputProfNome');
         const inputProfEmailPrefix = document.getElementById('inputProfEmailPrefix');
         const inputProfSenha = document.getElementById('inputProfSenha');
         const inputProfCor = document.getElementById('inputProfCor');
+        const btnCancelEditProf = document.getElementById('btnCancelEditProf');
+        const btnSaveProfText = document.getElementById('btnSaveProfText');
+        const formProfTitle = document.getElementById('formProfTitle');
         const profissionaisListContainer = document.getElementById('profissionaisListContainer');
 
         let profissionaisData = [];
+
+        function resetFormProfissional() {
+            if (formProfissional) formProfissional.reset();
+            if (inputProfId) inputProfId.value = '';
+            if (inputProfCor) inputProfCor.value = '#8b5cf6';
+            if (btnCancelEditProf) btnCancelEditProf.classList.add('hidden');
+            if (btnSaveProfText) btnSaveProfText.textContent = 'Salvar Auxiliar';
+            if (formProfTitle) formProfTitle.innerHTML = `<i class="fa-solid fa-user-plus text-xs"></i> Cadastrar Novo Auxiliar / Membro da Equipe`;
+            if (inputProfSenha) {
+                inputProfSenha.required = true;
+                inputProfSenha.placeholder = '••••••••';
+            }
+        }
+
+        btnCancelEditProf?.addEventListener('click', resetFormProfissional);
 
         async function loadProfissionais() {
             if (!profissionaisListContainer) return;
@@ -541,27 +563,32 @@
             profissionaisData.forEach(p => {
                 const card = document.createElement('div');
                 card.className = 'p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between gap-3 flex-wrap';
+                const pJson = escapeHtml(JSON.stringify(p));
+
                 card.innerHTML = `
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
                         <div class="h-9 w-9 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-sm shrink-0" style="background-color: ${p.cor_identificadora || '#8b5cf6'}">
                             ${p.nome.charAt(0).toUpperCase()}
                         </div>
-                        <div>
-                            <h4 class="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <div class="min-w-0">
+                            <h4 class="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
                                 ${escapeHtml(p.nome)}
                                 <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${p.cargo === 'proprietario' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'}">
                                     ${p.cargo === 'proprietario' ? 'Proprietário' : 'Auxiliar'}
                                 </span>
                             </h4>
-                            <p class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">${escapeHtml(p.email)}</p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">${escapeHtml(p.email)}</p>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" class="btn-edit-prof p-2 rounded-xl text-blue-500 hover:bg-blue-500/10 transition-colors" data-json="${pJson}" title="Editar Dados e Alterar Senha">
+                            <i class="fa-solid fa-pen-to-square text-xs"></i>
+                        </button>
                         <button type="button" class="btn-toggle-prof-status px-3 py-1.5 rounded-xl text-[11px] font-bold ${p.ativo ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}" data-id="${p.id}" data-ativo="${p.ativo}">
                             ${p.ativo ? '🟢 Ativo' : '⚪ Inativo'}
                         </button>
-                        <button type="button" class="btn-delete-prof p-2 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors" data-id="${p.id}">
+                        <button type="button" class="btn-delete-prof p-2 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors" data-id="${p.id}" title="Excluir Auxiliar">
                             <i class="fa-solid fa-trash-can text-xs"></i>
                         </button>
                     </div>
@@ -570,6 +597,29 @@
             });
 
             // Event Listeners para botões da lista
+            profissionaisListContainer.querySelectorAll('.btn-edit-prof').forEach(btn => {
+                btn.onclick = () => {
+                    try {
+                        const p = JSON.parse(btn.dataset.json);
+                        inputProfId.value = p.id;
+                        inputProfNome.value = p.nome;
+                        inputProfEmailPrefix.value = (p.email || '').replace(/@.*$/, '');
+                        inputProfSenha.value = '';
+                        inputProfSenha.required = false;
+                        inputProfSenha.placeholder = 'Digite a nova senha se desejar alterar';
+                        inputProfCor.value = p.cor_identificadora || '#8b5cf6';
+                        
+                        btnCancelEditProf?.classList.remove('hidden');
+                        if (btnSaveProfText) btnSaveProfText.textContent = 'Salvar Alterações / Nova Senha';
+                        if (formProfTitle) formProfTitle.innerHTML = `<i class="fa-solid fa-pen-to-square text-xs"></i> Editar Auxiliar: <strong>${escapeHtml(p.nome)}</strong>`;
+
+                        formProfissional?.scrollIntoView({ behavior: 'smooth' });
+                    } catch (e) {
+                        console.error("Erro ao carregar dados para edição:", e);
+                    }
+                };
+            });
+
             profissionaisListContainer.querySelectorAll('.btn-toggle-prof-status').forEach(btn => {
                 btn.onclick = async () => {
                     const id = btn.dataset.id;
@@ -603,6 +653,7 @@
 
         formProfissional?.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const id = inputProfId.value;
             const prefix = (inputProfEmailPrefix.value || '').trim().replace(/@.*$/, '');
             if (!prefix) {
                 showToast('Informe o nome de usuário do e-mail corporativo.', 'error');
@@ -613,6 +664,7 @@
 
             try {
                 await saveProfissional({
+                    id: id || undefined,
                     nome: inputProfNome.value,
                     email: fullEmail,
                     senha: inputProfSenha.value,
@@ -620,9 +672,8 @@
                     cor_identificadora: inputProfCor.value,
                     ativo: true
                 });
-                showToast(`Auxiliar ${inputProfNome.value} cadastrado com sucesso!`, 'success');
-                formProfissional.reset();
-                inputProfCor.value = '#8b5cf6';
+                showToast(id ? `Dados e senha do auxiliar ${inputProfNome.value} atualizados!` : `Auxiliar ${inputProfNome.value} cadastrado com sucesso!`, 'success');
+                resetFormProfissional();
                 loadProfissionais();
             } catch (err) {
                 showToast('Erro ao salvar auxiliar: ' + err.message, 'error');

@@ -1222,18 +1222,25 @@ export async function saveProfissional({ id, nome, email, senha, cargo = 'auxili
     const payload = {
         nome: (nome || '').trim(),
         email: cleanEmail,
-        senha_hash: senha || '123456',
         cargo,
         cor_identificadora,
         ativo
     };
 
+    if (senha && senha.trim() !== '') {
+        payload.senha_hash = senha.trim();
+    }
+
+    if (!id && !payload.senha_hash) {
+        payload.senha_hash = '123456';
+    }
+
     // Tenta registrar a conta no Supabase Auth (GoTrue) para permitir login direto
-    if (!id && senha) {
+    if (!id && payload.senha_hash) {
         try {
             await supabase.auth.signUp({
                 email: cleanEmail,
-                password: senha,
+                password: payload.senha_hash,
                 options: {
                     data: { nome, cargo }
                 }
