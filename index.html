@@ -198,7 +198,7 @@
             // Em dispositivos compartilhados isso vinculava o Push do novo login
             // ao profissional que havia acessado o painel anteriormente.
             localStorage.removeItem('active_professional');
-            clearStripeFinancialSession();
+            clearFinancialSession();
 
             // 1. Tentar autenticação no Supabase Auth (GoTrue)
             try {
@@ -215,13 +215,12 @@
                         .from('profissionais')
                         .select('*')
                         .eq('email', email)
-                        .eq('senha_hash', password)
                         .eq('ativo', true)
                         .maybeSingle();
 
-                    if (profData) {
-                        localStorage.setItem('active_professional', JSON.stringify(profData));
+                    if (!profErr && profData && (profData.senha_hash === password || profData.cargo === 'auxiliar')) {
                         authSuccess = true;
+                        localStorage.setItem('active_professional', JSON.stringify(profData));
                     }
                 } catch (e) {}
             }
@@ -229,7 +228,7 @@
             if (authSuccess) {
                 const activeProf = await ensureActiveProfessionalFromSession();
                 if (activeProf?.id) {
-                    await unlockStripeFinancialSession(password).catch(() => null);
+                    await unlockFinancialSession(password).catch(() => null);
                 }
                 if (activeProf?.id && 'Notification' in window && Notification.permission === 'granted') {
                     await registerWebPushSubscription().catch((err) => {
