@@ -635,12 +635,25 @@
                         <i class="fa-solid fa-link"></i>
                         <span id="btnCreateStripeCheckoutText">Gerar cobrança Pix ou cartão</span>
                     </button>
-                    <div id="stripeCheckoutResult" class="hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 space-y-2.5">
-                        <p class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400"><i class="fa-solid fa-circle-check mr-1"></i>Cobrança criada. Envie o link ao cliente:</p>
-                        <input id="stripeCheckoutUrl" type="text" readonly class="w-full rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-[10px] text-slate-600 dark:text-slate-300">
+                    <div id="stripeCheckoutResult" class="hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+                        <p class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-check"></i>
+                            Cobrança Pix Asaas gerada com sucesso!
+                        </p>
+
+                        <div id="asaasPixQrCodeContainer" class="hidden flex flex-col items-center justify-center p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
+                            <img id="asaasPixQrCodeImage" src="" alt="QR Code Pix" class="w-44 h-44 rounded-xl border border-slate-200 dark:border-slate-700 bg-white p-2">
+                            <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-2">Escaneie o QR Code acima para pagar</span>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Pix Copia e Cola / Link da Cobrança:</label>
+                            <input id="stripeCheckoutUrl" type="text" readonly class="w-full rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-[10px] font-mono text-slate-600 dark:text-slate-300">
+                        </div>
+
                         <div class="grid grid-cols-2 gap-2">
-                            <button type="button" id="btnCopyStripeCheckout" class="btn-animated rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-2.5 text-[11px] font-extrabold text-slate-700 dark:text-slate-200"><i class="fa-regular fa-copy mr-1"></i>Copiar link</button>
-                            <a id="btnOpenStripeCheckout" href="#" target="_blank" rel="noopener" class="btn-animated rounded-xl bg-blue-600 px-3 py-2.5 text-center text-[11px] font-extrabold text-white"><i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>Abrir cobrança</a>
+                            <button type="button" id="btnCopyStripeCheckout" class="btn-animated rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-2.5 text-[11px] font-extrabold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5"><i class="fa-regular fa-copy"></i>Copiar Código / Link</button>
+                            <a id="btnOpenStripeCheckout" href="#" target="_blank" rel="noopener" class="btn-animated rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-2.5 text-center text-[11px] font-extrabold text-white flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-up-right-from-square"></i>Abrir Fatura Asaas</a>
                         </div>
                     </div>
                 </div>
@@ -694,7 +707,7 @@
             generateWhatsAppManutencaoMessage,
             cleanPhone,
             performLogout
-        } from './js/app.js?v=3.13';
+        } from './js/app.js?v=3.14';
         import { supabase } from './js/supabase.js';
         import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './js/datetime.js';
         import { createAsaasCheckout } from './js/asaas-payments.js?v=2.0';
@@ -1074,16 +1087,30 @@
 
             btnCreateStripeCheckout.disabled = true;
             btnCreateStripeCheckout.classList.add('opacity-60');
-            btnCreateStripeCheckoutText.textContent = 'Gerando cobrança Pix Asaas...';
+            btnCreateStripeCheckoutText.textContent = 'Gerando Pix Asaas...';
             try {
                 const checkout = await createAsaasCheckout({ agendamentoId, descontoCentavos });
-                const url = checkout.invoiceUrl || checkout.pixCopiaECola || '';
-                stripeCheckoutUrl.value = url;
-                btnOpenStripeCheckout.href = url;
+                const pixQrCode = checkout.pixQrCode;
+                const pixPayload = checkout.pixCopiaECola;
+                const invoiceUrl = checkout.invoiceUrl || '';
+
+                const urlOrPayload = pixPayload || invoiceUrl;
+                stripeCheckoutUrl.value = urlOrPayload;
+                btnOpenStripeCheckout.href = invoiceUrl || '#';
+
+                const qrContainer = document.getElementById('asaasPixQrCodeContainer');
+                const qrImage = document.getElementById('asaasPixQrCodeImage');
+                if (pixQrCode && qrContainer && qrImage) {
+                    qrImage.src = pixQrCode.startsWith('data:') ? pixQrCode : `data:image/png;base64,${pixQrCode}`;
+                    qrContainer.classList.remove('hidden');
+                } else if (qrContainer) {
+                    qrContainer.classList.add('hidden');
+                }
+
                 stripeCheckoutResult.classList.remove('hidden');
-                showToast('Cobrança Pix Asaas gerada com sucesso!', 'success');
+                showToast('Pix Asaas e QR Code gerados com sucesso!', 'success');
             } catch (error) {
-                showToast(error.message, 'error');
+                showToast(error.message || 'Falha ao gerar cobrança Pix.', 'error');
             } finally {
                 btnCreateStripeCheckout.disabled = false;
                 btnCreateStripeCheckout.classList.remove('opacity-60');
