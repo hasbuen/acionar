@@ -611,49 +611,96 @@ export function generateSKU(nome = '', categoria = '') {
     return `SKU-${prefix}-${randomDigits}`;
 }
 
+async function compressImageForAI(file, maxDim = 1024) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                    height = Math.round((height * maxDim) / width);
+                    width = maxDim;
+                } else {
+                    width = Math.round((width * maxDim) / height);
+                    height = maxDim;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            resolve(dataUrl.split(',')[1]);
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+            reader.readAsDataURL(file);
+        };
+        img.src = url;
+    });
+}
+
 async function analyzeProductImageWithAI(file) {
     if (!file) return null;
 
-    const base64Data = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-
+    const base64Data = await compressImageForAI(file);
     if (!base64Data) return null;
 
-    const mimeType = file.type || 'image/jpeg';
-    const storedKey = localStorage.getItem('gemini_api_key') || window.GEMINI_API_KEY || '';
+    const storedKey = (localStorage.getItem('gemini_api_key') || window.GEMINI_API_KEY || '').trim();
 
     if (storedKey) {
-        try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${storedKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [
-                            { text: "Analise a imagem deste produto comercial, insumo ou ferramenta. Retorne APENAS um JSON estrito no formato: {\"nome\": \"Nome do produto com marca e especificação\", \"categoria\": \"Categoria ex: Pintura, Capilar, Esmaltes, Limpeza, Ferramentas\", \"tipo\": \"consumo\"}. Não inclua markdown extra." },
-                            { inline_data: { mime_type: mimeType, data: base64Data } }
-                        ]
-                    }]
-                })
-            });
+        const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
 
-            if (response.ok) {
-                const data = await response.json();
-                const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    const parsed = JSON.parse(jsonMatch[0]);
-                    if (parsed.nome) return { ...parsed, source: 'ai_vision' };
+        for (const model of models) {
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${storedKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                {
+                                    text: "Analise a imagem deste produto comercial, insumo, cosmético ou ferramenta. Identifique o nome preciso do produto com marca e volume/especificação se visível. Retorne APENAS um JSON estrito no formato: {\"nome\": \"Nome do produto\", \"categoria\": \"Categoria ex: Cabelo, Esmaltes, Pintura, Limpeza, Ferramentas\", \"tipo\": \"consumo\"}. Não inclua explicações ou markdown adicionais."
+                                },
+                                {
+                                    inline_data: {
+                                        mime_type: 'image/jpeg',
+                                        data: base64Data
+                                    }
+                                }
+                            ]
+                        }]
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                    const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        const parsed = JSON.parse(jsonMatch[0]);
+                        if (parsed.nome) return { ...parsed, source: 'ai_vision', modelUsed: model };
+                    }
+                } else {
+                    const errText = await response.text();
+                    console.warn(`Modelo ${model} retornou ${response.status}:`, errText);
+                    if (response.status === 400 && (errText.includes('API_KEY_INVALID') || errText.includes('API key not valid'))) {
+                        showToast('⚠️ A Chave Gemini salva é inválida. Clique em 🔑 CHAVE IA para atualizar.', 'error');
+                        return { source: 'error_key' };
+                    }
                 }
-            } else {
-                console.warn('Resposta não OK da API Gemini:', await response.text());
+            } catch (e) {
+                console.warn(`Falha na chamada do modelo ${model}:`, e);
             }
-        } catch (e) {
-            console.warn('API Generativa de Visão em nuvem indisponível:', e);
         }
     }
 
@@ -663,7 +710,7 @@ async function analyzeProductImageWithAI(file) {
         .replace(/\b\w/g, l => l.toUpperCase());
 
     const isTool = /ferramenta|alicate|tesoura|secador|prancha|pincel|espula|maleta/i.test(cleanName);
-    const validName = cleanName.length > 3 && !/^image\d*/i.test(cleanName) ? cleanName : 'Produto Identificado';
+    const validName = cleanName.length > 3 && !/^image\d*/i.test(cleanName) ? cleanName : '';
 
     return {
         nome: validName,
@@ -747,13 +794,24 @@ export async function initEstoquePage() {
 
         try {
             const aiResult = await analyzeProductImageWithAI(file);
-            if (aiResult && form) {
+            if (!aiResult) return;
+
+            if (aiResult.source === 'ai_vision') {
                 if (aiResult.nome) form.elements.nome.value = aiResult.nome;
                 if (!form.elements.codigo.value) form.elements.codigo.value = generateSKU(aiResult.nome, aiResult.categoria);
                 if (!form.elements.categoria.value && aiResult.categoria) form.elements.categoria.value = aiResult.categoria;
                 if (aiResult.tipo) form.elements.tipo.value = aiResult.tipo;
 
-                showToast(`✨ IA: Produto "${aiResult.nome}" identificado e SKU gerado!`, 'success');
+                showToast(`✨ IA Visão: Produto "${aiResult.nome}" identificado!`, 'success');
+            } else if (aiResult.source === 'heuristic') {
+                if (aiResult.nome && !form.elements.nome.value) form.elements.nome.value = aiResult.nome;
+                if (!form.elements.codigo.value) form.elements.codigo.value = generateSKU(aiResult.nome || file.name, aiResult.categoria);
+
+                if (!aiResult.hasKey) {
+                    showToast('💡 Dica: Clique em "🔑 CHAVE IA" para cadastrar sua Chave Gratuita do Google Gemini e ativar a visão por foto!', 'info');
+                } else if (aiResult.nome) {
+                    showToast(`SKU gerado para "${aiResult.nome}".`, 'info');
+                }
             }
         } catch (err) {
             console.warn('Erro ao processar visão da IA:', err);
