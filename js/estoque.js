@@ -109,69 +109,311 @@ async function saveProduto(form) {
 
     let saved;
     if (produtoId) {
-        const { data, error } = await supabase.from('estoque_produtos').update(payload).eq('id', produtoId).select().single();
+        const { data, error } = await supabase
+            .from('estoque_produtos')
+            .update(payload)
+            .eq('id', produtoId)
+            .eq('profissional_id', prof.id)
+            .select()
+            .single();
         if (error) throw error;
         saved = data;
     } else {
-        const { data, error } = await supabase.from('estoque_produtos').insert({ ...payload, saldo_atual: 0 }).select().single();
+        const { data, error } = await supabase
+            .from('estoque_produtos')
+            .insert({ ...payload, saldo_atual: saldoInicial })
+            .select()
+            .single();
         if (error) throw error;
         saved = data;
+
+        if (saldoInicial > 0) {
+            try {
+                const gerarCaixa = formData.get('gerar_caixa') === 'on';
+                const { error: rpcErr } = await supabase.rpc('registrar_movimento_estoque', {
+                    p_produto_id: saved.id,
+                    p_tipo: 'entrada',
+                    p_quantidade: saldoInicial,
+                    p_novo_saldo: null,
+                    p_motivo: 'Saldo inicial do cadastro',
+                    p_referencia: payload.codigo,
+                    p_gerar_caixa: gerarCaixa,
+                    p_valor_unitario: payload.custo_unitario,
+                    p_status_pagamento: 'pago'
+                });
+
+                if (rpcErr) {
+                    await supabase.from('estoque_movimentacoes').insert({
+                        profissional_id: prof.id,
+                        produto_id: saved.id,
+                        tipo: 'entrada',
+                        quantidade: saldoInicial,
+                        saldo_anterior: 0,
+                        saldo_posterior: saldoInicial,
+                        motivo: 'Saldo inicial do cadastro',
+                        referencia: payload.codigo
+                    });
+
+                    if (gerarCaixa) {
+                        await supabase.from('fluxo_caixa').insert({
+                            profissional_id: prof.id,
+                            tipo_movimento: 'saida',
+                            categoria: 'compra_material',
+                            estoque_produto_id: saved.id,
+                            valor_bruto: saldoInicial * payload.custo_unitario,
+                            valor_final: saldoInicial * payload.custo_unitario,
+                            status_pagamento: 'pago',
+                            data_pagamento: new Date().toISOString(),
+                            data_vencimento: new Date().toISOString(),
+                            observacoes: `Compra de material · ${saved.nome}`
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn('Registro de movimentação inicial via fallback:', e);
+            }
+        }
     }
 
     const file = form.querySelector('input[name="imagem"]')?.files?.[0];
     if (file) {
-        const imagemUrl = await uploadImagem(file, saved.id);
-        const { error } = await supabase.from('estoque_produtos').update({ imagem_url: imagemUrl }).eq('id', saved.id);
-        if (error) throw error;
-    }
-
-    if (!produtoId && saldoInicial > 0) {
-        const gerarCaixa = formData.get('gerar_caixa') === 'on';
-        const { error } = await supabase.rpc('registrar_movimento_estoque', {
-            p_produto_id: saved.id,
-            p_tipo: 'entrada',
-            p_quantidade: saldoInicial,
-            p_novo_saldo: null,
-            p_motivo: 'Saldo inicial do cadastro',
-            p_referencia: payload.codigo,
-            p_gerar_caixa: gerarCaixa,
-            p_valor_unitario: payload.custo_unitario,
-            p_status_pagamento: 'pago'
-        });
-        if (error) throw error;
+        try {
+            const imagemUrl = await uploadImagem(file, saved.id);
+            if (imagemUrl) {
+                const { error } = await supabase.from('estoque_produtos').update({ imagem_url: imagemUrl }).eq('id', saved.id);
+                if (error) console.warn('Erro ao salvar URL da imagem:', error);
+                else saved.imagem_url = imagemUrl;
+            }
+        } catch (imgErr) {
+            console.warn('Upload de imagem falhou:', imgErr);
+        }
     }
     return saved;
 }
 
-async function registrarMovimento(form) {
-    const data = new FormData(form);
-    const tipo = String(data.get('tipo'));
-    const { error } = await supabase.rpc('registrar_movimento_estoque', {
-        p_produto_id: String(data.get('produto_id')),
-        p_tipo: tipo,
-        p_quantidade: tipo === 'inventario' ? null : Number(data.get('quantidade') || 0),
-        p_novo_saldo: tipo === 'inventario' ? Number(data.get('quantidade') || 0) : null,
-        p_motivo: String(data.get('motivo') || ''),
-        p_referencia: String(data.get('referencia') || '') || null,
-        p_gerar_caixa: tipo === 'entrada' && data.get('gerar_caixa') === 'on',
-        p_valor_unitario: Number(data.get('valor_unitario') || 0),
-        p_status_pagamento: String(data.get('status_pagamento') || 'pago')
-    });
+async function deleteProduto(produtoId) {
+    const prof = await activeProfessional();
+    const { error } = await supabase
+        .from('estoque_produtos')
+        .update({ ativo: false })
+        .eq('id', produtoId)
+        .eq('profissional_id', prof.id);
+
     if (error) throw error;
+    return true;
+}
+
+async function registrarMovimento(form) {
+    const prof = await activeProfessional();
+    const data = new FormData(form);
+    const produtoId = String(data.get('produto_id'));
+    const tipo = String(data.get('tipo'));
+    const qtdInput = Number(data.get('quantidade') || 0);
+    const motivo = String(data.get('motivo') || '').trim();
+    const referencia = String(data.get('referencia') || '').trim() || null;
+    const gerarCaixa = tipo === 'entrada' && data.get('gerar_caixa') === 'on';
+    const valorUnitario = Number(data.get('valor_unitario') || 0);
+    const statusPagamento = String(data.get('status_pagamento') || 'pago');
+
+    if (!produtoId) throw new Error('Selecione um produto.');
+
+    // 1. Tenta via RPC primeiro
+    try {
+        const { error: rpcErr } = await supabase.rpc('registrar_movimento_estoque', {
+            p_produto_id: produtoId,
+            p_tipo: tipo,
+            p_quantidade: tipo === 'inventario' ? null : qtdInput,
+            p_novo_saldo: tipo === 'inventario' ? qtdInput : null,
+            p_motivo: motivo,
+            p_referencia: referencia,
+            p_gerar_caixa: gerarCaixa,
+            p_valor_unitario: valorUnitario,
+            p_status_pagamento: statusPagamento
+        });
+
+        if (!rpcErr) return true;
+        console.warn('RPC registrar_movimento_estoque indisponível, executando fallback JS:', rpcErr);
+    } catch (e) {
+        console.warn('Executando registrarMovimento via fallback JS');
+    }
+
+    // 2. Fallback JS resiliente
+    const { data: prod, error: prodErr } = await supabase
+        .from('estoque_produtos')
+        .select('*')
+        .eq('id', produtoId)
+        .single();
+
+    if (prodErr || !prod) throw new Error('Produto não encontrado.');
+
+    const saldoAnterior = Number(prod.saldo_atual || 0);
+    let delta = 0;
+    let saldoPosterior = 0;
+
+    if (tipo === 'inventario') {
+        if (qtdInput < 0) throw new Error('Saldo contado inválido.');
+        saldoPosterior = qtdInput;
+        delta = saldoPosterior - saldoAnterior;
+    } else if (tipo === 'entrada') {
+        if (qtdInput <= 0) throw new Error('Informe uma quantidade maior que zero.');
+        delta = qtdInput;
+        saldoPosterior = saldoAnterior + delta;
+    } else if (tipo === 'saida') {
+        if (qtdInput <= 0) throw new Error('Informe uma quantidade maior que zero.');
+        delta = -qtdInput;
+        saldoPosterior = saldoAnterior + delta;
+    } else {
+        throw new Error('Tipo de movimento inválido.');
+    }
+
+    if (saldoPosterior < 0) throw new Error('Saldo insuficiente para realizar esta saída.');
+    if (delta === 0) throw new Error('A contagem digitada é exatamente igual ao saldo atual.');
+
+    const { error: updErr } = await supabase
+        .from('estoque_produtos')
+        .update({ saldo_atual: saldoPosterior })
+        .eq('id', produtoId);
+
+    if (updErr) throw updErr;
+
+    const motivoFinal = motivo || (tipo === 'inventario' ? 'Contagem de inventário' : (tipo === 'entrada' ? 'Entrada / Compra' : 'Saída manual'));
+    await supabase.from('estoque_movimentacoes').insert({
+        profissional_id: prod.profissional_id,
+        produto_id: produtoId,
+        tipo: tipo,
+        quantidade: delta,
+        saldo_anterior: saldoAnterior,
+        saldo_posterior: saldoPosterior,
+        motivo: motivoFinal,
+        referencia: referencia
+    });
+
+    if (gerarCaixa && tipo === 'entrada') {
+        const totalCompra = qtdInput * (valorUnitario || prod.custo_unitario || 0);
+        await supabase.from('fluxo_caixa').insert({
+            profissional_id: prod.profissional_id,
+            tipo_movimento: 'saida',
+            categoria: 'compra_material',
+            estoque_produto_id: produtoId,
+            valor_bruto: totalCompra,
+            valor_final: totalCompra,
+            status_pagamento: statusPagamento,
+            data_pagamento: statusPagamento === 'pago' ? new Date().toISOString() : null,
+            data_vencimento: new Date().toISOString(),
+            observacoes: `Compra de material · ${prod.nome}${referencia ? ' · ' + referencia : ''}`
+        });
+    }
+
+    return true;
 }
 
 async function transferirProduto(form) {
+    const prof = await activeProfessional();
     const data = new FormData(form);
-    const { data: result, error } = await supabase.rpc('transferir_estoque', {
-        p_produto_origem_id: String(data.get('produto_id')),
-        p_profissional_destino_id: String(data.get('destino_id')),
-        p_quantidade: Number(data.get('quantidade') || 0),
-        p_acerto_financeiro: String(data.get('acerto_financeiro') || 'sem_acerto'),
-        p_valor_unitario: Number(data.get('valor_unitario') || 0),
-        p_observacoes: String(data.get('observacoes') || '') || null
-    });
-    if (error) throw error;
-    return result;
+    const produtoOrigemId = String(data.get('produto_id'));
+    const destinoId = String(data.get('destino_id'));
+    const quantidade = Number(data.get('quantidade') || 0);
+    const acertoFinanceiro = String(data.get('acerto_financeiro') || 'sem_acerto');
+    const valorUnitario = Number(data.get('valor_unitario') || 0);
+    const observacoes = String(data.get('observacoes') || '').trim() || null;
+
+    if (!produtoOrigemId) throw new Error('Selecione o produto de origem.');
+    if (!destinoId) throw new Error('Selecione o profissional de destino.');
+    if (quantidade <= 0) throw new Error('Informe uma quantidade válida.');
+    if (prof.id === destinoId) throw new Error('O profissional de destino deve ser diferente da origem.');
+
+    try {
+        const { data: result, error: rpcErr } = await supabase.rpc('transferir_estoque', {
+            p_produto_origem_id: produtoOrigemId,
+            p_profissional_destino_id: destinoId,
+            p_quantidade: quantidade,
+            p_acerto_financeiro: acertoFinanceiro,
+            p_valor_unitario: valorUnitario,
+            p_observacoes: observacoes
+        });
+
+        if (!rpcErr) return result;
+        console.warn('RPC transferir_estoque indisponível, executando via fallback JS:', rpcErr);
+    } catch (e) {
+        console.warn('Executando transferência via fallback JS');
+    }
+
+    const { data: origem, error: origErr } = await supabase
+        .from('estoque_produtos')
+        .select('*')
+        .eq('id', produtoOrigemId)
+        .single();
+
+    if (origErr || !origem) throw new Error('Produto de origem não encontrado.');
+    if (Number(origem.saldo_atual) < quantidade) throw new Error('Saldo insuficiente para realizar esta transferência.');
+
+    let { data: destino } = await supabase
+        .from('estoque_produtos')
+        .select('*')
+        .eq('profissional_id', destinoId)
+        .eq('catalogo_chave', origem.catalogo_chave)
+        .maybeSingle();
+
+    let fichaCopiada = false;
+    if (!destino) {
+        const { data: novoDestino, error: newErr } = await supabase
+            .from('estoque_produtos')
+            .insert({
+                profissional_id: destinoId,
+                catalogo_chave: origem.catalogo_chave,
+                produto_origem_id: origem.id,
+                tipo: origem.tipo,
+                nome: origem.nome,
+                codigo: origem.codigo,
+                categoria: origem.categoria,
+                unidade: origem.unidade,
+                saldo_atual: 0,
+                estoque_minimo: origem.estoque_minimo,
+                custo_unitario: origem.custo_unitario,
+                localizacao: null,
+                imagem_url: origem.imagem_url,
+                ativo: true
+            })
+            .select()
+            .single();
+
+        if (newErr) throw newErr;
+        destino = novoDestino;
+        fichaCopiada = true;
+    }
+
+    const saldoOrigemNovo = Number(origem.saldo_atual) - quantidade;
+    const saldoDestinoNovo = Number(destino.saldo_atual) + quantidade;
+
+    await supabase.from('estoque_produtos').update({ saldo_atual: saldoOrigemNovo }).eq('id', origem.id);
+    await supabase.from('estoque_produtos').update({ saldo_atual: saldoDestinoNovo }).eq('id', destino.id);
+
+    await supabase.from('estoque_movimentacoes').insert([
+        {
+            profissional_id: origem.profissional_id,
+            produto_id: origem.id,
+            tipo: 'transferencia_saida',
+            quantidade: -quantidade,
+            saldo_anterior: origem.saldo_atual,
+            saldo_posterior: saldoOrigemNovo,
+            motivo: 'Enviado para outro profissional',
+            referencia: `Envio para ${destinoId}`,
+            profissional_contraparte_id: destinoId
+        },
+        {
+            profissional_id: destinoId,
+            produto_id: destino.id,
+            tipo: 'transferencia_entrada',
+            quantidade: quantidade,
+            saldo_anterior: destino.saldo_atual,
+            saldo_posterior: saldoDestinoNovo,
+            motivo: 'Recebido de outro profissional',
+            referencia: `Recebido de ${origem.profissional_id}`,
+            profissional_contraparte_id: origem.profissional_id
+        }
+    ]);
+
+    return { ficha_copiada: fichaCopiada, saldo_origem: saldoOrigemNovo, saldo_destino: saldoDestinoNovo };
 }
 
 function productPhoto(produto, size = 'h-14 w-14') {
@@ -247,9 +489,10 @@ function renderProducts() {
             </div>
             <div class="mt-4 flex items-center gap-2 border-t border-slate-100 dark:border-slate-800 pt-3">
                 <span class="mr-auto text-[10px] text-slate-400 truncate"><i class="fa-solid fa-location-dot mr-1"></i>${escapeHtml(p.localizacao || 'Local não definido')}</span>
-                <button data-action="razao" data-id="${p.id}" title="Razão" class="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500"><i class="fa-solid fa-clock-rotate-left text-xs"></i></button>
-                <button data-action="movimentar" data-id="${p.id}" title="Movimentar" class="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400"><i class="fa-solid fa-arrow-right-arrow-left text-xs"></i></button>
-                <button data-action="editar" data-id="${p.id}" title="Editar" class="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500"><i class="fa-solid fa-pen text-xs"></i></button>
+                <button data-action="razao" data-id="${p.id}" title="Razão / Histórico" class="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 flex items-center justify-center"><i class="fa-solid fa-clock-rotate-left text-xs"></i></button>
+                <button data-action="movimentar" data-id="${p.id}" title="Movimentar" class="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center"><i class="fa-solid fa-arrow-right-arrow-left text-xs"></i></button>
+                <button data-action="editar" data-id="${p.id}" title="Editar" class="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 flex items-center justify-center"><i class="fa-solid fa-pen text-xs"></i></button>
+                <button data-action="excluir" data-id="${p.id}" title="Excluir Produto" class="h-9 w-9 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 flex items-center justify-center"><i class="fa-solid fa-trash text-xs"></i></button>
             </div>
         </article>`;
     }).join('');
@@ -427,6 +670,17 @@ export async function initEstoquePage() {
         if (button.dataset.action === 'movimentar') openMovementModal(button.dataset.id, 'entrada');
         if (button.dataset.action === 'razao') {
             try { await openLedger(button.dataset.id); } catch (error) { showToast(error.message, 'error'); }
+        }
+        if (button.dataset.action === 'excluir') {
+            if (confirm(`Tem certeza que deseja excluir o produto "${produto?.nome || ''}"?`)) {
+                try {
+                    await deleteProduto(button.dataset.id);
+                    showToast('Produto excluído com sucesso.', 'success');
+                    await refreshStock();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            }
         }
     });
 }
