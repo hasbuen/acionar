@@ -528,7 +528,7 @@
             fetchStripeConnectStatus,
             mountStripeConnectOnboarding,
             saveStripePlatformFee
-        } from './js/stripe-payments.js?v=1.1';
+        } from './js/stripe-payments.js?v=1.2';
 
         initTheme();
 
@@ -596,11 +596,10 @@
                 }
                 if (error.code === 'AUTH_SESSION_REQUIRED') {
                     renderStripeStatus({ connected: false });
-                    stripeStatusBadge.textContent = 'Login necessário';
+                    stripeStatusBadge.textContent = 'Tentar novamente';
                     stripeStatusBadge.className = 'text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400';
-                    stripeStatusText.textContent = 'Entre novamente neste aparelho para proteger seus dados bancários.';
-                    btnStripeConnectText.textContent = 'Entrar novamente para configurar';
-                    if (btnStripeConnect) btnStripeConnect.dataset.requiresAuth = 'true';
+                    stripeStatusText.textContent = 'A sessão financeira será validada novamente sem sair da sua conta.';
+                    btnStripeConnectText.textContent = 'Tentar configurar novamente';
                     return;
                 }
                 stripeStatusBadge.textContent = 'Configuração pendente';
@@ -611,11 +610,6 @@
         }
 
         btnStripeConnect?.addEventListener('click', async () => {
-            if (btnStripeConnect.dataset.requiresAuth === 'true') {
-                localStorage.removeItem('active_professional');
-                window.location.href = './index.html';
-                return;
-            }
             stripeFormWrap.classList.remove('hidden');
             stripeLoading.classList.remove('hidden');
             stripeContainer.replaceChildren();
@@ -634,8 +628,9 @@
             } catch (error) {
                 stripeLoading.classList.add('hidden');
                 if (error.code === 'AUTH_SESSION_REQUIRED') {
-                    localStorage.removeItem('active_professional');
-                    window.location.href = './index.html';
+                    stripeFormWrap.classList.add('hidden');
+                    await refreshStripeStatus({ silent: true });
+                    showToast('Não foi possível validar a sessão financeira. Tente novamente sem sair da sua conta.', 'error');
                     return;
                 }
                 showToast(error.message, 'error');

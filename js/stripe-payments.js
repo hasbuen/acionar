@@ -4,6 +4,21 @@ const BACKEND_URL = 'https://acionar-backend.vercel.app';
 let connectInstance = null;
 let connectLoadPromise = null;
 
+async function recoverSessionFromActiveProfessional() {
+    let professional = null;
+    try {
+        professional = JSON.parse(localStorage.getItem('active_professional') || 'null');
+    } catch (_) {}
+
+    const email = String(professional?.email || '').trim().toLowerCase();
+    const password = String(professional?.senha_hash || '').trim();
+    if (!email || !password || password === 'auth') return null;
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data?.session?.access_token) return null;
+    return data.session;
+}
+
 async function accessToken() {
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) throw sessionError;
@@ -18,8 +33,15 @@ async function accessToken() {
         if (!refreshError) session = refreshedData?.session || null;
     }
 
+    // O login profissional continua valido mesmo quando o armazenamento do
+    // PWA perde a sessao do Supabase Auth. Reconstrua a sessao em segundo plano
+    // sem tirar o usuario da tela de configuracoes.
     if (!session?.access_token) {
-        const error = new Error('Para configurar recebimentos, entre novamente neste aparelho.');
+        session = await recoverSessionFromActiveProfessional();
+    }
+
+    if (!session?.access_token) {
+        const error = new Error('Nao foi possivel validar a sessao financeira. Toque novamente para tentar de novo.');
         error.code = 'AUTH_SESSION_REQUIRED';
         throw error;
     }
