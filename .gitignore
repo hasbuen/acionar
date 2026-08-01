@@ -1,0 +1,11 @@
+# Credenciais locais — nunca enviar ao Git.
+.env
+.env.*
+!.env.example
+
+# Banco e migrações são mantidos somente fora do GitHub.
+supabase/
+*.sql
+
+# Saídas de servidores locais.
+*.local.log
