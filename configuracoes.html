@@ -608,6 +608,7 @@
                 btnStripeConnect.disabled = false;
                 btnStripeConnect.classList.remove('opacity-50', 'cursor-not-allowed');
                 delete btnStripeConnect.dataset.requiresAuth;
+                delete btnStripeConnect.dataset.requiresUnlock;
             }
             stripeStatusBadge.className = 'text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full';
             if (state.onboardingComplete && state.payoutsEnabled) {
@@ -645,12 +646,13 @@
                     }
                     return;
                 }
-                if (error.code === 'AUTH_SESSION_REQUIRED') {
+                if (isFinancialUnlockError(error)) {
                     renderStripeStatus({ connected: false });
-                    stripeStatusBadge.textContent = 'Tentar novamente';
+                    stripeStatusBadge.textContent = 'Confirmação necessária';
                     stripeStatusBadge.className = 'text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400';
-                    stripeStatusText.textContent = 'A sessão financeira será validada novamente sem sair da sua conta.';
-                    btnStripeConnectText.textContent = 'Tentar configurar novamente';
+                    stripeStatusText.textContent = 'Confirme sua senha uma vez neste aparelho para proteger seus dados financeiros.';
+                    btnStripeConnectText.textContent = 'Informar CPF e conta bancária';
+                    btnStripeConnect.dataset.requiresUnlock = 'true';
                     return;
                 }
                 stripeStatusBadge.textContent = 'Configuração pendente';
@@ -660,7 +662,8 @@
             }
         }
 
-        btnStripeConnect?.addEventListener('click', async () => {
+        async function openStripeOnboarding() {
+            hideFinancialUnlock();
             stripeFormWrap.classList.remove('hidden');
             stripeLoading.classList.remove('hidden');
             stripeContainer.replaceChildren();
@@ -678,16 +681,46 @@
                 stripeLoading.classList.add('hidden');
             } catch (error) {
                 stripeLoading.classList.add('hidden');
-                if (error.code === 'AUTH_SESSION_REQUIRED') {
-                    stripeFormWrap.classList.add('hidden');
-                    await refreshStripeStatus({ silent: true });
-                    showToast('Não foi possível validar a sessão financeira. Tente novamente sem sair da sua conta.', 'error');
+                if (isFinancialUnlockError(error)) {
+                    showFinancialUnlock();
                     return;
                 }
                 showToast(error.message, 'error');
             } finally {
                 btnStripeConnect.disabled = false;
                 btnStripeConnect.classList.remove('opacity-60');
+            }
+        }
+
+        btnStripeConnect?.addEventListener('click', async () => {
+            if (btnStripeConnect.dataset.requiresUnlock === 'true') {
+                showFinancialUnlock();
+                return;
+            }
+            await openStripeOnboarding();
+        });
+
+        stripeUnlockForm?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            stripeUnlockError.classList.add('hidden');
+            stripeUnlockError.textContent = '';
+            stripeUnlockButton.disabled = true;
+            stripeUnlockButton.classList.add('opacity-60');
+            const originalText = stripeUnlockButton.textContent;
+            stripeUnlockButton.textContent = 'Confirmando...';
+            try {
+                await unlockStripeFinancialSession(stripeUnlockPassword.value);
+                showToast('Acesso financeiro confirmado com segurança.', 'success');
+                await openStripeOnboarding();
+            } catch (error) {
+                stripeUnlockError.textContent = error.message;
+                stripeUnlockError.classList.remove('hidden');
+                stripeUnlockPassword.focus();
+                stripeUnlockPassword.select();
+            } finally {
+                stripeUnlockButton.disabled = false;
+                stripeUnlockButton.classList.remove('opacity-60');
+                stripeUnlockButton.textContent = originalText;
             }
         });
 

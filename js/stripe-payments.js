@@ -1,8 +1,30 @@
 import { supabase } from './supabase.js';
 
 const BACKEND_URL = 'https://acionar-backend.vercel.app';
+const FINANCIAL_SESSION_KEY = 'acionar_financial_session_v1';
 let connectInstance = null;
 let connectLoadPromise = null;
+
+function readFinancialSession() {
+    try {
+        const session = JSON.parse(localStorage.getItem(FINANCIAL_SESSION_KEY) || 'null');
+        const expiresAt = Date.parse(session?.expiresAt || '');
+        if (session?.token && Number.isFinite(expiresAt) && expiresAt > Date.now() + 30000) {
+            return session;
+        }
+    } catch (_) {}
+    localStorage.removeItem(FINANCIAL_SESSION_KEY);
+    return null;
+}
+
+function activeProfessionalEmail() {
+    try {
+        const professional = JSON.parse(localStorage.getItem('active_professional') || 'null');
+        return String(professional?.email || '').trim().toLowerCase();
+    } catch (_) {
+        return '';
+    }
+}
 
 async function recoverSessionFromActiveProfessional() {
     let professional = null;
@@ -33,6 +55,11 @@ async function accessToken() {
         if (!refreshError) session = refreshedData?.session || null;
     }
 
+    if (!session?.access_token) {
+        const financialSession = readFinancialSession();
+        if (financialSession?.token) return financialSession.token;
+    }
+
     // O login profissional continua valido mesmo quando o armazenamento do
     // PWA perde a sessao do Supabase Auth. Reconstrua a sessao em segundo plano
     // sem tirar o usuario da tela de configuracoes.
@@ -41,8 +68,8 @@ async function accessToken() {
     }
 
     if (!session?.access_token) {
-        const error = new Error('Nao foi possivel validar a sessao financeira. Toque novamente para tentar de novo.');
-        error.code = 'AUTH_SESSION_REQUIRED';
+        const error = new Error('Confirme sua senha para abrir seus dados de recebimento.');
+        error.code = 'FINANCIAL_UNLOCK_REQUIRED';
         throw error;
     }
 
@@ -63,8 +90,45 @@ async function backendFetch(path, options = {}) {
     if (!response.ok) {
         const error = new Error(payload.error || 'Não foi possível concluir a operação.');
         error.code = payload.code;
+        if (response.status === 401 && readFinancialSession()?.token === token) {
+            localStorage.removeItem(FINANCIAL_SESSION_KEY);
+            error.code = 'FINANCIAL_UNLOCK_REQUIRED';
+            error.message = 'Confirme sua senha novamente para continuar.';
+        }
         throw error;
     }
+    return payload;
+}
+
+export async function unlockStripeFinancialSession(password) {
+    const email = activeProfessionalEmail();
+    if (!email) {
+        const error = new Error('Profissional ativo não identificado neste aparelho.');
+        error.code = 'ACTIVE_PROFESSIONAL_REQUIRED';
+        throw error;
+    }
+    if (!String(password || '')) {
+        const error = new Error('Informe sua senha.');
+        error.code = 'CREDENTIALS_REQUIRED';
+        throw error;
+    }
+
+    const response = await fetch(`${BACKEND_URL}/api/auth/professional-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.token) {
+        const error = new Error(payload.error || 'Não foi possível confirmar sua senha.');
+        error.code = payload.code;
+        throw error;
+    }
+
+    localStorage.setItem(FINANCIAL_SESSION_KEY, JSON.stringify({
+        token: payload.token,
+        expiresAt: payload.expiresAt
+    }));
     return payload;
 }
 
