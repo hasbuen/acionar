@@ -2,8 +2,6 @@ import { supabase } from './supabase.js';
 
 const BACKEND_URL = 'https://acionar-backend.vercel.app';
 const FINANCIAL_SESSION_KEY = 'acionar_financial_session_v1';
-let connectInstance = null;
-let connectLoadPromise = null;
 
 function readFinancialSession() {
     try {
@@ -47,9 +45,6 @@ async function accessToken() {
 
     let session = sessionData?.session || null;
 
-    // Em PWA/mobile o armazenamento pode entregar a sessao alguns instantes
-    // antes da renovacao automatica terminar. Tenta renovar uma vez antes de
-    // informar que o login realmente precisa ser refeito.
     if (!session?.access_token) {
         const { data: refreshedData, error: refreshError } = await supabase.auth.refreshSession();
         if (!refreshError) session = refreshedData?.session || null;
@@ -60,9 +55,6 @@ async function accessToken() {
         if (financialSession?.token) return financialSession.token;
     }
 
-    // O login profissional continua valido mesmo quando o armazenamento do
-    // PWA perde a sessao do Supabase Auth. Reconstrua a sessao em segundo plano
-    // sem tirar o usuario da tela de configuracoes.
     if (!session?.access_token) {
         session = await recoverSessionFromActiveProfessional();
     }
@@ -100,7 +92,7 @@ async function backendFetch(path, options = {}) {
     return payload;
 }
 
-export async function unlockStripeFinancialSession(password) {
+export async function unlockFinancialSession(password) {
     const email = activeProfessionalEmail();
     if (!email) {
         const error = new Error('Profissional ativo não identificado neste aparelho.');
@@ -132,99 +124,37 @@ export async function unlockStripeFinancialSession(password) {
     return payload;
 }
 
-export function clearStripeFinancialSession() {
+export function clearFinancialSession() {
     localStorage.removeItem(FINANCIAL_SESSION_KEY);
 }
 
-export async function fetchStripeConnectStatus() {
-    return backendFetch('/api/stripe/connect/status');
+export async function fetchAsaasAccountStatus() {
+    return backendFetch('/api/asaas/account/status');
 }
 
-async function createAccountSession() {
-    return backendFetch('/api/stripe/connect/session', { method: 'POST', body: '{}' });
-}
-
-function loadConnectJs() {
-    if (window.StripeConnect?.init) return Promise.resolve(window.StripeConnect);
-    if (connectLoadPromise) return connectLoadPromise;
-
-    connectLoadPromise = new Promise((resolve, reject) => {
-        window.StripeConnect = window.StripeConnect || {};
-        window.StripeConnect.onLoad = () => resolve(window.StripeConnect);
-        const existing = document.querySelector('script[data-acionar-stripe-connect]');
-        if (existing) {
-            existing.addEventListener('error', () => reject(new Error('Falha ao carregar o formulário seguro do Stripe.')), { once: true });
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = 'https://connect-js.stripe.com/v1.0/connect.js';
-        script.async = true;
-        script.dataset.acionarStripeConnect = 'true';
-        script.addEventListener('error', () => reject(new Error('Falha ao carregar o formulário seguro do Stripe.')), { once: true });
-        document.head.appendChild(script);
-    });
-    return connectLoadPromise;
-}
-
-export async function mountStripeConnectOnboarding(container, { onExit, onLoadError } = {}) {
-    if (!container) throw new Error('Área do cadastro financeiro não encontrada.');
-    const firstSession = await createAccountSession();
-    const StripeConnect = await loadConnectJs();
-    let firstClientSecret = firstSession.clientSecret;
-
-    if (!connectInstance) {
-        connectInstance = StripeConnect.init({
-            publishableKey: firstSession.publishableKey,
-            locale: 'pt-BR',
-            appearance: {
-                overlays: 'dialog',
-                variables: {
-                    colorPrimary: '#2563eb',
-                    borderRadius: '16px',
-                    fontFamily: 'Inter, system-ui, sans-serif'
-                }
-            },
-            fetchClientSecret: async () => {
-                if (firstClientSecret) {
-                    const secret = firstClientSecret;
-                    firstClientSecret = null;
-                    return secret;
-                }
-                const refreshed = await createAccountSession();
-                return refreshed.clientSecret;
-            }
-        });
-    }
-
-    container.replaceChildren();
-    const onboarding = connectInstance.create('account-onboarding');
-    onboarding.setCollectionOptions({ fields: 'eventually_due', futureRequirements: 'include' });
-    onboarding.setOnExit(() => onExit?.());
-    onboarding.setOnLoadError((loadError) => onLoadError?.(loadError?.error));
-    container.appendChild(onboarding);
-    return firstSession.state;
-}
-
-export async function createStripeCheckout({ agendamentoId, descontoCentavos = 0 }) {
-    const nonce = globalThis.crypto?.randomUUID?.()
-        || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const idempotencyKey = `checkout-${agendamentoId}-${nonce}`;
-    return backendFetch('/api/stripe/checkout', {
+export async function saveProfessionalPixKey(tipoChave, chavePix) {
+    return backendFetch('/api/asaas/account/save-pix', {
         method: 'POST',
-        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify({ tipoChave, chavePix })
+    });
+}
+
+export async function createAsaasCheckout({ agendamentoId, descontoCentavos = 0 }) {
+    return backendFetch('/api/asaas/checkout', {
+        method: 'POST',
         body: JSON.stringify({ agendamentoId, descontoCentavos })
     });
 }
 
-export async function refundStripePayment(pagamentoId) {
-    return backendFetch('/api/stripe/refund', {
+export async function refundAsaasPayment(pagamentoId) {
+    return backendFetch('/api/asaas/refund', {
         method: 'POST',
         body: JSON.stringify({ pagamentoId })
     });
 }
 
-export async function saveStripePlatformFee({ profissionalId, percentual = 0, fixoCentavos = 0 }) {
-    return backendFetch('/api/stripe/platform-fee', {
+export async function saveAsaasPlatformFee({ profissionalId, percentual = 0, fixoCentavos = 0 }) {
+    return backendFetch('/api/asaas/platform-fee', {
         method: 'POST',
         body: JSON.stringify({ profissionalId, percentual, fixoCentavos })
     });

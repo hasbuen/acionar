@@ -697,7 +697,7 @@
         } from './js/app.js?v=3.13';
         import { supabase } from './js/supabase.js';
         import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './js/datetime.js';
-        import { createStripeCheckout } from './js/stripe-payments.js?v=1.1';
+        import { createAsaasCheckout } from './js/asaas-payments.js?v=2.0';
 
         initTheme();
         registerServiceWorker();
@@ -1074,13 +1074,14 @@
 
             btnCreateStripeCheckout.disabled = true;
             btnCreateStripeCheckout.classList.add('opacity-60');
-            btnCreateStripeCheckoutText.textContent = 'Gerando cobrança segura...';
+            btnCreateStripeCheckoutText.textContent = 'Gerando cobrança Pix Asaas...';
             try {
-                const checkout = await createStripeCheckout({ agendamentoId, descontoCentavos });
-                stripeCheckoutUrl.value = checkout.url;
-                btnOpenStripeCheckout.href = checkout.url;
+                const checkout = await createAsaasCheckout({ agendamentoId, descontoCentavos });
+                const url = checkout.invoiceUrl || checkout.pixCopiaECola || '';
+                stripeCheckoutUrl.value = url;
+                btnOpenStripeCheckout.href = url;
                 stripeCheckoutResult.classList.remove('hidden');
-                showToast('Cobrança criada. Agora abra ou copie o link para o cliente.', 'success');
+                showToast('Cobrança Pix Asaas gerada com sucesso!', 'success');
             } catch (error) {
                 showToast(error.message, 'error');
             } finally {

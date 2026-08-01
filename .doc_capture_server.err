@@ -1,0 +1,9 @@
+127.0.0.1 - - [31/Jul/2026 12:36:27] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jul/2026 12:36:27] "GET /js/supabase.js HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jul/2026 12:36:27] "GET /js/app.js?v=2.9 HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jul/2026 12:36:27] "GET /js/datetime.js HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jul/2026 12:36:27] code 404, message File not found
+127.0.0.1 - - [31/Jul/2026 12:36:27] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [31/Jul/2026 12:36:29] "GET /dashboard.html HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jul/2026 12:36:33] "GET /configuracoes.html HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jul/2026 12:36:35] "GET /caixa.html HTTP/1.1" 200 -

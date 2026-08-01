@@ -402,8 +402,8 @@
                 </div>
             </section>
 
-            <!-- RECEBIMENTOS INDIVIDUAIS VIA STRIPE CONNECT -->
-            <section id="sectionStripeConnect" class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-blue-500/20 dark:border-blue-500/30 backdrop-blur-md space-y-5">
+            <!-- RECEBIMENTOS INDIVIDUAIS VIA ASAAS (PIX & SPLIT) -->
+            <section id="sectionAsaasConnect" class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 dark:border-slate-800 backdrop-blur-md space-y-5">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div class="flex items-start gap-3 min-w-0">
                         <div class="h-10 w-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
@@ -412,15 +412,15 @@
                         <div>
                             <div class="flex items-center gap-2 flex-wrap">
                                 <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Meus Recebimentos <span class="text-[10px] font-black uppercase text-slate-400">Opcional</span></h3>
-                                <span id="stripeConnectStatusBadge" class="text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">Verificando</span>
+                                <span id="asaasStatusBadge" class="text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">Verificando</span>
                             </div>
-                            <p id="stripeConnectStatusText" class="text-xs text-slate-500 dark:text-slate-400 mt-1">Se quiser, conecte uma conta para receber Pix e cartão. O cadastro abre aqui mesmo, sem sair do Acionar.</p>
+                            <p id="asaasStatusText" class="text-xs text-slate-500 dark:text-slate-400 mt-1">Cadastre sua Chave Pix para receber os atendimentos diretamente no seu banco com repasse automático.</p>
                         </div>
                     </div>
 
-                    <button type="button" id="btnStripeConnect" class="btn-animated flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-black bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 shrink-0">
-                        <i class="fa-solid fa-shield-halved text-sm"></i>
-                        <span id="btnStripeConnectText">Abrir cadastro bancário</span>
+                    <button type="button" id="btnTogglePixForm" class="btn-animated flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-black bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 shrink-0">
+                        <i class="fa-solid fa-key text-sm"></i>
+                        <span id="btnTogglePixFormText">Informe sua Chave Pix</span>
                     </button>
                 </div>
 
@@ -430,45 +430,46 @@
                         <span class="block text-xs font-bold text-slate-700 dark:text-slate-200 mt-1">Cada profissional recebe na própria conta</span>
                     </div>
                     <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 p-3.5">
-                        <span class="block text-[10px] font-black uppercase tracking-wider text-slate-400">Dados protegidos</span>
-                        <span class="block text-xs font-bold text-slate-700 dark:text-slate-200 mt-1">Validação bancária e fiscal feita pelo Stripe</span>
+                        <span class="block text-[10px] font-black uppercase tracking-wider text-slate-400">Pix Instantâneo</span>
+                        <span class="block text-xs font-bold text-slate-700 dark:text-slate-200 mt-1">QR Code e Copia e Cola automático no agendamento</span>
                     </div>
                     <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 p-3.5">
-                        <span class="block text-[10px] font-black uppercase tracking-wider text-slate-400">Formas de pagamento</span>
-                        <span class="block text-xs font-bold text-slate-700 dark:text-slate-200 mt-1">Pix e cartões no checkout seguro</span>
+                        <span class="block text-[10px] font-black uppercase tracking-wider text-slate-400">Repasse Direto</span>
+                        <span class="block text-xs font-bold text-slate-700 dark:text-slate-200 mt-1">O valor do seu trabalho vai direto para a sua conta</span>
                     </div>
                 </div>
 
-                <form id="stripeFinancialUnlock" class="hidden rounded-3xl border border-blue-500/30 bg-blue-500/5 p-4 sm:p-5" autocomplete="on">
-                    <div class="flex items-start gap-3">
-                        <div class="h-9 w-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
-                            <i class="fa-solid fa-lock text-sm"></i>
+                <form id="formAsaasPixKey" class="hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 p-4 sm:p-6 space-y-4 transition-all">
+                    <h4 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-key text-blue-500"></i>
+                        Dados da sua Chave Pix de Recebimento
+                    </h4>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label for="selectTipoChavePix" class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Tipo de Chave</label>
+                            <select id="selectTipoChavePix" class="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                                <option value="cpf">CPF</option>
+                                <option value="cnpj">CNPJ</option>
+                                <option value="phone">Celular</option>
+                                <option value="email">E-mail</option>
+                                <option value="evp">Chave Aleatória (EVP)</option>
+                            </select>
                         </div>
-                        <div class="min-w-0 flex-1">
-                            <h4 class="text-sm font-extrabold text-slate-900 dark:text-white">Confirme sua senha</h4>
-                            <p class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">É só uma confirmação neste aparelho. Você continuará nesta tela e sua senha não será armazenada.</p>
-                            <div class="mt-4 flex flex-col sm:flex-row gap-2">
-                                <label class="sr-only" for="stripeFinancialPassword">Senha do Acionar</label>
-                                <input id="stripeFinancialPassword" type="password" autocomplete="current-password" required placeholder="Senha do Acionar" class="w-full min-w-0 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
-                                <button id="btnStripeFinancialUnlock" type="submit" class="btn-animated shrink-0 rounded-2xl bg-blue-600 hover:bg-blue-500 px-5 py-3 text-xs font-black text-white shadow-lg shadow-blue-600/20">
-                                    Confirmar e abrir cadastro
+                        <div class="sm:col-span-2">
+                            <label for="inputChavePix" class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Chave Pix</label>
+                            <div class="flex gap-2">
+                                <input id="inputChavePix" type="text" required placeholder="Digite sua Chave Pix" class="w-full min-w-0 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                                <button id="btnSavePixKey" type="submit" class="btn-animated shrink-0 rounded-2xl bg-blue-600 hover:bg-blue-500 px-5 py-3 text-xs font-black text-white shadow-lg shadow-blue-600/20">
+                                    Salvar Dados
                                 </button>
                             </div>
-                            <p id="stripeFinancialUnlockError" class="hidden mt-2 text-xs font-bold text-rose-600 dark:text-rose-400"></p>
                         </div>
                     </div>
                 </form>
 
-                <div id="stripeConnectFormWrap" class="hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 p-3 sm:p-5 min-h-28">
-                    <div id="stripeConnectLoading" class="flex items-center justify-center gap-2 py-8 text-xs font-bold text-slate-500">
-                        <i class="fa-solid fa-circle-notch fa-spin text-blue-500"></i>
-                        Carregando formulário bancário seguro...
-                    </div>
-                    <div id="stripeConnectContainer"></div>
-                </div>
-
                 <p class="text-[10px] leading-relaxed text-slate-400">
-                    O formulário protegido aparece dentro desta página. Agência, conta e CPF/CNPJ permanecem no Stripe; o Acionar guarda apenas o vínculo e a situação do cadastro.
+                    Sua Chave Pix é armazenada de forma segura para recebimento automático dos atendimentos.
                 </p>
             </section>
 
@@ -549,11 +550,9 @@
             performLogout
         } from './js/app.js?v=3.13';
         import {
-            fetchStripeConnectStatus,
-            mountStripeConnectOnboarding,
-            unlockStripeFinancialSession,
-            saveStripePlatformFee
-        } from './js/stripe-payments.js?v=1.4';
+            fetchAsaasAccountStatus,
+            saveProfessionalPixKey
+        } from './js/asaas-payments.js?v=2.0';
 
         initTheme();
 
@@ -568,168 +567,81 @@
             if (sectionWhatsapp) sectionWhatsapp.style.display = 'none';
         }
 
-        // --- RECEBIMENTOS INDIVIDUAIS VIA STRIPE CONNECT ---
-        const btnStripeConnect = document.getElementById('btnStripeConnect');
-        const btnStripeConnectText = document.getElementById('btnStripeConnectText');
-        const stripeStatusBadge = document.getElementById('stripeConnectStatusBadge');
-        const stripeStatusText = document.getElementById('stripeConnectStatusText');
-        const stripeFormWrap = document.getElementById('stripeConnectFormWrap');
-        const stripeLoading = document.getElementById('stripeConnectLoading');
-        const stripeContainer = document.getElementById('stripeConnectContainer');
-        const stripeUnlockForm = document.getElementById('stripeFinancialUnlock');
-        const stripeUnlockPassword = document.getElementById('stripeFinancialPassword');
-        const stripeUnlockButton = document.getElementById('btnStripeFinancialUnlock');
-        const stripeUnlockError = document.getElementById('stripeFinancialUnlockError');
-        let stripeFormAutoOpened = false;
+        // --- RECEBIMENTOS INDIVIDUAIS VIA ASAAS (PIX & SPLIT) ---
+        const asaasStatusBadge = document.getElementById('asaasStatusBadge');
+        const asaasStatusText = document.getElementById('asaasStatusText');
+        const formAsaasPixKey = document.getElementById('formAsaasPixKey');
+        const selectTipoChavePix = document.getElementById('selectTipoChavePix');
+        const inputChavePix = document.getElementById('inputChavePix');
+        const btnSavePixKey = document.getElementById('btnSavePixKey');
+        const btnTogglePixForm = document.getElementById('btnTogglePixForm');
+        const btnTogglePixFormText = document.getElementById('btnTogglePixFormText');
 
-        function isFinancialUnlockError(error) {
-            return error?.code === 'FINANCIAL_UNLOCK_REQUIRED' || error?.code === 'AUTH_SESSION_REQUIRED';
-        }
-
-        function showFinancialUnlock() {
-            stripeFormWrap.classList.add('hidden');
-            stripeUnlockForm.classList.remove('hidden');
-            stripeUnlockError.classList.add('hidden');
-            stripeUnlockError.textContent = '';
-            btnStripeConnect.dataset.requiresUnlock = 'true';
-            stripeUnlockForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            window.setTimeout(() => stripeUnlockPassword.focus(), 350);
-        }
-
-        function hideFinancialUnlock() {
-            stripeUnlockForm.classList.add('hidden');
-            stripeUnlockPassword.value = '';
-            stripeUnlockError.classList.add('hidden');
-            stripeUnlockError.textContent = '';
-            delete btnStripeConnect.dataset.requiresUnlock;
-        }
-
-        function renderStripeStatus(state = {}) {
-            if (btnStripeConnect) {
-                btnStripeConnect.disabled = false;
-                btnStripeConnect.classList.remove('opacity-50', 'cursor-not-allowed');
-                delete btnStripeConnect.dataset.requiresAuth;
-                delete btnStripeConnect.dataset.requiresUnlock;
-            }
-            stripeStatusBadge.className = 'text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full';
-            if (state.onboardingComplete && state.payoutsEnabled) {
-                stripeStatusBadge.textContent = 'Ativo';
-                stripeStatusBadge.classList.add('bg-emerald-500/10', 'text-emerald-600', 'dark:text-emerald-400');
-                stripeStatusText.textContent = 'Sua conta está pronta para receber pagamentos e repasses.';
-                btnStripeConnectText.textContent = 'Revisar dados de recebimento';
-            } else if (state.connected) {
-                stripeStatusBadge.textContent = state.needsAttention ? 'Ação necessária' : 'Em análise';
-                stripeStatusBadge.classList.add('bg-amber-500/10', 'text-amber-600', 'dark:text-amber-400');
-                stripeStatusText.textContent = state.needsAttention
-                    ? 'Existem dados bancários ou fiscais que precisam ser concluídos.'
-                    : 'O Stripe está analisando seu cadastro financeiro.';
-                btnStripeConnectText.textContent = 'Continuar cadastro aqui';
+        btnTogglePixForm?.addEventListener('click', () => {
+            if (!formAsaasPixKey) return;
+            const isHidden = formAsaasPixKey.classList.contains('hidden');
+            if (isHidden) {
+                formAsaasPixKey.classList.remove('hidden');
+                if (btnTogglePixFormText) btnTogglePixFormText.textContent = 'Ocultar formulário';
+                formAsaasPixKey.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                inputChavePix?.focus();
             } else {
-                stripeStatusBadge.textContent = 'Não ativado';
-                stripeStatusBadge.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-500', 'dark:text-slate-400');
-                stripeStatusText.textContent = 'Cadastre seus dados para receber Pix e cartão diretamente.';
-                btnStripeConnectText.textContent = 'Abrir cadastro bancário';
+                formAsaasPixKey.classList.add('hidden');
+                if (btnTogglePixFormText) btnTogglePixFormText.textContent = 'Informe sua Chave Pix';
             }
-        }
-
-        async function refreshStripeStatus({ silent = false } = {}) {
-            try {
-                const result = await fetchStripeConnectStatus();
-                renderStripeStatus(result.state);
-                if (result.state?.connected && !result.state?.onboardingComplete && !stripeFormAutoOpened) {
-                    stripeFormAutoOpened = true;
-                    await openStripeOnboarding();
-                }
-            } catch (error) {
-                if (error.code === 'FINANCIAL_CONFIG_MISSING' || error.code === 'SERVICE_ROLE_REQUIRED' || error.code === 'STRIPE_NOT_CONFIGURED') {
-                    renderStripeStatus({ connected: false });
-                    stripeStatusBadge.textContent = 'Opcional';
-                    stripeStatusText.textContent = 'Recebimentos online não ativados. Agenda, atendimentos e caixa manual continuam funcionando normalmente.';
-                    if (btnStripeConnect) {
-                        btnStripeConnect.disabled = true;
-                        btnStripeConnect.classList.add('opacity-50', 'cursor-not-allowed');
-                    }
-                    return;
-                }
-                if (isFinancialUnlockError(error)) {
-                    renderStripeStatus({ connected: false });
-                    stripeStatusBadge.textContent = 'Confirmação necessária';
-                    stripeStatusBadge.className = 'text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400';
-                    stripeStatusText.textContent = 'Confirme sua senha uma vez neste aparelho para proteger seus dados financeiros.';
-                    btnStripeConnectText.textContent = 'Informar CPF e conta bancária';
-                    btnStripeConnect.dataset.requiresUnlock = 'true';
-                    return;
-                }
-                stripeStatusBadge.textContent = 'Configuração pendente';
-                stripeStatusBadge.className = 'text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400';
-                stripeStatusText.textContent = error.message;
-                if (!silent) showToast(error.message, 'error');
-            }
-        }
-
-        async function openStripeOnboarding() {
-            hideFinancialUnlock();
-            stripeFormWrap.classList.remove('hidden');
-            stripeLoading.classList.remove('hidden');
-            stripeContainer.replaceChildren();
-            btnStripeConnect.disabled = true;
-            btnStripeConnect.classList.add('opacity-60');
-            stripeFormWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            try {
-                await mountStripeConnectOnboarding(stripeContainer, {
-                    onExit: async () => {
-                        await refreshStripeStatus();
-                        showToast('Situação do cadastro financeiro atualizada.', 'success');
-                    },
-                    onLoadError: (error) => showToast(error?.message || 'Falha ao carregar o cadastro financeiro.', 'error')
-                });
-                stripeLoading.classList.add('hidden');
-            } catch (error) {
-                stripeLoading.classList.add('hidden');
-                if (isFinancialUnlockError(error)) {
-                    showFinancialUnlock();
-                    return;
-                }
-                showToast(error.message, 'error');
-            } finally {
-                btnStripeConnect.disabled = false;
-                btnStripeConnect.classList.remove('opacity-60');
-            }
-        }
-
-        btnStripeConnect?.addEventListener('click', async () => {
-            if (btnStripeConnect.dataset.requiresUnlock === 'true') {
-                showFinancialUnlock();
-                return;
-            }
-            await openStripeOnboarding();
         });
 
-        stripeUnlockForm?.addEventListener('submit', async (event) => {
+        function renderAsaasStatus(state = {}) {
+            if (!asaasStatusBadge || !asaasStatusText) return;
+            asaasStatusBadge.className = 'text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full';
+            if (state.connected && state.chavePix) {
+                asaasStatusBadge.textContent = 'Ativo';
+                asaasStatusBadge.classList.add('bg-emerald-500/10', 'text-emerald-600', 'dark:text-emerald-400');
+                asaasStatusText.textContent = `Chave Pix cadastrada (${(state.tipoChave || 'cpf').toUpperCase()}: ${state.chavePix}). Atendimentos serão repassados automaticamente.`;
+                if (inputChavePix && !inputChavePix.value) {
+                    inputChavePix.value = state.chavePix;
+                    selectTipoChavePix.value = state.tipoChave || 'cpf';
+                }
+            } else {
+                asaasStatusBadge.textContent = 'Não ativado';
+                asaasStatusBadge.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-500', 'dark:text-slate-400');
+                asaasStatusText.textContent = 'Cadastre sua Chave Pix para receber os atendimentos diretamente no seu banco com repasse automático.';
+            }
+        }
+
+        async function refreshAsaasStatus() {
+            try {
+                const result = await fetchAsaasAccountStatus();
+                renderAsaasStatus(result.state);
+            } catch (error) {
+                renderAsaasStatus({ connected: false });
+            }
+        }
+
+        formAsaasPixKey?.addEventListener('submit', async (event) => {
             event.preventDefault();
-            stripeUnlockError.classList.add('hidden');
-            stripeUnlockError.textContent = '';
-            stripeUnlockButton.disabled = true;
-            stripeUnlockButton.classList.add('opacity-60');
-            const originalText = stripeUnlockButton.textContent;
-            stripeUnlockButton.textContent = 'Confirmando...';
+            if (!btnSavePixKey) return;
+            btnSavePixKey.disabled = true;
+            btnSavePixKey.classList.add('opacity-60');
+            const originalText = btnSavePixKey.textContent;
+            btnSavePixKey.textContent = 'Salvando...';
+
             try {
-                await unlockStripeFinancialSession(stripeUnlockPassword.value);
-                showToast('Acesso financeiro confirmado com segurança.', 'success');
-                await openStripeOnboarding();
+                const tipo = selectTipoChavePix.value;
+                const chave = inputChavePix.value;
+                await saveProfessionalPixKey(tipo, chave);
+                showToast('Chave Pix salva com sucesso para recebimentos!', 'success');
+                await refreshAsaasStatus();
             } catch (error) {
-                stripeUnlockError.textContent = error.message;
-                stripeUnlockError.classList.remove('hidden');
-                stripeUnlockPassword.focus();
-                stripeUnlockPassword.select();
+                showToast(error.message || 'Falha ao salvar a Chave Pix.', 'error');
             } finally {
-                stripeUnlockButton.disabled = false;
-                stripeUnlockButton.classList.remove('opacity-60');
-                stripeUnlockButton.textContent = originalText;
+                btnSavePixKey.disabled = false;
+                btnSavePixKey.classList.remove('opacity-60');
+                btnSavePixKey.textContent = originalText;
             }
         });
 
-        refreshStripeStatus({ silent: true });
+        refreshAsaasStatus();
 
         // --- CONTROLE DE ALARME SONORO ---
         const btnEnableNotifications = document.getElementById('btnEnableNotifications');
