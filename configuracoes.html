@@ -242,6 +242,23 @@
                         </span>
                     </label>
 
+                    <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+                        <div>
+                            <span class="block text-xs font-extrabold text-slate-900 dark:text-white">Taxa da plataforma sobre os pagamentos deste profissional</span>
+                            <span class="block text-[11px] text-slate-500 dark:text-slate-400">Opcional. Use zero para não reter comissão. Neste modelo, as tarifas de processamento do Stripe ficam sob responsabilidade da plataforma.</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="inputProfTaxaPercentual" class="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Percentual (%)</label>
+                                <input type="number" id="inputProfTaxaPercentual" min="0" max="100" step="0.01" value="0" class="w-full rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-xs font-bold text-slate-900 dark:text-white">
+                            </div>
+                            <div>
+                                <label for="inputProfTaxaFixa" class="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Valor fixo (R$)</label>
+                                <input type="number" id="inputProfTaxaFixa" min="0" step="0.01" value="0" class="w-full rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-xs font-bold text-slate-900 dark:text-white">
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex items-center justify-end gap-2 pt-2">
                         <button type="button" id="btnCancelEditProf" class="hidden px-4 py-2.5 rounded-full text-xs font-bold text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
                             Cancelar Edição
@@ -362,6 +379,56 @@
                 </div>
             </section>
 
+            <!-- RECEBIMENTOS INDIVIDUAIS VIA STRIPE CONNECT -->
+            <section id="sectionStripeConnect" class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-blue-500/20 dark:border-blue-500/30 backdrop-blur-md space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex items-start gap-3 min-w-0">
+                        <div class="h-10 w-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-building-columns text-base"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Meus Recebimentos</h3>
+                                <span id="stripeConnectStatusBadge" class="text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">Verificando</span>
+                            </div>
+                            <p id="stripeConnectStatusText" class="text-xs text-slate-500 dark:text-slate-400 mt-1">Verificando seu cadastro para receber Pix e cartão.</p>
+                        </div>
+                    </div>
+
+                    <button type="button" id="btnStripeConnect" class="btn-animated flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-black bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 shrink-0">
+                        <i class="fa-solid fa-shield-halved text-sm"></i>
+                        <span id="btnStripeConnectText">Cadastrar dados para receber</span>
+                    </button>
+                </div>
+
+                <div class="grid sm:grid-cols-3 gap-3">
+                    <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 p-3.5">
+                        <span class="block text-[10px] font-black uppercase tracking-wider text-slate-400">Conta individual</span>
+                        <span class="block text-xs font-bold text-slate-700 dark:text-slate-200 mt-1">Cada profissional recebe na própria conta</span>
+                    </div>
+                    <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 p-3.5">
+                        <span class="block text-[10px] font-black uppercase tracking-wider text-slate-400">Dados protegidos</span>
+                        <span class="block text-xs font-bold text-slate-700 dark:text-slate-200 mt-1">Validação bancária e fiscal feita pelo Stripe</span>
+                    </div>
+                    <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 p-3.5">
+                        <span class="block text-[10px] font-black uppercase tracking-wider text-slate-400">Formas de pagamento</span>
+                        <span class="block text-xs font-bold text-slate-700 dark:text-slate-200 mt-1">Pix e cartões no checkout seguro</span>
+                    </div>
+                </div>
+
+                <div id="stripeConnectFormWrap" class="hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 p-3 sm:p-5 min-h-28">
+                    <div id="stripeConnectLoading" class="flex items-center justify-center gap-2 py-8 text-xs font-bold text-slate-500">
+                        <i class="fa-solid fa-circle-notch fa-spin text-blue-500"></i>
+                        Carregando formulário bancário seguro...
+                    </div>
+                    <div id="stripeConnectContainer"></div>
+                </div>
+
+                <p class="text-[10px] leading-relaxed text-slate-400">
+                    Agência, conta e CPF/CNPJ são informados no formulário protegido e permanecem no Stripe. O Acionar guarda apenas o vínculo e a situação do cadastro.
+                </p>
+            </section>
+
             <!-- SEÇÃO DE DESCONEXÃO / SAIR DO APLICATIVO -->
             <section class="bg-white dark:bg-slate-900/60 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-rose-500/20 dark:border-rose-500/30 backdrop-blur-md">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -435,7 +502,12 @@
             escapeHtml,
             getActiveProfessional,
             performLogout
-        } from './js/app.js?v=3.8';
+        } from './js/app.js?v=3.9';
+        import {
+            fetchStripeConnectStatus,
+            mountStripeConnectOnboarding,
+            saveStripePlatformFee
+        } from './js/stripe-payments.js?v=1.0';
 
         initTheme();
 
@@ -449,6 +521,76 @@
             if (sectionGestaoEquipe) sectionGestaoEquipe.style.display = 'none';
             if (sectionWhatsapp) sectionWhatsapp.style.display = 'none';
         }
+
+        // --- RECEBIMENTOS INDIVIDUAIS VIA STRIPE CONNECT ---
+        const btnStripeConnect = document.getElementById('btnStripeConnect');
+        const btnStripeConnectText = document.getElementById('btnStripeConnectText');
+        const stripeStatusBadge = document.getElementById('stripeConnectStatusBadge');
+        const stripeStatusText = document.getElementById('stripeConnectStatusText');
+        const stripeFormWrap = document.getElementById('stripeConnectFormWrap');
+        const stripeLoading = document.getElementById('stripeConnectLoading');
+        const stripeContainer = document.getElementById('stripeConnectContainer');
+
+        function renderStripeStatus(state = {}) {
+            stripeStatusBadge.className = 'text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full';
+            if (state.onboardingComplete && state.payoutsEnabled) {
+                stripeStatusBadge.textContent = 'Ativo';
+                stripeStatusBadge.classList.add('bg-emerald-500/10', 'text-emerald-600', 'dark:text-emerald-400');
+                stripeStatusText.textContent = 'Sua conta está pronta para receber pagamentos e repasses.';
+                btnStripeConnectText.textContent = 'Revisar dados de recebimento';
+            } else if (state.connected) {
+                stripeStatusBadge.textContent = state.needsAttention ? 'Ação necessária' : 'Em análise';
+                stripeStatusBadge.classList.add('bg-amber-500/10', 'text-amber-600', 'dark:text-amber-400');
+                stripeStatusText.textContent = state.needsAttention
+                    ? 'Existem dados bancários ou fiscais que precisam ser concluídos.'
+                    : 'O Stripe está analisando seu cadastro financeiro.';
+                btnStripeConnectText.textContent = 'Continuar cadastro';
+            } else {
+                stripeStatusBadge.textContent = 'Não ativado';
+                stripeStatusBadge.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-500', 'dark:text-slate-400');
+                stripeStatusText.textContent = 'Cadastre seus dados para receber Pix e cartão diretamente.';
+                btnStripeConnectText.textContent = 'Cadastrar dados para receber';
+            }
+        }
+
+        async function refreshStripeStatus({ silent = false } = {}) {
+            try {
+                const result = await fetchStripeConnectStatus();
+                renderStripeStatus(result.state);
+            } catch (error) {
+                stripeStatusBadge.textContent = 'Configuração pendente';
+                stripeStatusBadge.className = 'text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400';
+                stripeStatusText.textContent = error.message;
+                if (!silent) showToast(error.message, 'error');
+            }
+        }
+
+        btnStripeConnect?.addEventListener('click', async () => {
+            stripeFormWrap.classList.remove('hidden');
+            stripeLoading.classList.remove('hidden');
+            stripeContainer.replaceChildren();
+            btnStripeConnect.disabled = true;
+            btnStripeConnect.classList.add('opacity-60');
+            stripeFormWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            try {
+                await mountStripeConnectOnboarding(stripeContainer, {
+                    onExit: async () => {
+                        await refreshStripeStatus();
+                        showToast('Situação do cadastro financeiro atualizada.', 'success');
+                    },
+                    onLoadError: (error) => showToast(error?.message || 'Falha ao carregar o cadastro financeiro.', 'error')
+                });
+                stripeLoading.classList.add('hidden');
+            } catch (error) {
+                stripeLoading.classList.add('hidden');
+                showToast(error.message, 'error');
+            } finally {
+                btnStripeConnect.disabled = false;
+                btnStripeConnect.classList.remove('opacity-60');
+            }
+        });
+
+        refreshStripeStatus({ silent: true });
 
         // --- CONTROLE DE ALARME SONORO ---
         const btnEnableNotifications = document.getElementById('btnEnableNotifications');
@@ -535,6 +677,8 @@
         const formProfTitle = document.getElementById('formProfTitle');
         const profissionaisListContainer = document.getElementById('profissionaisListContainer');
         const inputProfAtendimentoExterno = document.getElementById('inputProfAtendimentoExterno');
+        const inputProfTaxaPercentual = document.getElementById('inputProfTaxaPercentual');
+        const inputProfTaxaFixa = document.getElementById('inputProfTaxaFixa');
 
         let profissionaisData = [];
 
@@ -543,6 +687,8 @@
             if (inputProfId) inputProfId.value = '';
             if (inputProfCor) inputProfCor.value = '#8b5cf6';
             if (inputProfAtendimentoExterno) inputProfAtendimentoExterno.checked = false;
+            if (inputProfTaxaPercentual) inputProfTaxaPercentual.value = '0';
+            if (inputProfTaxaFixa) inputProfTaxaFixa.value = '0';
             if (btnCancelEditProf) btnCancelEditProf.classList.add('hidden');
             if (btnSaveProfText) btnSaveProfText.textContent = 'Salvar Auxiliar';
             if (formProfTitle) formProfTitle.innerHTML = `<i class="fa-solid fa-user-plus text-xs"></i> Cadastrar Novo Auxiliar / Membro da Equipe`;
@@ -630,6 +776,8 @@
                         inputProfSenha.placeholder = 'Digite a nova senha se desejar alterar';
                         inputProfCor.value = p.cor_identificadora || '#8b5cf6';
                         if (inputProfAtendimentoExterno) inputProfAtendimentoExterno.checked = Boolean(p.aceita_atendimento_externo);
+                        if (inputProfTaxaPercentual) inputProfTaxaPercentual.value = Number(p.stripe_taxa_plataforma_percentual || 0).toFixed(2);
+                        if (inputProfTaxaFixa) inputProfTaxaFixa.value = (Number(p.stripe_taxa_plataforma_fixa_centavos || 0) / 100).toFixed(2);
                         
                         btnCancelEditProf?.classList.remove('hidden');
                         if (btnSaveProfText) btnSaveProfText.textContent = 'Salvar Alterações / Nova Senha';
@@ -683,17 +831,23 @@
             }
 
             const fullEmail = `${prefix}@acionar.online`;
+            const existingProfessional = profissionaisData.find((professional) => professional.id === id);
 
             try {
-                await saveProfissional({
+                const savedProfessional = await saveProfissional({
                     id: id || undefined,
                     nome: inputProfNome.value,
                     email: fullEmail,
                     senha: inputProfSenha.value,
-                    cargo: 'auxiliar',
+                    cargo: existingProfessional?.cargo || 'auxiliar',
                     cor_identificadora: inputProfCor.value,
                     ativo: true,
                     aceita_atendimento_externo: Boolean(inputProfAtendimentoExterno?.checked)
+                });
+                await saveStripePlatformFee({
+                    profissionalId: savedProfessional.id,
+                    percentual: Math.max(0, Number(inputProfTaxaPercentual?.value || 0)),
+                    fixoCentavos: Math.round(Math.max(0, Number(inputProfTaxaFixa?.value || 0)) * 100)
                 });
                 showToast(id ? `Dados e senha do auxiliar ${inputProfNome.value} atualizados!` : `Auxiliar ${inputProfNome.value} cadastrado com sucesso!`, 'success');
                 resetFormProfissional();

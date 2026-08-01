@@ -617,6 +617,30 @@
                     <input type="text" id="inputObsPagamento" placeholder="Ex: Pagamento parcial ou troco..." class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
 
+                <div class="rounded-3xl border border-blue-500/25 bg-blue-500/5 p-4 space-y-3">
+                    <div class="flex items-start gap-3">
+                        <div class="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <span class="block text-xs font-extrabold text-slate-900 dark:text-white">Cobrança online segura</span>
+                            <span class="block text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">Gera um link para o cliente escolher Pix ou cartão. O Pix exibe o QR Code no checkout.</span>
+                        </div>
+                    </div>
+                    <button type="button" id="btnCreateStripeCheckout" class="btn-animated w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-black bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20">
+                        <i class="fa-solid fa-link"></i>
+                        <span id="btnCreateStripeCheckoutText">Gerar cobrança Pix ou cartão</span>
+                    </button>
+                    <div id="stripeCheckoutResult" class="hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 space-y-2.5">
+                        <p class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400"><i class="fa-solid fa-circle-check mr-1"></i>Cobrança criada. Envie o link ao cliente:</p>
+                        <input id="stripeCheckoutUrl" type="text" readonly class="w-full rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-[10px] text-slate-600 dark:text-slate-300">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="btnCopyStripeCheckout" class="btn-animated rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-2.5 text-[11px] font-extrabold text-slate-700 dark:text-slate-200"><i class="fa-regular fa-copy mr-1"></i>Copiar link</button>
+                            <a id="btnOpenStripeCheckout" href="#" target="_blank" rel="noopener" class="btn-animated rounded-xl bg-blue-600 px-3 py-2.5 text-center text-[11px] font-extrabold text-white"><i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>Abrir cobrança</a>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
                     <button type="button" id="btnCancelPagamentoModal" class="btn-animated px-5 py-2.5 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700">
                         Cancelar
@@ -665,9 +689,10 @@
             generateWhatsAppManutencaoMessage,
             cleanPhone,
             performLogout
-        } from './js/app.js?v=3.8';
+        } from './js/app.js?v=3.9';
         import { supabase } from './js/supabase.js';
         import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './js/datetime.js';
+        import { createStripeCheckout } from './js/stripe-payments.js?v=1.0';
 
         initTheme();
         registerServiceWorker();
@@ -987,6 +1012,11 @@
         const inputCondicao = document.getElementById('inputCondicaoPagamento');
         const inputForma = document.getElementById('inputFormaPagamento');
         const inputStatusPag = document.getElementById('inputStatusPagamento');
+        const btnCreateStripeCheckout = document.getElementById('btnCreateStripeCheckout');
+        const btnCreateStripeCheckoutText = document.getElementById('btnCreateStripeCheckoutText');
+        const stripeCheckoutResult = document.getElementById('stripeCheckoutResult');
+        const stripeCheckoutUrl = document.getElementById('stripeCheckoutUrl');
+        const btnOpenStripeCheckout = document.getElementById('btnOpenStripeCheckout');
 
         function calcValorFinal() {
             const bruto = parseFloat(inputValorBruto?.value || 0);
@@ -1031,6 +1061,44 @@
         const closePaymentModal = () => modalPagamento?.classList.add('hidden');
         btnClosePagamentoModal?.addEventListener('click', closePaymentModal);
         btnCancelPagamentoModal?.addEventListener('click', closePaymentModal);
+
+        btnCreateStripeCheckout?.addEventListener('click', async () => {
+            const agendamentoId = document.getElementById('pagamentoAgendamentoId').value;
+            const descontoCentavos = Math.round(Math.max(0, parseFloat(inputDesconto.value || 0)) * 100);
+            if (!agendamentoId) return showToast('Agendamento não encontrado.', 'error');
+
+            btnCreateStripeCheckout.disabled = true;
+            btnCreateStripeCheckout.classList.add('opacity-60');
+            btnCreateStripeCheckoutText.textContent = 'Gerando cobrança segura...';
+            try {
+                const checkout = await createStripeCheckout({ agendamentoId, descontoCentavos });
+                stripeCheckoutUrl.value = checkout.url;
+                btnOpenStripeCheckout.href = checkout.url;
+                stripeCheckoutResult.classList.remove('hidden');
+                showToast('Cobrança criada. Agora abra ou copie o link para o cliente.', 'success');
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                btnCreateStripeCheckout.disabled = false;
+                btnCreateStripeCheckout.classList.remove('opacity-60');
+                btnCreateStripeCheckoutText.textContent = 'Gerar cobrança Pix ou cartão';
+            }
+        });
+
+        document.getElementById('btnCopyStripeCheckout')?.addEventListener('click', async () => {
+            const url = stripeCheckoutUrl.value;
+            if (!url) return;
+            try {
+                if (navigator.share) {
+                    await navigator.share({ title: 'Pagamento do atendimento', text: 'Use este link seguro para pagar por Pix ou cartão:', url });
+                } else {
+                    await navigator.clipboard.writeText(url);
+                    showToast('Link da cobrança copiado.', 'success');
+                }
+            } catch (error) {
+                if (error?.name !== 'AbortError') showToast('Não foi possível compartilhar o link.', 'error');
+            }
+        });
 
         formPagamento?.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1133,6 +1201,8 @@
 
                 document.getElementById('pagamentoClienteNome').textContent = cNome;
                 document.getElementById('pagamentoServicoNome').textContent = sNome;
+                stripeCheckoutResult?.classList.add('hidden');
+                if (stripeCheckoutUrl) stripeCheckoutUrl.value = '';
 
                 const existing = await fetchPagamentoByAgendamentoId(agId);
                 if (existing) {

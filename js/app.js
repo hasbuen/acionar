@@ -2549,6 +2549,7 @@ export async function saveProfissional({ id, nome, email, senha, cargo = 'auxili
     // Tenta registrar a conta no Supabase Auth (GoTrue) para permitir login direto
     if (!id && payload.senha_hash) {
         try {
+            const { data: { session: ownerSession } } = await supabase.auth.getSession();
             await supabase.auth.signUp({
                 email: cleanEmail,
                 password: payload.senha_hash,
@@ -2556,6 +2557,13 @@ export async function saveProfissional({ id, nome, email, senha, cargo = 'auxili
                     data: { nome, cargo }
                 }
             });
+            // O cadastro de um auxiliar nunca deve trocar a sessão do proprietário.
+            if (ownerSession?.access_token && ownerSession?.refresh_token) {
+                await supabase.auth.setSession({
+                    access_token: ownerSession.access_token,
+                    refresh_token: ownerSession.refresh_token
+                });
+            }
         } catch (authErr) {
             console.warn("Registro no Supabase Auth falhou, mantendo cadastro na tabela profissionais:", authErr);
         }
