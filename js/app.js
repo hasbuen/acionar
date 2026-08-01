@@ -1528,11 +1528,40 @@ async function updateClienteProfessional(clienteId, profissionalId) {
 }
 
 // --- GESTÃO DE CONFIGURAÇÕES DE HORÁRIO DE FUNCIONAMENTO ---
+async function resolveProfessionalScheduleRole(profissionalId, activeProf = null) {
+    if (!profissionalId) return null;
+
+    let cargo = activeProf?.id === profissionalId ? activeProf?.cargo : null;
+
+    try {
+        const { data, error } = await supabase
+            .from('profissionais')
+            .select('id, cargo')
+            .eq('id', profissionalId)
+            .maybeSingle();
+
+        if (!error && data?.cargo) {
+            cargo = data.cargo;
+
+            // Mantém a sessão local coerente depois de uma correção de cargo no banco.
+            if (activeProf?.id === profissionalId && activeProf.cargo !== data.cargo) {
+                localStorage.setItem('active_professional', JSON.stringify({ ...activeProf, cargo: data.cargo }));
+            }
+        }
+    } catch (err) {
+        console.warn(`Erro ao identificar o perfil do profissional ${profissionalId}:`, err);
+    }
+
+    return String(cargo || '').toLowerCase() || null;
+}
+
 export async function fetchConfiguracaoHorarios(profissionalId = null) {
     const activeProf = getActiveProfessional() || (!profissionalId ? await ensureActiveProfessionalFromSession() : null);
     const targetProfId = profissionalId || activeProf?.id || null;
+    const targetRole = await resolveProfessionalScheduleRole(targetProfId, activeProf);
+    const usesIndividualSchedule = targetProfId && targetRole !== 'proprietario';
 
-    if (targetProfId) {
+    if (usesIndividualSchedule) {
         try {
             const { data, error } = await supabase
                 .from('configuracoes')
@@ -1578,14 +1607,16 @@ export async function fetchConfiguracaoHorarios(profissionalId = null) {
 export async function saveConfiguracaoHorarios(configValor) {
     const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
     const targetProfId = activeProf?.id || null;
-    const chave = targetProfId ? `horario_funcionamento_${targetProfId}` : 'horario_funcionamento';
+    const targetRole = await resolveProfessionalScheduleRole(targetProfId, activeProf);
+    const usesIndividualSchedule = targetProfId && targetRole !== 'proprietario';
+    const chave = usesIndividualSchedule ? `horario_funcionamento_${targetProfId}` : 'horario_funcionamento';
 
     const { error } = await supabase
         .from('configuracoes')
         .upsert({
             chave: chave,
             valor: configValor,
-            descricao: targetProfId ? `Horário individual do auxiliar ${activeProf.nome || targetProfId}` : 'Configuração avançada de turnos e horários por dia da semana'
+            descricao: usesIndividualSchedule ? `Horário individual do profissional ${activeProf.nome || targetProfId}` : 'Configuração avançada de turnos e horários por dia da semana'
         }, { onConflict: 'chave' });
 
     if (error) throw error;
@@ -2167,8 +2198,7 @@ export async function updateAgendamentoStatus(id, newStatus, profissionalId = un
         activeProfId = resolvedProf?.id || null;
     }
     const shouldClaim =
-        isRequestStatus(currentAgendamento?.status) &&
-        !currentAgendamento?.profissional_id &&
+        isUnassignedRequest(currentAgendamento) &&
         !isRequestStatus(newStatus) &&
         (newStatus || '').toLowerCase() !== 'cancelado';
 
@@ -2180,6 +2210,33 @@ export async function updateAgendamentoStatus(id, newStatus, profissionalId = un
 
     if (shouldClaim && targetProfId) {
         await assertProfessionalCanClaimAppointment(id, currentAgendamento, targetProfId);
+
+        // Atribui e confirma em uma unica escrita condicionada. Se outra pessoa
+        // aceitar primeiro, nenhuma linha e alterada e o painel informa o motivo.
+        const { data: claimed, error: claimError } = await supabase
+            .from('agendamentos')
+            .update({ status: newStatus, profissional_id: targetProfId })
+            .eq('id', id)
+            .is('profissional_id', null)
+            .in('status', ['aguardando_confirmacao', 'solicitado', 'pendente'])
+            .select('id, status, profissional_id')
+            .maybeSingle();
+
+        if (claimError) throw claimError;
+        if (!claimed) {
+            const { data: latest } = await supabase
+                .from('agendamentos')
+                .select('status, profissional_id')
+                .eq('id', id)
+                .maybeSingle();
+            if (latest?.profissional_id === targetProfId && latest?.status === newStatus) return true;
+            throw new Error('Esta solicitação já foi aceita por outro profissional. Atualize a agenda.');
+        }
+
+        if (currentAgendamento?.cliente_id) {
+            await updateClienteProfessional(currentAgendamento.cliente_id, targetProfId);
+        }
+        return true;
     }
 
     // A conclusão passa pela RPC transacional do estoque. O banco valida todos os
