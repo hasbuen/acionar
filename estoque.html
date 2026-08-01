@@ -157,13 +157,7 @@
     </div>
 
     <script type="module">
-        import { initEstoquePage } from './js/estoque.js?v=3.1';
-        document.querySelectorAll('#modalProdutoEstoque,#modalMovimentoEstoque,#modalTransferenciaEstoque,#modalRazaoEstoque').forEach(modal => {
-            const observer = new MutationObserver(() => {
-                if (!modal.classList.contains('hidden')) modal.classList.add('flex'); else modal.classList.remove('flex');
-            });
-            observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
-        });
+        import { initEstoquePage } from './js/estoque.js?v=3.2';
         initEstoquePage();
     </script>
 </body>

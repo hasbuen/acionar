@@ -503,6 +503,19 @@ function populateProductSelect(select, selectedId = '') {
     select.innerHTML = state.produtos.map(p => `<option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.nome)} · ${number.format(p.saldo_atual)} ${escapeHtml(p.unidade)}</option>`).join('');
 }
 
+function showModal(modal) {
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeModal(id) {
+    const modal = typeof id === 'string' ? document.getElementById(id) : id;
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
 function openProductModal(produto = null) {
     const modal = document.getElementById('modalProdutoEstoque');
     const form = document.getElementById('formProdutoEstoque');
@@ -517,12 +530,12 @@ function openProductModal(produto = null) {
     form.elements.estoque_minimo.value = produto?.estoque_minimo ?? 0;
     form.elements.custo_unitario.value = produto?.custo_unitario ?? 0;
     form.elements.localizacao.value = produto?.localizacao || '';
-    form.elements.saldo_inicial.closest('[data-initial-balance]').classList.toggle('hidden', Boolean(produto));
+    form.elements.saldo_inicial.closest('[data-initial-balance]')?.classList.toggle('hidden', Boolean(produto));
     document.getElementById('produtoModalTitle').textContent = produto ? 'Editar produto' : 'Novo produto';
     document.getElementById('produtoImagemPreview').innerHTML = produto?.imagem_url
         ? `<img src="${escapeHtml(produto.imagem_url)}" class="h-full w-full object-cover">`
         : '<i class="fa-solid fa-camera text-xl"></i><span>Fotografar produto</span>';
-    modal.classList.remove('hidden');
+    showModal(modal);
 }
 
 function openMovementModal(produtoId = '', type = 'entrada') {
@@ -533,7 +546,7 @@ function openMovementModal(produtoId = '', type = 'entrada') {
     populateProductSelect(form.elements.produto_id, produtoId);
     form.elements.tipo.value = type;
     updateMovementForm(form);
-    modal.classList.remove('hidden');
+    showModal(modal);
 }
 
 function updateMovementForm(form) {
@@ -558,7 +571,7 @@ async function openTransferModal(produtoId = '') {
     const selected = state.produtos.find(p => p.id === form.elements.produto_id.value);
     if (selected) form.elements.valor_unitario.value = selected.custo_unitario || 0;
     document.getElementById('transferenciaAcertoFields')?.classList.add('hidden');
-    modal.classList.remove('hidden');
+    showModal(modal);
 }
 
 async function openLedger(produtoId) {
@@ -579,16 +592,12 @@ async function openLedger(produtoId) {
             <div class="min-w-0 flex-1"><strong class="block text-xs">${escapeHtml(m.motivo)}</strong><span class="text-[10px] text-slate-400">${escapeHtml(m.referencia || 'Sem referência')} · ${new Date(m.criado_em).toLocaleString('pt-BR')}</span></div>
             <div class="text-right"><strong class="block text-xs ${Number(m.quantidade) > 0 ? 'text-emerald-500' : 'text-orange-500'}">${Number(m.quantidade) > 0 ? '+' : ''}${number.format(m.quantidade)} ${produto.unidade}</strong><span class="text-[10px] text-slate-400">Saldo ${number.format(m.saldo_posterior)}</span></div>
         </div>`).join('') : '<p class="py-8 text-center text-xs text-slate-400">Nenhuma movimentação registrada.</p>';
-    document.getElementById('modalRazaoEstoque')?.classList.remove('hidden');
+    showModal(document.getElementById('modalRazaoEstoque'));
 }
 
 async function refreshStock() {
     await Promise.all([fetchProdutos(), fetchMovimentos()]);
     renderProducts();
-}
-
-function closeModal(id) {
-    document.getElementById(id)?.classList.add('hidden');
 }
 
 export async function initEstoquePage() {
