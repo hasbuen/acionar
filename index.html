@@ -171,28 +171,6 @@
             }
         }
 
-
-        initTheme();
-
-        const loginForm = document.getElementById('login-form');
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        const errorMessage = document.getElementById('error-message');
-        const errorText = document.getElementById('error-text');
-        const submitBtn = document.getElementById('submit-btn');
-
-        async function checkSession() {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                const activeProf = localStorage.getItem('active_professional');
-                if (session || activeProf) {
-                    window.location.href = './dashboard.html';
-                }
-            } catch (err) {
-                console.log("Check Session status:", err);
-            }
-        }
-
         function showError(msg) {
             if (!msg) {
                 errorMessage.classList.add('hidden');
