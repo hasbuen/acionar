@@ -203,11 +203,15 @@
                 <input type="hidden" name="id">
                 <label class="block cursor-pointer">
                     <input id="produtoImagemInput" name="imagem" type="file" accept="image/*" capture="environment" class="hidden">
-                    <span id="produtoImagemPreview" class="h-28 rounded-2xl border-2 border-dashed border-blue-500/25 bg-blue-500/5 text-blue-500 flex flex-col gap-1 items-center justify-center overflow-hidden">
+                    <span id="produtoImagemPreview" class="h-28 rounded-2xl border-2 border-dashed border-blue-500/25 bg-blue-500/5 text-blue-500 flex flex-col gap-1 items-center justify-center overflow-hidden relative">
                         <i class="fa-solid fa-camera text-xl"></i>
-                        <span class="text-xs font-bold">Fotografar produto</span>
+                        <span class="text-xs font-bold">Fotografar / Anexar produto</span>
                     </span>
                 </label>
+                <div class="flex items-center gap-2 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-500/10 p-2.5 rounded-2xl border border-blue-500/20">
+                    <i class="fa-solid fa-wand-magic-sparkles text-blue-500 text-sm"></i>
+                    <span><strong>IA Generativa:</strong> Tire foto do produto para preencher o <strong>Nome</strong> e gerar o <strong>Código SKU</strong> automaticamente!</span>
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tipo
                         <select name="tipo" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
@@ -215,11 +219,15 @@
                             <option value="ferramenta">Ferramenta · uso sem baixa</option>
                         </select>
                     </label>
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Código
-                        <input name="codigo" placeholder="MAT-001" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        <span class="flex items-center justify-between">
+                            <span>Código (SKU)</span>
+                            <button type="button" id="btnGerarSku" class="text-[9px] text-blue-600 dark:text-blue-400 font-extrabold hover:underline lowercase">⚡ gerar sku</button>
+                        </span>
+                        <input name="codigo" id="inputProdutoCodigo" placeholder="SKU-MAT-1024" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
                     </label>
                     <label class="sm:col-span-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nome
-                        <input name="nome" required placeholder="Ex.: Tinta acrílica branca" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
+                        <input name="nome" id="inputProdutoNome" required placeholder="Ex.: Tinta acrílica branca" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
                     </label>
                     <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Categoria
                         <input name="categoria" placeholder="Ex.: Pintura" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
@@ -386,7 +394,7 @@
     </div>
 
     <script type="module">
-        import { initEstoquePage } from './js/estoque.js?v=3.3';
+        import { initEstoquePage } from './js/estoque.js?v=3.4';
         initEstoquePage();
     </script>
 </body>

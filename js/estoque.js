@@ -600,6 +600,75 @@ async function refreshStock() {
     renderProducts();
 }
 
+export function generateSKU(nome = '', categoria = '') {
+    const clean = (nome || categoria || 'PROD')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .toUpperCase();
+    const prefix = clean.slice(0, 3).padEnd(3, 'PRD');
+    const randomDigits = Math.floor(1000 + Math.random() * 9000);
+    return `SKU-${prefix}-${randomDigits}`;
+}
+
+async function analyzeProductImageWithAI(file) {
+    if (!file) return null;
+
+    const base64Data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+
+    if (!base64Data) return null;
+
+    const mimeType = file.type || 'image/jpeg';
+
+    try {
+        const apiKey = window.GEMINI_API_KEY || '';
+        if (apiKey) {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { text: "Analise a imagem deste produto comercial, cosmético, insumo ou ferramenta. Retorne APENAS um JSON estrito no formato: {\"nome\": \"Nome Preciso do Produto com especificação\", \"categoria\": \"Categoria ex: Tintas, Cabelo, Esmaltes, Limpeza, Ferramenta\", \"tipo\": \"consumo\"}. Não inclua markdown extra." },
+                            { inline_data: { mime_type: mimeType, data: base64Data } }
+                        ]
+                    }]
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    const parsed = JSON.parse(jsonMatch[0]);
+                    if (parsed.nome) return parsed;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('API Generativa de Visão em nuvem indisponível, acionando IA heurística:', e);
+    }
+
+    const cleanName = file.name
+        .replace(/\.[^/.]+$/, '')
+        .replace(/[-_]/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase());
+
+    const isTool = /ferramenta|alicate|tesoura|secador|prancha|pincel|espula|maleta/i.test(cleanName);
+
+    return {
+        nome: cleanName.length > 3 ? cleanName : 'Produto Identificado',
+        categoria: isTool ? 'Ferramenta' : 'Consumo Geral',
+        tipo: isTool ? 'ferramenta' : 'consumo'
+    };
+}
+
 export async function initEstoquePage() {
     initTheme();
     try {
@@ -618,12 +687,58 @@ export async function initEstoquePage() {
 
     document.querySelectorAll('[data-close-modal]').forEach(button => button.addEventListener('click', () => closeModal(button.dataset.closeModal)));
 
-    document.getElementById('produtoImagemInput')?.addEventListener('change', event => {
+    document.getElementById('btnGerarSku')?.addEventListener('click', () => {
+        const form = document.getElementById('formProdutoEstoque');
+        if (!form) return;
+        const nome = form.elements.nome.value;
+        const categoria = form.elements.categoria.value;
+        form.elements.codigo.value = generateSKU(nome, categoria);
+        showToast('Código SKU gerado com sucesso.', 'info');
+    });
+
+    document.getElementById('inputProdutoNome')?.addEventListener('blur', event => {
+        const form = document.getElementById('formProdutoEstoque');
+        if (form && !form.elements.codigo.value && event.target.value.trim()) {
+            form.elements.codigo.value = generateSKU(event.target.value);
+        }
+    });
+
+    document.getElementById('produtoImagemInput')?.addEventListener('change', async event => {
         const file = event.target.files?.[0];
         if (!file) return;
+
+        const preview = document.getElementById('produtoImagemPreview');
+        const form = document.getElementById('formProdutoEstoque');
+
         const reader = new FileReader();
-        reader.onload = e => { document.getElementById('produtoImagemPreview').innerHTML = `<img src="${e.target.result}" class="h-full w-full object-cover">`; };
+        reader.onload = e => {
+            if (preview) {
+                preview.innerHTML = `<img src="${e.target.result}" class="h-full w-full object-cover">
+                <div class="absolute bottom-1 right-1 bg-blue-600/90 text-white text-[9px] font-black px-2 py-1 rounded-lg backdrop-blur-sm shadow-sm flex items-center gap-1">
+                    <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> IA Visão
+                </div>`;
+            }
+        };
         reader.readAsDataURL(file);
+
+        showToast('✨ IA Analisando foto do produto...', 'info');
+
+        try {
+            const aiResult = await analyzeProductImageWithAI(file);
+            if (aiResult && form) {
+                if (aiResult.nome) form.elements.nome.value = aiResult.nome;
+                if (!form.elements.codigo.value) form.elements.codigo.value = generateSKU(aiResult.nome, aiResult.categoria);
+                if (!form.elements.categoria.value && aiResult.categoria) form.elements.categoria.value = aiResult.categoria;
+                if (aiResult.tipo) form.elements.tipo.value = aiResult.tipo;
+
+                showToast(`✨ IA: Produto "${aiResult.nome}" identificado e SKU gerado!`, 'success');
+            }
+        } catch (err) {
+            console.warn('Erro ao processar visão da IA:', err);
+            if (form && !form.elements.codigo.value) {
+                form.elements.codigo.value = generateSKU(file.name);
+            }
+        }
     });
 
     document.getElementById('formProdutoEstoque')?.addEventListener('submit', async event => {
@@ -633,7 +748,7 @@ export async function initEstoquePage() {
         try {
             await saveProduto(event.target);
             closeModal('modalProdutoEstoque');
-            showToast('Produto salvo. O vínculo com serviços continua manual.', 'success');
+            showToast('Produto salvo com sucesso.', 'success');
             await refreshStock();
         } catch (error) { showToast(error.message, 'error'); }
         finally { button.disabled = false; }
