@@ -649,6 +649,15 @@ async function compressImageForAI(file, maxDim = 1024) {
     });
 }
 
+function isGarbageFilename(filename = '') {
+    const clean = String(filename || '').replace(/\.[^/.]+$/, '').trim();
+    if (!clean) return true;
+    if (/^\d+$/.test(clean)) return true;
+    if (/^(img|photo|pxl|dsc|win|vid|image)[_\-\d]+/i.test(clean)) return true;
+    if (clean.length > 15 && (clean.match(/\d/g) || []).length > 10) return true;
+    return false;
+}
+
 async function analyzeProductImageWithAI(file) {
     if (!file) return null;
 
@@ -658,7 +667,7 @@ async function analyzeProductImageWithAI(file) {
     const storedKey = (localStorage.getItem('gemini_api_key') || window.GEMINI_API_KEY || '').trim();
 
     if (storedKey) {
-        const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+        const models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'];
 
         for (const model of models) {
             try {
@@ -667,9 +676,10 @@ async function analyzeProductImageWithAI(file) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         contents: [{
+                            role: "user",
                             parts: [
                                 {
-                                    text: "Analise a imagem deste produto comercial, insumo, cosmético ou ferramenta. Identifique o nome preciso do produto com marca e volume/especificação se visível. Retorne APENAS um JSON estrito no formato: {\"nome\": \"Nome do produto\", \"categoria\": \"Categoria ex: Cabelo, Esmaltes, Pintura, Limpeza, Ferramentas\", \"tipo\": \"consumo\"}. Não inclua explicações ou markdown adicionais."
+                                    text: "Analise o rótulo e a embalagem desta foto de produto. Identifique a marca e nome do produto com precisão. Retorne um JSON no formato: {\"nome\": \"Marca e Nome do Produto\", \"categoria\": \"Categoria do produto ex: Capilar, Esmaltes, Limpeza, Ferramentas\", \"tipo\": \"consumo\"}."
                                 },
                                 {
                                     inline_data: {
@@ -678,7 +688,11 @@ async function analyzeProductImageWithAI(file) {
                                     }
                                 }
                             ]
-                        }]
+                        }],
+                        generationConfig: {
+                            response_mime_type: "application/json",
+                            temperature: 0.2
+                        }
                     })
                 });
 
@@ -688,7 +702,9 @@ async function analyzeProductImageWithAI(file) {
                     const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
                     if (jsonMatch) {
                         const parsed = JSON.parse(jsonMatch[0]);
-                        if (parsed.nome) return { ...parsed, source: 'ai_vision', modelUsed: model };
+                        if (parsed.nome && !isGarbageFilename(parsed.nome)) {
+                            return { ...parsed, source: 'ai_vision', modelUsed: model };
+                        }
                     }
                 } else {
                     const errText = await response.text();
@@ -704,16 +720,14 @@ async function analyzeProductImageWithAI(file) {
         }
     }
 
-    const cleanName = file.name
-        .replace(/\.[^/.]+$/, '')
-        .replace(/[-_]/g, ' ')
-        .replace(/\b\w/g, l => l.toUpperCase());
+    const rawName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').trim();
+    const isGarbage = isGarbageFilename(file.name);
+    const cleanName = isGarbage ? '' : rawName.replace(/\b\w/g, l => l.toUpperCase());
 
-    const isTool = /ferramenta|alicate|tesoura|secador|prancha|pincel|espula|maleta/i.test(cleanName);
-    const validName = cleanName.length > 3 && !/^image\d*/i.test(cleanName) ? cleanName : '';
+    const isTool = /ferramenta|alicate|tesoura|secador|prancha|pincel|espula|maleta/i.test(rawName);
 
     return {
-        nome: validName,
+        nome: cleanName,
         categoria: isTool ? 'Ferramenta' : 'Consumo Geral',
         tipo: isTool ? 'ferramenta' : 'consumo',
         source: 'heuristic',
