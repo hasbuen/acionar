@@ -140,7 +140,12 @@
 
     <script type="module">
         import { supabase } from './js/supabase.js';
-        import { initTheme, ensureActiveProfessionalFromSession } from './js/app.js?v=3.1';
+        import {
+            initTheme,
+            ensureActiveProfessionalFromSession,
+            registerWebPushSubscription,
+            isAlarmEnabled
+        } from './js/app.js?v=3.2';
 
         initTheme();
 
@@ -213,7 +218,12 @@
             }
 
             if (authSuccess) {
-                await ensureActiveProfessionalFromSession();
+                const activeProf = await ensureActiveProfessionalFromSession();
+                if (activeProf?.id && 'Notification' in window && Notification.permission === 'granted' && isAlarmEnabled()) {
+                    await registerWebPushSubscription().catch((err) => {
+                        console.warn('Não foi possível vincular as notificações ao profissional autenticado:', err);
+                    });
+                }
                 window.location.href = './dashboard.html';
             } else {
                 showError('E-mail ou senha incorretos. Verifique suas credenciais.');

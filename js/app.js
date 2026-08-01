@@ -160,9 +160,15 @@ async function fetchWebPushPublicKey() {
     return '';
 }
 
-async function registerWebPushSubscription() {
+export async function registerWebPushSubscription() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         console.warn('Web Push não está disponível neste navegador/PWA.');
+        return null;
+    }
+
+    const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
+    if (!activeProf?.id) {
+        console.warn('Web Push não registrado: profissional da sessão não identificado.');
         return null;
     }
 
@@ -181,7 +187,6 @@ async function registerWebPushSubscription() {
         });
     }
 
-    const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
     const json = subscription.toJSON();
     const endpoint = json.endpoint || subscription.endpoint;
     const payload = {
