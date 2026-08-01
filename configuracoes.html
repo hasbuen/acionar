@@ -844,12 +844,24 @@
                     ativo: true,
                     aceita_atendimento_externo: Boolean(inputProfAtendimentoExterno?.checked)
                 });
-                await saveStripePlatformFee({
-                    profissionalId: savedProfessional.id,
-                    percentual: Math.max(0, Number(inputProfTaxaPercentual?.value || 0)),
-                    fixoCentavos: Math.round(Math.max(0, Number(inputProfTaxaFixa?.value || 0)) * 100)
-                });
+                let feeConfigPending = false;
+                try {
+                    await saveStripePlatformFee({
+                        profissionalId: savedProfessional.id,
+                        percentual: Math.max(0, Number(inputProfTaxaPercentual?.value || 0)),
+                        fixoCentavos: Math.round(Math.max(0, Number(inputProfTaxaFixa?.value || 0)) * 100)
+                    });
+                } catch (feeError) {
+                    if (feeError.code === 'FINANCIAL_CONFIG_MISSING' || feeError.code === 'SERVICE_ROLE_REQUIRED') {
+                        feeConfigPending = true;
+                    } else {
+                        throw feeError;
+                    }
+                }
                 showToast(id ? `Dados e senha do auxiliar ${inputProfNome.value} atualizados!` : `Auxiliar ${inputProfNome.value} cadastrado com sucesso!`, 'success');
+                if (feeConfigPending) {
+                    showToast('Auxiliar salvo. A taxa será liberada após concluir as chaves financeiras da Vercel.', 'info');
+                }
                 resetFormProfissional();
                 loadProfissionais();
             } catch (err) {
