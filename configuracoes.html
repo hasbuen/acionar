@@ -523,12 +523,12 @@
             escapeHtml,
             getActiveProfessional,
             performLogout
-        } from './js/app.js?v=3.10';
+        } from './js/app.js?v=3.11';
         import {
             fetchStripeConnectStatus,
             mountStripeConnectOnboarding,
             saveStripePlatformFee
-        } from './js/stripe-payments.js?v=1.0';
+        } from './js/stripe-payments.js?v=1.1';
 
         initTheme();
 
@@ -556,6 +556,7 @@
             if (btnStripeConnect) {
                 btnStripeConnect.disabled = false;
                 btnStripeConnect.classList.remove('opacity-50', 'cursor-not-allowed');
+                delete btnStripeConnect.dataset.requiresAuth;
             }
             stripeStatusBadge.className = 'text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full';
             if (state.onboardingComplete && state.payoutsEnabled) {
@@ -593,6 +594,15 @@
                     }
                     return;
                 }
+                if (error.code === 'AUTH_SESSION_REQUIRED') {
+                    renderStripeStatus({ connected: false });
+                    stripeStatusBadge.textContent = 'Login necessário';
+                    stripeStatusBadge.className = 'text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400';
+                    stripeStatusText.textContent = 'Entre novamente neste aparelho para proteger seus dados bancários.';
+                    btnStripeConnectText.textContent = 'Entrar novamente para configurar';
+                    if (btnStripeConnect) btnStripeConnect.dataset.requiresAuth = 'true';
+                    return;
+                }
                 stripeStatusBadge.textContent = 'Configuração pendente';
                 stripeStatusBadge.className = 'text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400';
                 stripeStatusText.textContent = error.message;
@@ -601,6 +611,11 @@
         }
 
         btnStripeConnect?.addEventListener('click', async () => {
+            if (btnStripeConnect.dataset.requiresAuth === 'true') {
+                localStorage.removeItem('active_professional');
+                window.location.href = './index.html';
+                return;
+            }
             stripeFormWrap.classList.remove('hidden');
             stripeLoading.classList.remove('hidden');
             stripeContainer.replaceChildren();
@@ -618,6 +633,11 @@
                 stripeLoading.classList.add('hidden');
             } catch (error) {
                 stripeLoading.classList.add('hidden');
+                if (error.code === 'AUTH_SESSION_REQUIRED') {
+                    localStorage.removeItem('active_professional');
+                    window.location.href = './index.html';
+                    return;
+                }
                 showToast(error.message, 'error');
             } finally {
                 btnStripeConnect.disabled = false;

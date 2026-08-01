@@ -2561,7 +2561,10 @@ export async function performLogout() {
     await deactivateCurrentWebPushSubscription();
 
     try {
-        await supabase.auth.signOut();
+        // Encerra somente a sessao deste aparelho. O escopo padrao do Supabase
+        // e global e derrubava Android, iPhone e navegador quando um deles
+        // usava "Sair do Aplicativo" com a mesma conta profissional.
+        await supabase.auth.signOut({ scope: 'local' });
     } catch (e) {}
 
     try {

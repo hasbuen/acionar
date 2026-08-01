@@ -5,8 +5,25 @@ let connectInstance = null;
 let connectLoadPromise = null;
 
 async function accessToken() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) throw new Error('Sua sessão expirou. Entre novamente.');
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+
+    let session = sessionData?.session || null;
+
+    // Em PWA/mobile o armazenamento pode entregar a sessao alguns instantes
+    // antes da renovacao automatica terminar. Tenta renovar uma vez antes de
+    // informar que o login realmente precisa ser refeito.
+    if (!session?.access_token) {
+        const { data: refreshedData, error: refreshError } = await supabase.auth.refreshSession();
+        if (!refreshError) session = refreshedData?.session || null;
+    }
+
+    if (!session?.access_token) {
+        const error = new Error('Para configurar recebimentos, entre novamente neste aparelho.');
+        error.code = 'AUTH_SESSION_REQUIRED';
+        throw error;
+    }
+
     return session.access_token;
 }
 
