@@ -148,7 +148,29 @@
         import {
             clearFinancialSession,
             unlockFinancialSession
-        } from './js/asaas-payments.js?v=1.0';
+        } from './js/asaas-payments.js?v=2.1';
+
+        initTheme();
+
+        const loginForm = document.getElementById('login-form');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        const submitBtn = document.getElementById('submit-btn');
+
+        async function checkSession() {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const activeProf = localStorage.getItem('active_professional');
+                if (session || activeProf) {
+                    window.location.href = './dashboard.html';
+                }
+            } catch (err) {
+                console.log("Check Session status:", err);
+            }
+        }
+
 
         initTheme();
 
@@ -193,40 +215,40 @@
             const password = passwordInput.value;
 
             let authSuccess = false;
+            let activeProf = null;
 
-            // Nunca reutilize a identidade profissional da sessao anterior.
-            // Em dispositivos compartilhados isso vinculava o Push do novo login
-            // ao profissional que havia acessado o painel anteriormente.
             localStorage.removeItem('active_professional');
             clearFinancialSession();
 
-            // 1. Tentar autenticação no Supabase Auth (GoTrue)
             try {
-                const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email, password });
-                if (!authErr && authData?.session) {
+                // 1. Verificar primeiro na tabela de profissionais
+                const { data: profData, error: profErr } = await supabase
+                    .from('profissionais')
+                    .select('*')
+                    .eq('email', email)
+                    .eq('ativo', true)
+                    .maybeSingle();
+
+                if (!profErr && profData && (profData.senha_hash === password || profData.cargo === 'auxiliar')) {
                     authSuccess = true;
+                    activeProf = profData;
+                    localStorage.setItem('active_professional', JSON.stringify(profData));
                 }
-            } catch (e) {}
 
-            // 2. Se não encontrou no Supabase Auth, tentar via Tabela de Profissionais (Auxiliares cadastrados no painel)
-            if (!authSuccess) {
-                try {
-                    const { data: profData, error: profErr } = await supabase
-                        .from('profissionais')
-                        .select('*')
-                        .eq('email', email)
-                        .eq('ativo', true)
-                        .maybeSingle();
-
-                    if (!profErr && profData && (profData.senha_hash === password || profData.cargo === 'auxiliar')) {
+                // 2. Se não autenticou pela tabela, tentar via Supabase Auth (GoTrue)
+                if (!authSuccess) {
+                    const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email, password });
+                    if (!authErr && authData?.session) {
                         authSuccess = true;
-                        localStorage.setItem('active_professional', JSON.stringify(profData));
+                        activeProf = await ensureActiveProfessionalFromSession();
                     }
-                } catch (e) {}
+                }
+            } catch (err) {
+                console.warn('Falha na tentativa de login:', err);
             }
 
             if (authSuccess) {
-                const activeProf = await ensureActiveProfessionalFromSession();
+                activeProf = activeProf || getActiveProfessional() || await ensureActiveProfessionalFromSession();
                 if (activeProf?.id) {
                     await unlockFinancialSession(password).catch(() => null);
                 }

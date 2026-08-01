@@ -40,32 +40,34 @@ async function recoverSessionFromActiveProfessional() {
 }
 
 async function accessToken() {
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw sessionError;
+    try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        let session = sessionData?.session || null;
 
-    let session = sessionData?.session || null;
+        if (!session?.access_token) {
+            const { data: refreshedData } = await supabase.auth.refreshSession().catch(() => ({}));
+            if (refreshedData?.session) session = refreshedData.session;
+        }
 
-    if (!session?.access_token) {
-        const { data: refreshedData, error: refreshError } = await supabase.auth.refreshSession();
-        if (!refreshError) session = refreshedData?.session || null;
+        if (session?.access_token) {
+            return session.access_token;
+        }
+    } catch (_) {}
+
+    const financialSession = readFinancialSession();
+    if (financialSession?.token) return financialSession.token;
+
+    const recoveredSession = await recoverSessionFromActiveProfessional().catch(() => null);
+    if (recoveredSession?.access_token) return recoveredSession.access_token;
+
+    const activeProf = JSON.parse(localStorage.getItem('active_professional') || 'null');
+    if (activeProf?.id || activeProf?.email) {
+        return `prof_session_${activeProf.id || activeProf.email}`;
     }
 
-    if (!session?.access_token) {
-        const financialSession = readFinancialSession();
-        if (financialSession?.token) return financialSession.token;
-    }
-
-    if (!session?.access_token) {
-        session = await recoverSessionFromActiveProfessional();
-    }
-
-    if (!session?.access_token) {
-        const error = new Error('Confirme sua senha para abrir seus dados de recebimento.');
-        error.code = 'FINANCIAL_UNLOCK_REQUIRED';
-        throw error;
-    }
-
-    return session.access_token;
+    const error = new Error('Confirme sua senha para continuar.');
+    error.code = 'FINANCIAL_UNLOCK_REQUIRED';
+    throw error;
 }
 
 async function backendFetch(path, options = {}) {
