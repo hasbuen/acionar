@@ -204,9 +204,14 @@
                         <span class="text-xs font-bold">Fotografar / Anexar produto</span>
                     </span>
                 </label>
-                <div class="flex items-center gap-2 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-500/10 p-2.5 rounded-2xl border border-blue-500/20">
-                    <i class="fa-solid fa-wand-magic-sparkles text-blue-500 text-sm"></i>
-                    <span><strong>IA Generativa:</strong> Tire foto do produto para preencher o <strong>Nome</strong> e gerar o <strong>Código SKU</strong> automaticamente!</span>
+                <div class="flex items-center justify-between gap-2 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-500/10 p-2.5 rounded-2xl border border-blue-500/20">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-blue-500 text-sm shrink-0"></i>
+                        <span><strong>IA Generativa:</strong> Tire foto do produto para preencher o <strong>Nome</strong> e gerar o <strong>SKU</strong>!</span>
+                    </div>
+                    <button type="button" id="btnConfigurarIaKey" class="px-2.5 py-1.5 rounded-xl bg-blue-600 text-white font-extrabold hover:bg-blue-700 shrink-0 transition-all text-[9px] uppercase tracking-wider">
+                        🔑 Chave IA
+                    </button>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tipo
@@ -390,7 +395,7 @@
     </div>
 
     <script type="module">
-        import { initEstoquePage } from './js/estoque.js?v=3.5';
+        import { initEstoquePage } from './js/estoque.js?v=3.6';
         initEstoquePage();
     </script>
 </body>

@@ -624,17 +624,17 @@ async function analyzeProductImageWithAI(file) {
     if (!base64Data) return null;
 
     const mimeType = file.type || 'image/jpeg';
+    const storedKey = localStorage.getItem('gemini_api_key') || window.GEMINI_API_KEY || '';
 
-    try {
-        const apiKey = window.GEMINI_API_KEY || '';
-        if (apiKey) {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    if (storedKey) {
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${storedKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     contents: [{
                         parts: [
-                            { text: "Analise a imagem deste produto comercial, cosmético, insumo ou ferramenta. Retorne APENAS um JSON estrito no formato: {\"nome\": \"Nome Preciso do Produto com especificação\", \"categoria\": \"Categoria ex: Tintas, Cabelo, Esmaltes, Limpeza, Ferramenta\", \"tipo\": \"consumo\"}. Não inclua markdown extra." },
+                            { text: "Analise a imagem deste produto comercial, insumo ou ferramenta. Retorne APENAS um JSON estrito no formato: {\"nome\": \"Nome do produto com marca e especificação\", \"categoria\": \"Categoria ex: Pintura, Capilar, Esmaltes, Limpeza, Ferramentas\", \"tipo\": \"consumo\"}. Não inclua markdown extra." },
                             { inline_data: { mime_type: mimeType, data: base64Data } }
                         ]
                     }]
@@ -647,12 +647,14 @@ async function analyzeProductImageWithAI(file) {
                 const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
                     const parsed = JSON.parse(jsonMatch[0]);
-                    if (parsed.nome) return parsed;
+                    if (parsed.nome) return { ...parsed, source: 'ai_vision' };
                 }
+            } else {
+                console.warn('Resposta não OK da API Gemini:', await response.text());
             }
+        } catch (e) {
+            console.warn('API Generativa de Visão em nuvem indisponível:', e);
         }
-    } catch (e) {
-        console.warn('API Generativa de Visão em nuvem indisponível, acionando IA heurística:', e);
     }
 
     const cleanName = file.name
@@ -661,11 +663,14 @@ async function analyzeProductImageWithAI(file) {
         .replace(/\b\w/g, l => l.toUpperCase());
 
     const isTool = /ferramenta|alicate|tesoura|secador|prancha|pincel|espula|maleta/i.test(cleanName);
+    const validName = cleanName.length > 3 && !/^image\d*/i.test(cleanName) ? cleanName : 'Produto Identificado';
 
     return {
-        nome: cleanName.length > 3 ? cleanName : 'Produto Identificado',
+        nome: validName,
         categoria: isTool ? 'Ferramenta' : 'Consumo Geral',
-        tipo: isTool ? 'ferramenta' : 'consumo'
+        tipo: isTool ? 'ferramenta' : 'consumo',
+        source: 'heuristic',
+        hasKey: Boolean(storedKey)
     };
 }
 
@@ -677,6 +682,23 @@ export async function initEstoquePage() {
         if (!isMissingSchema(error)) showToast(`Erro ao carregar estoque: ${error.message}`, 'error');
         renderProducts();
     }
+
+    document.getElementById('btnConfigurarIaKey')?.addEventListener('click', () => {
+        const currentKey = localStorage.getItem('gemini_api_key') || '';
+        const key = prompt(
+            'Para a IA analisar suas fotos em tempo real, informe uma Chave Gratuita do Google Gemini (obtenha em https://aistudio.google.com/app/apikey):\n\nCole sua Chave da API Gemini:',
+            currentKey
+        );
+        if (key !== null) {
+            if (key.trim()) {
+                localStorage.setItem('gemini_api_key', key.trim());
+                showToast('🔑 Chave da IA salva com sucesso! Agora suas fotos serão analisadas em tempo real.', 'success');
+            } else {
+                localStorage.removeItem('gemini_api_key');
+                showToast('Chave da IA removida.', 'info');
+            }
+        }
+    });
 
     document.getElementById('btnNovoProduto')?.addEventListener('click', () => openProductModal());
     document.getElementById('btnRegistrarEntrada')?.addEventListener('click', () => openMovementModal('', 'entrada'));
