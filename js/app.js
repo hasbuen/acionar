@@ -196,7 +196,12 @@ export async function registerWebPushSubscription() {
 
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
-    if (subscription && !pushSubscriptionUsesKey(subscription, publicKey)) {
+    const registeredKey = localStorage.getItem('web_push_registration_key');
+    const mustRenewSubscription = subscription && (
+        !pushSubscriptionUsesKey(subscription, publicKey) ||
+        registeredKey !== publicKey
+    );
+    if (mustRenewSubscription) {
         await subscription.unsubscribe();
         subscription = null;
     }
@@ -230,6 +235,7 @@ export async function registerWebPushSubscription() {
     }
 
     localStorage.setItem('web_push_registered', 'true');
+    localStorage.setItem('web_push_registration_key', publicKey);
     return subscription;
 }
 
