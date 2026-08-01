@@ -431,6 +431,10 @@
                             <button type="button" class="btn-preset-time-edit btn-animated px-2.5 py-1 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-bold hover:bg-blue-600 hover:text-white transition-all" data-time="17:00">17:00</button>
                         </div>
                     </div>
+                    <div id="editOutsideHoursNotice" class="hidden items-start gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                        <i class="fa-solid fa-circle-info mt-0.5"></i>
+                        <span>Exceção manual ativada: você pode escolher um horário fora do expediente. Conflitos com outro atendimento continuam bloqueados.</span>
+                    </div>
                 </div>
 
                 <!-- SELETOR DE STATUS EM CHIPS -->
@@ -681,6 +685,7 @@
             transferirAgendamentoParaProfissional,
             updateAgendamentoStatus,
             updateAgendamento,
+            fetchPermissaoEdicaoForaExpediente,
             updateAgendamentoObservacoes,
             deleteAgendamento,
             getAvailableTimeSlots,
@@ -689,7 +694,7 @@
             generateWhatsAppManutencaoMessage,
             cleanPhone,
             performLogout
-        } from './js/app.js?v=3.9';
+        } from './js/app.js?v=3.10';
         import { supabase } from './js/supabase.js';
         import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './js/datetime.js';
         import { createStripeCheckout } from './js/stripe-payments.js?v=1.0';
@@ -1778,6 +1783,14 @@
                 document.getElementById('editInputObservacoes').value = ag.observacoes || '';
 
                 updateEditStatusChips(ag.status || 'aguardando_confirmacao');
+
+                const outsideHoursNotice = document.getElementById('editOutsideHoursNotice');
+                outsideHoursNotice?.classList.add('hidden');
+                outsideHoursNotice?.classList.remove('flex');
+                fetchPermissaoEdicaoForaExpediente().then(habilitado => {
+                    outsideHoursNotice?.classList.toggle('hidden', !habilitado);
+                    outsideHoursNotice?.classList.toggle('flex', habilitado);
+                });
 
                 modalEdit.classList.remove('hidden');
             }

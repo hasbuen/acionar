@@ -371,6 +371,25 @@
                     <!-- Preenchido via JS -->
                 </div>
 
+                <div class="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 sm:p-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div class="flex items-start gap-3 min-w-0">
+                            <div class="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-calendar-plus"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-extrabold text-slate-900 dark:text-white">Permitir ajustes manuais fora do expediente</h4>
+                                <p class="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400 mt-1">Quando ativo, você pode alterar os seus próprios agendamentos para um dia ou horário excepcional. A agenda pública continua exibindo apenas horários disponíveis e conflitos continuam bloqueados.</p>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input type="checkbox" id="toggleEdicaoForaExpediente" class="sr-only peer">
+                            <div class="w-12 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-slate-600 peer-checked:bg-amber-500"></div>
+                            <span id="labelEdicaoForaExpediente" class="ml-3 text-xs font-extrabold text-slate-500 dark:text-slate-400">Desativado</span>
+                        </label>
+                    </div>
+                </div>
+
                 <div class="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
                     <button type="button" id="btnSaveHorariosBottom" class="flex items-center justify-center gap-2 px-8 py-3.5 rounded-full text-xs font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/25 transition-all transform active:scale-95">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -485,6 +504,8 @@
             showToast, 
             fetchConfiguracaoHorarios, 
             saveConfiguracaoHorarios,
+            fetchPermissaoEdicaoForaExpediente,
+            savePermissaoEdicaoForaExpediente,
             fetchConfiguracaoMensagemWhatsApp,
             saveConfiguracaoMensagemWhatsApp,
             MENSAGEM_WHATSAPP_PADRAO,
@@ -502,7 +523,7 @@
             escapeHtml,
             getActiveProfessional,
             performLogout
-        } from './js/app.js?v=3.9';
+        } from './js/app.js?v=3.10';
         import {
             fetchStripeConnectStatus,
             mountStripeConnectOnboarding,
@@ -1109,12 +1130,47 @@
         document.getElementById('btnSaveHorariosTop')?.addEventListener('click', saveAllHorarios);
         document.getElementById('btnSaveHorariosBottom')?.addEventListener('click', saveAllHorarios);
 
+        const toggleEdicaoForaExpediente = document.getElementById('toggleEdicaoForaExpediente');
+        const labelEdicaoForaExpediente = document.getElementById('labelEdicaoForaExpediente');
+
+        function renderEdicaoForaExpediente(habilitado) {
+            if (toggleEdicaoForaExpediente) toggleEdicaoForaExpediente.checked = Boolean(habilitado);
+            if (labelEdicaoForaExpediente) {
+                labelEdicaoForaExpediente.textContent = habilitado ? 'Ativado' : 'Desativado';
+                labelEdicaoForaExpediente.className = habilitado
+                    ? 'ml-3 text-xs font-extrabold text-amber-600 dark:text-amber-400'
+                    : 'ml-3 text-xs font-extrabold text-slate-500 dark:text-slate-400';
+            }
+        }
+
+        async function loadEdicaoForaExpediente() {
+            renderEdicaoForaExpediente(await fetchPermissaoEdicaoForaExpediente());
+        }
+
+        toggleEdicaoForaExpediente?.addEventListener('change', async (event) => {
+            const habilitado = event.target.checked;
+            event.target.disabled = true;
+            try {
+                await savePermissaoEdicaoForaExpediente(habilitado);
+                renderEdicaoForaExpediente(habilitado);
+                showToast(habilitado
+                    ? 'Ajustes manuais fora do expediente foram ativados para você.'
+                    : 'Ajustes manuais voltaram a respeitar o seu expediente.', 'success');
+            } catch (err) {
+                renderEdicaoForaExpediente(!habilitado);
+                showToast('Erro ao salvar a permissão: ' + err.message, 'error');
+            } finally {
+                event.target.disabled = false;
+            }
+        });
+
         document.getElementById('btnLogoutSettings')?.addEventListener('click', async () => {
             await performLogout();
         });
 
         loadWhatsAppConfig();
         loadHorariosConfig();
+        loadEdicaoForaExpediente();
         if (window.lucide) window.lucide.createIcons();
     </script>
 </body>

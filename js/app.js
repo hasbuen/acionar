@@ -1750,6 +1750,55 @@ export async function saveConfiguracaoHorarios(configValor) {
     return true;
 }
 
+const MANUAL_OUTSIDE_HOURS_KEY_PREFIX = 'permitir_edicao_manual_fora_expediente_';
+
+function configuracaoBoolean(valor, fallback = false) {
+    if (typeof valor === 'boolean') return valor;
+    if (typeof valor === 'number') return valor !== 0;
+    if (typeof valor === 'string') return ['1', 'true', 'sim', 'ativo'].includes(valor.trim().toLowerCase());
+    if (valor && typeof valor === 'object') {
+        return configuracaoBoolean(valor.ativo ?? valor.habilitado ?? valor.valor, fallback);
+    }
+    return fallback;
+}
+
+export async function fetchPermissaoEdicaoForaExpediente(profissionalId = null) {
+    const activeProf = getActiveProfessional() || (!profissionalId ? await ensureActiveProfessionalFromSession() : null);
+    const targetProfId = profissionalId || activeProf?.id || null;
+    if (!targetProfId) return false;
+
+    try {
+        const { data, error } = await supabase
+            .from('configuracoes')
+            .select('valor')
+            .eq('chave', `${MANUAL_OUTSIDE_HOURS_KEY_PREFIX}${targetProfId}`)
+            .maybeSingle();
+
+        if (error) throw error;
+        return configuracaoBoolean(data?.valor, false);
+    } catch (err) {
+        console.warn('Não foi possível carregar a permissão de edição fora do expediente:', err);
+        return false;
+    }
+}
+
+export async function savePermissaoEdicaoForaExpediente(habilitado) {
+    const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
+    const targetProfId = activeProf?.id || null;
+    if (!targetProfId) throw new Error('Profissional ativo não identificado. Faça login novamente.');
+
+    const { error } = await supabase
+        .from('configuracoes')
+        .upsert({
+            chave: `${MANUAL_OUTSIDE_HOURS_KEY_PREFIX}${targetProfId}`,
+            valor: { ativo: Boolean(habilitado), profissional_id: targetProfId },
+            descricao: `Permite ao profissional ${activeProf.nome || targetProfId} ajustar manualmente os próprios agendamentos fora do expediente`
+        }, { onConflict: 'chave' });
+
+    if (error) throw error;
+    return true;
+}
+
 // --- CÁLCULO INTELIGENTE DE HORÁRIOS DISPONÍVEIS COM BASE NA DURAÇÃO DO SERVIÇO ---
 export async function getAvailableTimeSlots(dateStr, servicoDuracao = 30, options = {}) {
     if (!dateStr) return { closed: true, slots: [] };
@@ -2665,11 +2714,52 @@ export async function transferirAgendamentoParaProfissional(agendamentoId, profi
 }
 
 export async function updateAgendamento(id, { servico_id, data_hora_inicio, observacoes, status }) {
+    const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
+    const activeProfId = activeProf?.id || null;
+    const { data: atual, error: atualError } = await supabase
+        .from('agendamentos')
+        .select('id, profissional_id, servico_id, data_hora_inicio, data_hora_fim, status')
+        .eq('id', id)
+        .maybeSingle();
+
+    if (atualError) throw atualError;
+    if (!atual) throw new Error('Agendamento não encontrado. Atualize a agenda e tente novamente.');
+
     const { data: servico } = await supabase.from('servicos').select('duracao_minutos').eq('id', servico_id).single();
     const duracao = servico?.duracao_minutos || 30;
 
     const dataInicio = new Date(data_hora_inicio);
     const dataFim = new Date(dataInicio.getTime() + duracao * 60000);
+    if (Number.isNaN(dataInicio.getTime())) throw new Error('Informe uma data e horário válidos.');
+
+    const isOwnAppointment = Boolean(activeProfId && atual.profissional_id === activeProfId);
+    if (isOwnAppointment) {
+        const candidato = {
+            ...atual,
+            servico_id,
+            data_hora_inicio: dataInicio.toISOString(),
+            data_hora_fim: dataFim.toISOString()
+        };
+        const allowOutsideHours = await fetchPermissaoEdicaoForaExpediente(activeProfId);
+
+        if (!allowOutsideHours) {
+            await fetchActiveProfessionalHorarioConfig();
+            if (!canActiveProfessionalAttendAppointment(candidato)) {
+                throw new Error('Profissional não atende neste dia ou horário. Ative a permissão de ajuste manual nas configurações para fazer uma exceção.');
+            }
+        }
+
+        const { data: agendamentos, error: conflictError } = await supabase
+            .from('agendamentos')
+            .select('id, data_hora_inicio, data_hora_fim, status, profissional_id, servicos(duracao_minutos)')
+            .eq('profissional_id', activeProfId)
+            .neq('status', 'cancelado');
+
+        if (conflictError) throw conflictError;
+        if (professionalHasConflictWithAppointment(candidato, agendamentos || [], activeProfId)) {
+            throw new Error('Já existe outro agendamento deste profissional neste horário.');
+        }
+    }
 
     const payload = {
         servico_id,
