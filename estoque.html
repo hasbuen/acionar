@@ -10,16 +10,11 @@
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <title>Acionar - Controle de estoque</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="./css/estoque.css?v=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] }, spacing: { 'safe-bottom': 'env(safe-area-inset-bottom)', 'safe-top': 'env(safe-area-inset-top)' } } }
-        };
         if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark');
     </script>
     <style>
@@ -52,7 +47,7 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28 space-y-5">
         <section id="estoqueSetupAlert" class="hidden rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
-            <div class="flex gap-3"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><div><strong class="block">Banco ainda não preparado</strong><span class="text-xs">Execute <code>supabase/estoque_profissional.sql</code> no SQL Editor da Lovable/Supabase e recarregue esta página.</span></div></div>
+            <div class="flex gap-3"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><div><strong class="block">Banco ainda não preparado</strong><span class="text-xs">Execute o script de configuração fornecido no SQL Editor da Lovable/Supabase e recarregue esta página.</span></div></div>
         </section>
 
         <section class="rounded-[2rem] border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-5 sm:p-6 shadow-sm">

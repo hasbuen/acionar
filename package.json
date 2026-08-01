@@ -2,6 +2,7 @@
   "name": "acionar-static",
   "private": true,
   "scripts": {
-    "dev": "node --env-file=.env scripts/dev-server.mjs"
+    "dev": "node --env-file=.env scripts/dev-server.mjs",
+    "build:css:estoque": "npx --yes tailwindcss@3.4.17 -c tailwind.config.cjs -i css/tailwind-input.css -o css/estoque.css --minify"
   }
 }
