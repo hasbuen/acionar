@@ -54,7 +54,17 @@ export function initTheme() {
         });
     }
 
-    // Iniciar checagem em segundo plano de agendamentos prestes a iniciar (5 minutos antes)
+    const logoutBtns = document.querySelectorAll('#btnLogout, [data-action="logout"]');
+    logoutBtns.forEach(btn => {
+        if (!btn.dataset.logoutBound) {
+            btn.dataset.logoutBound = 'true';
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await performLogout();
+            });
+        }
+    });
+
     try {
         hydrateHeaderIdentity();
         ensurePushNotificationOnboarding().catch((err) => console.warn('Onboarding de Web Push indisponível:', err));

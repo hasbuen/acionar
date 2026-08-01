@@ -1940,9 +1940,9 @@
             }
         }
 
-        const handleLogout = async () => {
+        document.getElementById('btnLogout')?.addEventListener('click', async () => {
             await performLogout();
-        };
+        });
 
         document.querySelectorAll('.overflow-x-auto').forEach(container => {
             let isDown = false;
