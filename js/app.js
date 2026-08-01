@@ -55,9 +55,7 @@ export function initTheme() {
     // Iniciar checagem em segundo plano de agendamentos prestes a iniciar (5 minutos antes)
     try {
         hydrateHeaderIdentity();
-        if ('Notification' in window && Notification.permission === 'granted') {
-            registerWebPushSubscription().catch((err) => console.warn('Web Push indisponível na inicialização:', err));
-        }
+        ensurePushNotificationOnboarding().catch((err) => console.warn('Onboarding de Web Push indisponível:', err));
         startUpcoming5MinChecker();
     } catch (e) {}
 }
@@ -248,6 +246,92 @@ export async function registerWebPushSubscription() {
         return await pushRegistrationPromise;
     } finally {
         pushRegistrationPromise = null;
+    }
+}
+
+function removePushOnboarding() {
+    document.getElementById('push-notification-onboarding')?.remove();
+}
+
+export async function ensurePushNotificationOnboarding() {
+    const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
+    if (!activeProf?.id || !('Notification' in window)) return;
+
+    if (Notification.permission === 'granted') {
+        removePushOnboarding();
+        await registerWebPushSubscription();
+        return;
+    }
+
+    if (document.getElementById('push-notification-onboarding')) return;
+
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const permissionDenied = Notification.permission === 'denied';
+    const needsIOSInstall = isIOS && !isStandalone;
+    const card = document.createElement('section');
+    card.id = 'push-notification-onboarding';
+    card.setAttribute('role', 'status');
+    card.className = 'fixed z-[100] left-3 right-3 bottom-24 sm:left-auto sm:right-5 sm:bottom-5 sm:w-[390px] rounded-2xl border border-blue-400/30 bg-slate-950/95 text-white p-4 shadow-2xl backdrop-blur-xl';
+    card.innerHTML = `
+        <div class="flex items-start gap-3">
+            <div class="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-500/20 text-blue-300">
+                <span aria-hidden="true" class="text-xl">🔔</span>
+            </div>
+            <div class="min-w-0 flex-1">
+                <p class="text-sm font-bold">Receba novos agendamentos</p>
+                <p class="mt-1 text-xs leading-relaxed text-slate-300">
+                    ${needsIOSInstall
+                        ? 'No iPhone, instale o Acionar pela Tela de Início para liberar as notificações.'
+                        : permissionDenied
+                            ? 'As notificações estão bloqueadas nas configurações deste aparelho.'
+                            : 'Ative uma vez neste aparelho. Depois o vínculo com seu perfil será automático.'}
+                </p>
+                <button type="button" class="mt-3 w-full rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-500 active:scale-[0.98]">
+                    ${needsIOSInstall ? 'Como instalar no iPhone' : permissionDenied ? 'Como desbloquear' : 'Ativar notificações'}
+                </button>
+            </div>
+        </div>
+    `;
+
+    card.querySelector('button')?.addEventListener('click', () => {
+        if (needsIOSInstall) {
+            showToast('No Safari: Compartilhar > Adicionar à Tela de Início. Abra o Acionar pelo novo ícone e toque em Ativar notificações.', 'info');
+            return;
+        }
+        if (permissionDenied) {
+            showToast('Abra as configurações do aparelho, permita notificações para o Acionar e volte ao aplicativo.', 'error');
+            return;
+        }
+
+        requestNotificationPermission(async (granted) => {
+            if (!granted) return;
+            setAlarmEnabled(true);
+            const subscription = await registerWebPushSubscription().catch(() => null);
+            if (subscription) {
+                removePushOnboarding();
+                showToast('Notificações ativadas neste aparelho.', 'success');
+            }
+        });
+    });
+
+    document.body.appendChild(card);
+}
+
+async function deactivateCurrentWebPushSubscription() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (!subscription?.endpoint) return;
+
+        await supabase
+            .from('push_subscriptions')
+            .update({ ativo: false, atualizado_em: new Date().toISOString() })
+            .eq('endpoint', subscription.endpoint);
+    } catch (error) {
+        console.warn('Não foi possível desativar o Push deste aparelho no logout:', error);
     }
 }
 
@@ -2425,6 +2509,8 @@ export async function ensureActiveProfessionalFromSession() {
 }
 
 export async function performLogout() {
+    await deactivateCurrentWebPushSubscription();
+
     try {
         await supabase.auth.signOut();
     } catch (e) {}
