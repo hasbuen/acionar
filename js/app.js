@@ -135,6 +135,16 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
+function pushSubscriptionUsesKey(subscription, publicKey) {
+    const currentKey = subscription?.options?.applicationServerKey;
+    if (!currentKey) return true;
+
+    const current = new Uint8Array(currentKey);
+    const expected = urlBase64ToUint8Array(publicKey);
+    if (current.length !== expected.length) return false;
+    return current.every((value, index) => value === expected[index]);
+}
+
 async function fetchWebPushPublicKey() {
     const localKey = localStorage.getItem('web_push_public_key');
     if (localKey) return localKey;
@@ -180,6 +190,10 @@ export async function registerWebPushSubscription() {
 
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
+    if (subscription && !pushSubscriptionUsesKey(subscription, publicKey)) {
+        await subscription.unsubscribe();
+        subscription = null;
+    }
     if (!subscription) {
         subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,

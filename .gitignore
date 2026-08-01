@@ -9,3 +9,5 @@ supabase/
 
 # Saídas de servidores locais.
 *.local.log
+node_modules/
+.wrangler/
