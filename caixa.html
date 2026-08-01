@@ -82,6 +82,7 @@
                     <a href="./dashboard.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Agenda</a>
                     <a href="./clientes.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Clientes</a>
                     <a href="./servicos.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Serviços</a>
+                    <a href="./estoque.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Estoque</a>
                     <a href="./caixa.html" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-emerald-600 border border-slate-200/80 dark:border-emerald-500/30 text-emerald-600 dark:text-white shadow-sm">Caixa</a>
                     <a href="./configuracoes.html" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Horários</a>
                 </nav>
@@ -104,8 +105,8 @@
                     <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                         <i class="fa-solid fa-chart-pie text-xs"></i> Gestão Financeira Completa
                     </span>
-                    <h2 class="text-xl font-extrabold text-slate-900 dark:text-slate-100">Resumo de Recebimentos & Caixa</h2>
-                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Acompanhe entradas, pagamentos pendentes e indicadores de faturamento.</p>
+                    <h2 class="text-xl font-extrabold text-slate-900 dark:text-slate-100">Entradas, saídas & saldo</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Acompanhe recebimentos, compras de materiais e acertos entre profissionais.</p>
                 </div>
 
                 <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 self-start lg:self-auto overflow-x-auto max-w-full">
@@ -154,31 +155,31 @@
                     </div>
                 </div>
 
-                <!-- KPI 3: DESCONTOS CONCEDIDOS -->
+                <!-- KPI 3: SAÍDAS E COMPROMISSOS -->
                 <div class="p-5 rounded-[2.5rem] bg-white dark:bg-slate-900/60 border border-purple-500/30 dark:border-purple-500/20 shadow-sm backdrop-blur-md space-y-2">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Descontos Concedidos</span>
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Saídas e compromissos</span>
                         <div class="h-9 w-9 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
-                            <i class="fa-solid fa-tag text-base"></i>
+                            <i class="fa-solid fa-arrow-trend-down text-base"></i>
                         </div>
                     </div>
                     <div>
                         <h3 id="kpiTotalDescontos" class="text-2xl font-black text-purple-600 dark:text-purple-400">R$ 0,00</h3>
-                        <p class="text-[11px] font-semibold text-slate-400">Abatimentos em atendimentos</p>
+                        <p id="kpiCountSaidas" class="text-[11px] font-semibold text-slate-400">0 pagas · 0 pendentes</p>
                     </div>
                 </div>
 
-                <!-- KPI 4: FATURAMENTO BRUTO -->
+                <!-- KPI 4: SALDO REALIZADO -->
                 <div class="p-5 rounded-[2.5rem] bg-white dark:bg-slate-900/60 border border-blue-500/30 dark:border-blue-500/20 shadow-sm backdrop-blur-md space-y-2">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Faturamento Bruto</span>
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Saldo realizado</span>
                         <div class="h-9 w-9 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
                             <i class="fa-solid fa-chart-line text-base"></i>
                         </div>
                     </div>
                     <div>
                         <h3 id="kpiTotalBruto" class="text-2xl font-black text-slate-900 dark:text-white">R$ 0,00</h3>
-                        <p class="text-[11px] font-semibold text-slate-400">Valor nominal total</p>
+                        <p class="text-[11px] font-semibold text-slate-400">Entradas recebidas menos saídas pagas</p>
                     </div>
                 </div>
             </div>
@@ -233,7 +234,7 @@
                             <i class="fa-solid fa-list-check text-emerald-500"></i>
                             <span>Histórico de Lançamentos no Caixa</span>
                         </h3>
-                        <p class="text-xs text-slate-400 font-medium">Todos os pagamentos registrados vinculados aos agendamentos</p>
+                        <p class="text-xs text-slate-400 font-medium">Recebimentos de serviços, compras de materiais e acertos de estoque</p>
                     </div>
 
                     <!-- Filtro por Status do Lançamento -->
@@ -242,10 +243,10 @@
                             Todos
                         </button>
                         <button id="filterStatusPagPago" class="btn-status-pag px-3 py-1 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" data-status="pago">
-                            Recebidos
+                            Realizados
                         </button>
                         <button id="filterStatusPagReceber" class="btn-status-pag px-3 py-1 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" data-status="a_receber">
-                            À Receber
+                            Pendentes
                         </button>
                     </div>
                 </div>
@@ -349,15 +350,18 @@
 
             pagamentos.forEach(p => {
                 const val = parseFloat(p.valor_final || 0);
+                const isSaida = p.tipo_movimento === 'saida';
                 const forma = p.forma_pagamento || 'pix';
                 const cond = p.condicao_pagamento || 'a_vista';
 
-                if (formaCount[forma] !== undefined) formaCount[forma] += val;
-                if (condicaoCount[cond] !== undefined) condicaoCount[cond] += val;
+                // Formas e condições representam recebimentos. As saídas entram
+                // apenas na evolução semanal, com sinal negativo.
+                if (!isSaida && formaCount[forma] !== undefined) formaCount[forma] += val;
+                if (!isSaida && condicaoCount[cond] !== undefined) condicaoCount[cond] += val;
 
                 const d = new Date(p.criado_em || p.data_pagamento || Date.now());
                 const dayIdx = mapDayIndex[d.getDay()];
-                if (dayIdx !== undefined) diasSemanaSum[dayIdx] += val;
+                if (dayIdx !== undefined) diasSemanaSum[dayIdx] += isSaida ? -val : val;
             });
 
             // 1. Chart Forma de Pagamento
@@ -420,7 +424,7 @@
                     data: {
                         labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
                         datasets: [{
-                            label: 'Entradas (R$)',
+                            label: 'Saldo (R$)',
                             data: diasSemanaSum,
                             borderColor: '#8B5CF6',
                             backgroundColor: 'rgba(139, 92, 246, 0.1)',
@@ -456,38 +460,47 @@
 
                 const pagamentosFiltradosPeriodo = filterByPeriod(todosPagamentos, currentPeriodFilter);
 
-                let totalPago = 0;
-                let countPago = 0;
+                let totalEntradasPagas = 0;
+                let countEntradasPagas = 0;
                 let totalAReceber = 0;
                 let countAReceber = 0;
-                let totalDescontos = 0;
-                let totalBruto = 0;
+                let totalSaidasPagas = 0;
+                let countSaidasPagas = 0;
+                let totalSaidasPendentes = 0;
+                let countSaidasPendentes = 0;
 
                 pagamentosFiltradosPeriodo.forEach(p => {
                     const finalVal = parseFloat(p.valor_final || 0);
-                    const brutoVal = parseFloat(p.valor_bruto || 0);
-                    const descVal = parseFloat(p.desconto || 0);
-
-                    totalBruto += brutoVal;
-                    totalDescontos += descVal;
+                    const isSaida = p.tipo_movimento === 'saida';
 
                     if (p.status_pagamento === 'pago') {
-                        totalPago += finalVal;
-                        countPago++;
+                        if (isSaida) {
+                            totalSaidasPagas += finalVal;
+                            countSaidasPagas++;
+                        } else {
+                            totalEntradasPagas += finalVal;
+                            countEntradasPagas++;
+                        }
                     } else {
-                        totalAReceber += finalVal;
-                        countAReceber++;
+                        if (isSaida) {
+                            totalSaidasPendentes += finalVal;
+                            countSaidasPendentes++;
+                        } else {
+                            totalAReceber += finalVal;
+                            countAReceber++;
+                        }
                     }
                 });
 
-                document.getElementById('kpiTotalRecebido').textContent = `R$ ${totalPago.toFixed(2)}`;
-                document.getElementById('kpiCountRecebido').textContent = `${countPago} lançamento(s) efetuados`;
+                document.getElementById('kpiTotalRecebido').textContent = `R$ ${totalEntradasPagas.toFixed(2)}`;
+                document.getElementById('kpiCountRecebido').textContent = `${countEntradasPagas} lançamento(s) efetuados`;
 
                 document.getElementById('kpiTotalAReceber').textContent = `R$ ${totalAReceber.toFixed(2)}`;
                 document.getElementById('kpiCountAReceber').textContent = `${countAReceber} valor(es) em aberto`;
 
-                document.getElementById('kpiTotalDescontos').textContent = `R$ ${totalDescontos.toFixed(2)}`;
-                document.getElementById('kpiTotalBruto').textContent = `R$ ${totalBruto.toFixed(2)}`;
+                document.getElementById('kpiTotalDescontos').textContent = `R$ ${(totalSaidasPagas + totalSaidasPendentes).toFixed(2)}`;
+                document.getElementById('kpiCountSaidas').textContent = `${countSaidasPagas} paga(s) · ${countSaidasPendentes} pendente(s)`;
+                document.getElementById('kpiTotalBruto').textContent = `R$ ${(totalEntradasPagas - totalSaidasPagas).toFixed(2)}`;
 
                 renderCharts(pagamentosFiltradosPeriodo);
 
@@ -515,12 +528,22 @@
                     item.className = 'p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm animate-fade-in';
                     
                     const isPago = p.status_pagamento === 'pago';
-                    const clienteNome = p.clientes?.nome || 'Cliente não identificado';
-                    const servicoNome = p.servicos?.nome || 'Serviço';
+                    const isSaida = p.tipo_movimento === 'saida';
+                    const categoriaLabel = {
+                        compra_estoque: 'Compra de estoque',
+                        compra_material: 'Compra de estoque',
+                        transferencia_estoque: 'Transferência de estoque',
+                        acerto_estoque: 'Acerto entre profissionais',
+                        ajuste_estoque: 'Ajuste de estoque',
+                        servico: 'Atendimento'
+                    }[p.categoria] || (isSaida ? 'Saída operacional' : 'Atendimento');
+                    const tituloLancamento = isSaida
+                        ? (p.observacoes || categoriaLabel)
+                        : (p.clientes?.nome || 'Cliente não identificado');
+                    const detalheLancamento = isSaida ? categoriaLabel : (p.servicos?.nome || 'Serviço');
                     const d = new Date(p.criado_em || p.data_pagamento || Date.now());
                     const dataStr = d.toLocaleDateString('pt-BR');
 
-                    const valorBruto = parseFloat(p.valor_bruto || 0).toFixed(2);
                     const desconto = parseFloat(p.desconto || 0).toFixed(2);
                     const valorFinal = parseFloat(p.valor_final || 0).toFixed(2);
 
@@ -531,21 +554,21 @@
                     item.innerHTML = `
                         <div class="flex items-center gap-3.5 min-w-0">
                             <div class="h-11 w-11 shrink-0 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-lg">
-                                ${formaIcon}
+                                ${isSaida ? '<i class="fa-solid fa-arrow-up text-rose-500"></i>' : formaIcon}
                             </div>
                             <div class="min-w-0 space-y-0.5">
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    <h4 class="text-xs font-extrabold text-slate-900 dark:text-white truncate">${escapeHtml(clienteNome)}</h4>
+                                    <h4 class="text-xs font-extrabold text-slate-900 dark:text-white truncate">${escapeHtml(tituloLancamento)}</h4>
                                     <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
                                         isPago 
                                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
                                             : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 animate-pulse'
                                     }">
-                                        ${isPago ? 'RECEBIDO / PAGO' : 'À RECEBER'}
+                                        ${isSaida ? (isPago ? 'SAÍDA PAGA' : 'A PAGAR') : (isPago ? 'RECEBIDO / PAGO' : 'À RECEBER')}
                                     </span>
                                 </div>
                                 <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                                    ${escapeHtml(servicoNome)} • ${formaLabel} (${condLabel})
+                                    ${escapeHtml(detalheLancamento)} • ${formaLabel} (${condLabel})
                                 </p>
                                 <p class="text-[10px] text-slate-400 font-semibold">${dataStr}</p>
                             </div>
@@ -553,14 +576,14 @@
 
                         <div class="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/50 dark:border-slate-800">
                             <div class="text-right">
-                                <span class="block text-sm font-black text-emerald-600 dark:text-emerald-400">R$ ${valorFinal}</span>
-                                ${parseFloat(desconto) > 0 ? `<span class="block text-[10px] text-purple-500 font-bold">Desc: -R$ ${desconto}</span>` : ''}
+                                <span class="block text-sm font-black ${isSaida ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}">${isSaida ? '− ' : ''}R$ ${valorFinal}</span>
+                                ${!isSaida && parseFloat(desconto) > 0 ? `<span class="block text-[10px] text-purple-500 font-bold">Desc: -R$ ${desconto}</span>` : ''}
                             </div>
 
                             <div class="flex items-center gap-1.5">
                                 ${!isPago ? `
-                                    <button type="button" class="btn-toggle-pago btn-animated px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-sm" data-id="${p.id}" title="Marcar como Pago">
-                                        <i class="fa-solid fa-check mr-1"></i> Receber
+                                    <button type="button" class="btn-toggle-pago btn-animated px-3 py-1.5 rounded-xl ${isSaida ? 'bg-rose-600 hover:bg-rose-500' : 'bg-emerald-600 hover:bg-emerald-500'} text-white text-xs font-extrabold shadow-sm" data-id="${p.id}" title="${isSaida ? 'Marcar saída como paga' : 'Marcar como recebido'}">
+                                        <i class="fa-solid fa-check mr-1"></i> ${isSaida ? 'Pagar' : 'Receber'}
                                     </button>
                                 `: ''}
 

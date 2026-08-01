@@ -2163,6 +2163,40 @@ export async function updateAgendamentoStatus(id, newStatus, profissionalId = un
         await assertProfessionalCanClaimAppointment(id, currentAgendamento, targetProfId);
     }
 
+    // A conclusão passa pela RPC transacional do estoque. O banco valida todos os
+    // produtos, baixa apenas consumos, preserva ferramentas e gera o caixa uma vez.
+    const finalStatuses = new Set(['atendido', 'concluido', 'finalizado']);
+    const isFinalTransition = finalStatuses.has(String(newStatus || '').toLowerCase())
+        && !finalStatuses.has(String(currentAgendamento?.status || '').toLowerCase());
+
+    if (isFinalTransition) {
+        if (targetProfId && currentAgendamento?.profissional_id !== targetProfId) {
+            const { error: claimError } = await supabase
+                .from('agendamentos')
+                .update({ profissional_id: targetProfId })
+                .eq('id', id);
+            if (claimError && !String(claimError.message || '').includes('profissional_id')) throw claimError;
+            currentAgendamento.profissional_id = targetProfId;
+        }
+
+        const { error: estoqueError } = await supabase.rpc('finalizar_atendimento_com_estoque', {
+            p_agendamento_id: id,
+            p_novo_status: newStatus
+        });
+        const rpcMissing = estoqueError && (
+            String(estoqueError.code || '').includes('PGRST202')
+            || String(estoqueError.message || '').toLowerCase().includes('finalizar_atendimento_com_estoque')
+        );
+        if (estoqueError && !rpcMissing) throw estoqueError;
+        if (!estoqueError) {
+            if (shouldClaim && currentAgendamento?.cliente_id) {
+                await updateClienteProfessional(currentAgendamento.cliente_id, targetProfId || null);
+            }
+            return true;
+        }
+        console.warn('RPC de estoque ainda não instalada; concluindo sem baixa automática.');
+    }
+
     let { error } = await supabase
         .from('agendamentos')
         .update(updatePayload)
