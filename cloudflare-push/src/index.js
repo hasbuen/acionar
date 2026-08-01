@@ -137,7 +137,7 @@ async function hasConflict(env, professionalId, appointment) {
     const rows = await supabaseRequest(env, 'agendamentos', {
         select: 'id,data_hora_inicio,data_hora_fim,status,profissional_id,servicos(duracao_minutos)',
         profissional_id: `eq.${professionalId}`,
-        status: 'neq.cancelado',
+        status: 'not.in.(cancelado,recusado)',
         data_hora_inicio: `gte.${new Date(target.start.getTime() - 86400000).toISOString()}`,
         and: `(data_hora_inicio.lte.${new Date(target.end.getTime() + 86400000).toISOString()})`
     });
@@ -146,7 +146,7 @@ async function hasConflict(env, professionalId, appointment) {
 }
 
 async function eligibleProfessionalIds(env, appointment) {
-    if (appointment.profissional_id) return [appointment.profissional_id];
+    if (appointment.profissional_id) return [];
     if (!REQUEST_STATUSES.has(String(appointment.status || '').toLowerCase())) return [];
 
     const [professionals, serviceRows, subserviceRows, configRows] = await Promise.all([
@@ -176,6 +176,20 @@ async function eligibleProfessionalIds(env, appointment) {
         eligible.push(professional.id);
     }
     return eligible;
+}
+
+async function isRequestStillOpen(env, appointmentId) {
+    const rows = await supabaseRequest(env, 'agendamentos', {
+        select: 'id,status,profissional_id',
+        id: `eq.${appointmentId}`,
+        limit: '1'
+    });
+    const current = rows?.[0];
+    return Boolean(
+        current &&
+        !current.profissional_id &&
+        REQUEST_STATUSES.has(String(current.status || '').toLowerCase())
+    );
 }
 
 function formatDate(date) {
@@ -249,6 +263,9 @@ async function sendAppointmentPush(env, appointmentId) {
     });
     const appointment = appointments?.[0];
     if (!appointment) return { ok: false, status: 404, error: 'Agendamento não encontrado' };
+    if (appointment.profissional_id || !REQUEST_STATUSES.has(String(appointment.status || '').toLowerCase())) {
+        return { ok: true, sent: 0, professionals: 0, reason: 'Solicitação já assumida ou encerrada' };
+    }
 
     const professionalIds = await eligibleProfessionalIds(env, appointment);
     if (professionalIds.length === 0) {
@@ -265,9 +282,14 @@ async function sendAppointmentPush(env, appointmentId) {
     const payload = JSON.stringify(notificationPayload(appointment));
     let sent = 0;
     const failures = [];
+    let stoppedBecauseConfirmed = false;
 
     for (const subscription of subscriptions || []) {
         if (!subscription.endpoint || !subscription.p256dh || !subscription.auth) continue;
+        if (!await isRequestStillOpen(env, appointment.id)) {
+            stoppedBecauseConfirmed = true;
+            break;
+        }
         try {
             await webpush.sendNotification({
                 endpoint: subscription.endpoint,
@@ -289,6 +311,7 @@ async function sendAppointmentPush(env, appointmentId) {
         sent,
         professionals: professionalIds.length,
         subscriptions: subscriptions?.length || 0,
+        stoppedBecauseConfirmed,
         failures
     };
 }

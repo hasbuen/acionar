@@ -6,7 +6,8 @@ import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocal
 export async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
-            const reg = await navigator.serviceWorker.register('./sw.js');
+            const reg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
+            await reg.update().catch(() => {});
             console.log('✅ Service Worker registrado com sucesso:', reg);
             return reg;
         } catch (e) {
@@ -54,7 +55,7 @@ export function initTheme() {
     // Iniciar checagem em segundo plano de agendamentos prestes a iniciar (5 minutos antes)
     try {
         hydrateHeaderIdentity();
-        if ('Notification' in window && Notification.permission === 'granted' && isAlarmEnabled()) {
+        if ('Notification' in window && Notification.permission === 'granted') {
             registerWebPushSubscription().catch((err) => console.warn('Web Push indisponível na inicialização:', err));
         }
         startUpcoming5MinChecker();
@@ -146,16 +147,17 @@ function pushSubscriptionUsesKey(subscription, publicKey) {
 }
 
 async function fetchWebPushPublicKey() {
-    const localKey = localStorage.getItem('web_push_public_key');
-    if (localKey) return localKey;
-
     try {
         const { data } = await supabase
             .from('parametros')
             .select('valor')
             .eq('nome', 'web_push_public_key')
             .maybeSingle();
-        if (data?.valor) return String(data.valor);
+        if (data?.valor) {
+            const currentKey = String(data.valor);
+            localStorage.setItem('web_push_public_key', currentKey);
+            return currentKey;
+        }
     } catch (e) {}
 
     try {
@@ -164,10 +166,14 @@ async function fetchWebPushPublicKey() {
             .select('valor')
             .eq('chave', 'web_push_public_key')
             .maybeSingle();
-        if (data?.valor) return String(data.valor);
+        if (data?.valor) {
+            const currentKey = String(data.valor);
+            localStorage.setItem('web_push_public_key', currentKey);
+            return currentKey;
+        }
     } catch (e) {}
 
-    return '';
+    return localStorage.getItem('web_push_public_key') || '';
 }
 
 export async function registerWebPushSubscription() {
