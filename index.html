@@ -145,6 +145,10 @@
             ensureActiveProfessionalFromSession,
             registerWebPushSubscription
         } from './js/app.js?v=3.13';
+        import {
+            clearStripeFinancialSession,
+            unlockStripeFinancialSession
+        } from './js/stripe-payments.js?v=1.4';
 
         initTheme();
 
@@ -194,6 +198,7 @@
             // Em dispositivos compartilhados isso vinculava o Push do novo login
             // ao profissional que havia acessado o painel anteriormente.
             localStorage.removeItem('active_professional');
+            clearStripeFinancialSession();
 
             // 1. Tentar autenticação no Supabase Auth (GoTrue)
             try {
@@ -223,6 +228,9 @@
 
             if (authSuccess) {
                 const activeProf = await ensureActiveProfessionalFromSession();
+                if (activeProf?.id) {
+                    await unlockStripeFinancialSession(password).catch(() => null);
+                }
                 if (activeProf?.id && 'Notification' in window && Notification.permission === 'granted') {
                     await registerWebPushSubscription().catch((err) => {
                         console.warn('Não foi possível vincular as notificações ao profissional autenticado:', err);

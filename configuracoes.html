@@ -414,13 +414,13 @@
                                 <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Meus Recebimentos <span class="text-[10px] font-black uppercase text-slate-400">Opcional</span></h3>
                                 <span id="stripeConnectStatusBadge" class="text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">Verificando</span>
                             </div>
-                            <p id="stripeConnectStatusText" class="text-xs text-slate-500 dark:text-slate-400 mt-1">Se quiser, conecte uma conta para receber Pix e cartão. O uso normal do Acionar não depende disso.</p>
+                            <p id="stripeConnectStatusText" class="text-xs text-slate-500 dark:text-slate-400 mt-1">Se quiser, conecte uma conta para receber Pix e cartão. O cadastro abre aqui mesmo, sem sair do Acionar.</p>
                         </div>
                     </div>
 
                     <button type="button" id="btnStripeConnect" class="btn-animated flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-black bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 shrink-0">
                         <i class="fa-solid fa-shield-halved text-sm"></i>
-                        <span id="btnStripeConnectText">Cadastrar dados para receber</span>
+                        <span id="btnStripeConnectText">Abrir cadastro bancário</span>
                     </button>
                 </div>
 
@@ -468,7 +468,7 @@
                 </div>
 
                 <p class="text-[10px] leading-relaxed text-slate-400">
-                    Agência, conta e CPF/CNPJ são informados no formulário protegido e permanecem no Stripe. O Acionar guarda apenas o vínculo e a situação do cadastro.
+                    O formulário protegido aparece dentro desta página. Agência, conta e CPF/CNPJ permanecem no Stripe; o Acionar guarda apenas o vínculo e a situação do cadastro.
                 </p>
             </section>
 
@@ -553,7 +553,7 @@
             mountStripeConnectOnboarding,
             unlockStripeFinancialSession,
             saveStripePlatformFee
-        } from './js/stripe-payments.js?v=1.3';
+        } from './js/stripe-payments.js?v=1.4';
 
         initTheme();
 
@@ -580,6 +580,7 @@
         const stripeUnlockPassword = document.getElementById('stripeFinancialPassword');
         const stripeUnlockButton = document.getElementById('btnStripeFinancialUnlock');
         const stripeUnlockError = document.getElementById('stripeFinancialUnlockError');
+        let stripeFormAutoOpened = false;
 
         function isFinancialUnlockError(error) {
             return error?.code === 'FINANCIAL_UNLOCK_REQUIRED' || error?.code === 'AUTH_SESSION_REQUIRED';
@@ -622,12 +623,12 @@
                 stripeStatusText.textContent = state.needsAttention
                     ? 'Existem dados bancários ou fiscais que precisam ser concluídos.'
                     : 'O Stripe está analisando seu cadastro financeiro.';
-                btnStripeConnectText.textContent = 'Continuar cadastro';
+                btnStripeConnectText.textContent = 'Continuar cadastro aqui';
             } else {
                 stripeStatusBadge.textContent = 'Não ativado';
                 stripeStatusBadge.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-500', 'dark:text-slate-400');
                 stripeStatusText.textContent = 'Cadastre seus dados para receber Pix e cartão diretamente.';
-                btnStripeConnectText.textContent = 'Cadastrar dados para receber';
+                btnStripeConnectText.textContent = 'Abrir cadastro bancário';
             }
         }
 
@@ -635,6 +636,10 @@
             try {
                 const result = await fetchStripeConnectStatus();
                 renderStripeStatus(result.state);
+                if (result.state?.connected && !result.state?.onboardingComplete && !stripeFormAutoOpened) {
+                    stripeFormAutoOpened = true;
+                    await openStripeOnboarding();
+                }
             } catch (error) {
                 if (error.code === 'FINANCIAL_CONFIG_MISSING' || error.code === 'SERVICE_ROLE_REQUIRED' || error.code === 'STRIPE_NOT_CONFIGURED') {
                     renderStripeStatus({ connected: false });

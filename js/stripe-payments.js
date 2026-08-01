@@ -132,6 +132,10 @@ export async function unlockStripeFinancialSession(password) {
     return payload;
 }
 
+export function clearStripeFinancialSession() {
+    localStorage.removeItem(FINANCIAL_SESSION_KEY);
+}
+
 export async function fetchStripeConnectStatus() {
     return backendFetch('/api/stripe/connect/status');
 }
