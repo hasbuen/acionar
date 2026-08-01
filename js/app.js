@@ -113,6 +113,7 @@ let audioCtx = null;
 let knownAgendamentoIds = new Set();
 let isInitialLoadDone = false;
 let pushRegistrationPromise = null;
+let lastPushRegistrationError = '';
 
 export function isAlarmEnabled() {
     const savedState = localStorage.getItem('alarm-enabled');
@@ -170,30 +171,33 @@ async function fetchWebPushPublicKey() {
 }
 
 async function performWebPushSubscriptionRegistration() {
+    lastPushRegistrationError = '';
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         console.warn('Web Push não está disponível neste navegador/PWA.');
+        lastPushRegistrationError = 'Este navegador não oferece notificações em segundo plano.';
         return null;
     }
 
     const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
     if (!activeProf?.id) {
         console.warn('Web Push não registrado: profissional da sessão não identificado.');
+        lastPushRegistrationError = 'Não foi possível identificar o profissional conectado. Abra o aplicativo novamente.';
         return null;
     }
 
     const publicKey = await fetchWebPushPublicKey();
     if (!publicKey) {
         console.warn('Servico de notificacoes indisponivel para registrar este aparelho.');
+        lastPushRegistrationError = 'O serviço de notificações está temporariamente indisponível.';
         return null;
     }
 
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
-    const registeredKey = localStorage.getItem('web_push_registration_key');
-    const mustRenewSubscription = subscription && (
-        !pushSubscriptionUsesKey(subscription, publicKey) ||
-        registeredKey !== publicKey
-    );
+    // No iOS, a assinatura do PushManager pode sobreviver à limpeza do localStorage.
+    // Recrie somente quando a chave VAPID realmente mudou; a ausência da marca local
+    // não torna a assinatura da Apple inválida.
+    const mustRenewSubscription = subscription && !pushSubscriptionUsesKey(subscription, publicKey);
     if (mustRenewSubscription) {
         await subscription.unsubscribe();
         subscription = null;
@@ -224,6 +228,7 @@ async function performWebPushSubscriptionRegistration() {
 
     if (error) {
         console.warn('Nao foi possivel vincular este aparelho ao servico de notificacoes.', error);
+        lastPushRegistrationError = 'Sua sessão não conseguiu vincular este aparelho. Abra o aplicativo novamente e tente ativar.';
         return null;
     }
 
@@ -409,13 +414,16 @@ export function toggleAlarmState(callback) {
                 setAlarmEnabled(true);
                 const subscription = await registerWebPushSubscription().catch((err) => {
                     console.warn('Registro Web Push não concluído:', err);
+                    lastPushRegistrationError = err?.name === 'NotAllowedError'
+                        ? 'O iPhone bloqueou a permissão de notificações para o Acionar.'
+                        : 'O iPhone não concluiu o vínculo com as notificações. Feche o aplicativo, abra novamente e tente ativar.';
                     return null;
                 });
                 playNotificationSound();
                 showToast(
                     subscription
                         ? 'Notificações ativadas neste dispositivo.'
-                        : 'Alerta local ativado, mas este aparelho ainda não foi vinculado ao envio em segundo plano.',
+                        : lastPushRegistrationError || 'Não foi possível vincular este aparelho às notificações em segundo plano.',
                     subscription ? 'success' : 'info'
                 );
                 if (callback) callback(true);
