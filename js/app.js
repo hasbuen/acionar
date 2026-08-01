@@ -315,8 +315,17 @@ export function requestNotificationPermission(callback) {
     initAudioContext();
     registerServiceWorker();
 
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+    if (isIOS && !isStandalone) {
+        showToast('No iPhone, abra no Safari e use Compartilhar > Adicionar à Tela de Início. Depois ative as notificações no app instalado.', 'error');
+        if (callback) callback(false);
+        return;
+    }
+
     if (!('Notification' in window)) {
-        showToast('Este navegador não oferece notificação nativa para este PWA.', 'error');
+        showToast('Este dispositivo não oferece notificações para este aplicativo.', 'error');
         if (callback) callback(false);
         return;
     }
@@ -372,8 +381,8 @@ export function triggerSystemNotification(titleOrPayload, body = '') {
 
     const options = {
         body: payload.body,
-        icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f514.png',
-        badge: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f514.png',
+        icon: './icons/icon-192.png',
+        badge: './icons/badge-96.png',
         vibrate: [300, 100, 300],
         tag: payload.tag,
         renotify: true,
@@ -395,8 +404,8 @@ export function triggerSystemNotification(titleOrPayload, body = '') {
                 navigator.serviceWorker.ready.then((reg) => {
                     reg.showNotification(payload.title, {
                         body: payload.body,
-                        icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f514.png',
-                        badge: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f514.png',
+                        icon: './icons/icon-192.png',
+                        badge: './icons/badge-96.png',
                         vibrate: [300, 100, 300],
                         tag: payload.tag,
                         renotify: true,
@@ -1170,6 +1179,7 @@ export function buildAppointmentNotificationPayload(agendamento, kind = 'new') {
         tag: `${kind}-agendamento-${agendamento?.id || Date.now()}`,
         data: {
             url: './dashboard.html',
+            agendamento_id: agendamento?.id || null,
             agendamentoId: agendamento?.id || null,
             clienteNome,
             telefone,
@@ -1191,6 +1201,16 @@ function isMissingColumnError(error, columnName) {
 function isRequestStatus(status) {
     const statusLower = (status || '').toLowerCase();
     return statusLower === 'aguardando_confirmacao' || statusLower === 'solicitado';
+}
+
+function isUnassignedRequest(agendamento) {
+    const statusLower = (agendamento?.status || '').toLowerCase();
+    const isPendingPublicRequest = statusLower === 'pendente' && !getAppointmentProfessionalId(agendamento);
+    return !getAppointmentProfessionalId(agendamento) && (isRequestStatus(statusLower) || isPendingPublicRequest);
+}
+
+function isAppointmentRequest(agendamento) {
+    return isRequestStatus(agendamento?.status) || isUnassignedRequest(agendamento);
 }
 
 function getActiveProfessionalId() {
@@ -1436,10 +1456,9 @@ function canActiveProfessionalSeeSharedRequest(agendamento, allAgendamentos) {
 function filterAppointmentsForActiveProfessional(agendamentos) {
     const list = agendamentos || [];
     return list.filter(ag => {
-        const profId = getAppointmentProfessionalId(ag);
-        if (isRequestStatus(ag.status) && !profId) {
-            return canActiveProfessionalSeeSharedRequest(ag, list);
-        }
+        // Solicitacoes publicas sem responsavel aparecem para toda a equipe.
+        // Habilitacao, horario e conflito continuam validados ao aceitar.
+        if (isUnassignedRequest(ag)) return true;
         return belongsToActiveProfessional(ag);
     });
 }
@@ -2499,33 +2518,35 @@ export async function deleteAgendamento(id) {
 export async function fetchNotificationsList() {
     try {
         await ensureActiveProfessionalFromSession();
-        const { data: agendamentos, error } = await supabase
-            .from('agendamentos')
-            .select(`
-                id,
-                cliente_id,
-                servico_id,
-                subservico_id,
-                profissional_id,
-                data_hora_inicio,
-                data_hora_fim,
-                status,
-                tipo_atendimento,
-                endereco_atendimento,
-                is_manutencao,
-                observacoes,
-                clientes ( id, nome, whatsapp ),
-                servicos ( id, nome, duracao_minutos )
-            `)
-            .neq('status', 'cancelado')
-            .order('data_hora_inicio', { ascending: true });
+        let agendamentos = null;
+        const rpcRes = await supabase.rpc('listar_agendamentos_painel');
+        if (!rpcRes.error && Array.isArray(rpcRes.data)) {
+            agendamentos = rpcRes.data.map(mapPanelAppointment);
+        } else {
+            const directRes = await supabase
+                .from('agendamentos')
+                .select(`
+                    id,
+                    cliente_id,
+                    servico_id,
+                    subservico_id,
+                    profissional_id,
+                    data_hora_inicio,
+                    data_hora_fim,
+                    status,
+                    tipo_atendimento,
+                    endereco_atendimento,
+                    is_manutencao,
+                    observacoes,
+                    clientes ( id, nome, whatsapp ),
+                    servicos ( id, nome, duracao_minutos )
+                `)
+                .neq('status', 'cancelado')
+                .order('data_hora_inicio', { ascending: true });
+            if (directRes.error) throw directRes.error;
+            agendamentos = directRes.data || [];
+        }
 
-        if (error) throw error;
-        if (!agendamentos) return [];
-
-        await fetchActiveProfessionalServiceIds();
-        await fetchActiveProfessionalExternalAcceptance();
-        await fetchActiveProfessionalHorarioConfig();
         const visibleAgendamentos = filterAppointmentsForActiveProfessional(agendamentos);
 
         const now = new Date();
@@ -2544,7 +2565,7 @@ export async function fetchNotificationsList() {
             const statusLower = (ag.status || '').toLowerCase();
 
             // 1. Novas Solicitações Aguardando Confirmação
-            if (statusLower === 'aguardando_confirmacao' || statusLower === 'solicitado') {
+            if (isAppointmentRequest(ag)) {
                 notifications.push({
                     id: `solicitation-${ag.id}`,
                     type: 'solicitacao',
@@ -2816,6 +2837,39 @@ export function getServicePrice(servico) {
 }
 
 // --- RENDERIZAÇÃO DE AGENDAMENTOS COM FALLBACK DE SEGURANÇA VIA RPC (EVITA ERRO DE RLS PERMISSION DENIED) ---
+function mapPanelAppointment(a) {
+    return {
+        id: a.id,
+        cliente_id: a.cliente_id,
+        servico_id: a.servico_id,
+        subservico_id: a.subservico_id || null,
+        profissional_id: a.profissional_id || null,
+        data_hora_inicio: a.data_hora_inicio,
+        data_hora_fim: a.data_hora_fim,
+        status: a.status,
+        observacoes: a.observacoes,
+        tipo_atendimento: a.tipo_atendimento || 'salao',
+        endereco_atendimento: a.endereco_atendimento || null,
+        latitude_atendimento: a.latitude_atendimento || null,
+        longitude_atendimento: a.longitude_atendimento || null,
+        is_manutencao: a.is_manutencao,
+        agendamento_pai_id: a.agendamento_pai_id,
+        periodicidade_dias: a.periodicidade_dias,
+        clientes: a.clientes || { id: a.cliente_id, nome: a.cliente_nome, whatsapp: a.cliente_whatsapp },
+        servicos: a.servicos || {
+            id: a.servico_id,
+            nome: a.servico_nome,
+            duracao_minutos: a.servico_duracao_minutos,
+            tabela_precos: [{ valor: a.servico_preco || 0 }]
+        },
+        profissionais: a.profissionais || (a.profissional_id ? {
+            id: a.profissional_id,
+            nome: a.profissional_nome,
+            cor_identificadora: a.profissional_cor
+        } : null)
+    };
+}
+
 export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null, silent = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -2832,8 +2886,22 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
     let agendamentos = [];
     let fetchSuccess = false;
 
-    // Tentativa 1: Busca direta na tabela agendamentos via Supabase
+    // A RPC inclui as solicitacoes publicas sem profissional. Ela precisa ser a
+    // fonte principal porque a RLS pode devolver uma lista parcial sem erro.
     try {
+        const rpcRes = await supabase.rpc('listar_agendamentos_painel');
+        if (!rpcRes.error && Array.isArray(rpcRes.data)) {
+            agendamentos = rpcRes.data.map(mapPanelAppointment);
+            fetchSuccess = true;
+        } else if (rpcRes.error) {
+            console.warn('Fonte compartilhada indisponivel. Tentando consulta direta...', rpcRes.error);
+        }
+    } catch (rpcErr) {
+        console.warn('Erro na fonte compartilhada de agendamentos:', rpcErr);
+    }
+
+    // Fallback para instalacoes que ainda nao possuem a RPC.
+    if (!fetchSuccess) try {
         const res = await supabase
             .from('agendamentos')
             .select(`
@@ -2875,7 +2943,7 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
             .order('data_hora_inicio', { ascending: true });
 
         if (!res.error && res.data) {
-            agendamentos = res.data;
+            agendamentos = res.data.map(mapPanelAppointment);
             fetchSuccess = true;
         } else if (res.error) {
             console.warn("Busca direta em agendamentos bloqueada por RLS. Tentando RPC...", res.error);
@@ -2952,11 +3020,10 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
     if (activeProf && activeProf.cargo === 'auxiliar') {
         const myProfId = activeProf.id;
         agendamentos = agendamentos.filter(a => {
-            const statusLower = (a.status || '').toLowerCase();
             const profIdStr = a.profissional_id || a.profissionais?.id;
 
             // Solicitação pendente não atribuída -> fica visível para todos os auxiliares aceitarem
-            if ((statusLower === 'aguardando_confirmacao' || statusLower === 'solicitado') && !profIdStr) {
+            if (isUnassignedRequest(a)) {
                 return true;
             }
 
@@ -2965,15 +3032,12 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
         });
     }
 
-    await fetchActiveProfessionalServiceIds();
-    await fetchActiveProfessionalExternalAcceptance();
-    await fetchActiveProfessionalHorarioConfig();
     agendamentos = filterAppointmentsForActiveProfessional(agendamentos);
 
     // DETECÇÃO DE NOVO AGENDAMENTO PARA DISPARAR SOM DE ALARME
     // O alerta usa a mesma lista filtrada da agenda, evitando avisar profissionais com conflito.
     if (isInitialLoadDone && fetchSuccess) {
-        const newBooking = agendamentos.find(ag => !knownAgendamentoIds.has(ag.id) && isRequestStatus(ag.status));
+        const newBooking = agendamentos.find(ag => !knownAgendamentoIds.has(ag.id) && isAppointmentRequest(ag));
         if (newBooking) {
             triggerSystemNotification(buildAppointmentNotificationPayload(newBooking, 'new'));
         }
@@ -2992,7 +3056,10 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
         if (filterStatus.toLowerCase() === 'manutencao') {
             agendamentos = agendamentos.filter(a => a.is_manutencao === true);
         } else {
-            agendamentos = agendamentos.filter(a => (a.status || 'aguardando_confirmacao').toLowerCase() === filterStatus.toLowerCase());
+            const normalizedFilter = filterStatus.toLowerCase();
+            agendamentos = agendamentos.filter(a => normalizedFilter === 'aguardando_confirmacao'
+                ? isAppointmentRequest(a)
+                : (a.status || 'aguardando_confirmacao').toLowerCase() === normalizedFilter);
         }
     }
 
@@ -3034,7 +3101,7 @@ function renderAgendamentosList(container, agendamentos) {
 
         const isManutencao = ag.is_manutencao === true;
         const statusLower = (ag.status || 'aguardando_confirmacao').toLowerCase();
-        const isSolicitacao = statusLower === 'aguardando_confirmacao' || statusLower === 'solicitado';
+        const isSolicitacao = isAppointmentRequest(ag);
         const isAguardando = isSolicitacao;
 
         const statusClass = isManutencao

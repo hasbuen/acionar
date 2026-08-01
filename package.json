@@ -1,0 +1,7 @@
+{
+  "name": "acionar-static",
+  "private": true,
+  "scripts": {
+    "dev": "node --env-file=.env scripts/dev-server.mjs"
+  }
+}

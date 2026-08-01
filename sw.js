@@ -1,22 +1,27 @@
-// Service Worker do Acionar Agendamentos para Notificações em Segundo Plano (Android & iOS PWA)
+// Service Worker do painel Acionar: Web Push para Android e iOS instalado como PWA.
 
-const DEFAULT_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%232563eb'/%3E%3Ctext x='50' y='66' font-size='54' font-weight='800' text-anchor='middle' fill='white' font-family='Arial'%3EA%3C/text%3E%3C/svg%3E";
-const DEFAULT_BADGE = DEFAULT_ICON;
+const DEFAULT_URL = new URL('dashboard.html', self.registration.scope).href;
+const DEFAULT_ICON = new URL('icons/icon-192.png', self.registration.scope).href;
+const DEFAULT_BADGE = new URL('icons/badge-96.png', self.registration.scope).href;
 
 function normalizeNotificationPayload(raw = {}) {
-    const data = raw.data || {};
-    const clienteNome = data.clienteNome || raw.clienteNome || 'Cliente';
-    const telefone = data.telefone || raw.telefone || 'Não informado';
-    const servicoNome = data.servicoNome || raw.servicoNome || 'Serviço';
-    const dataLabel = data.data || raw.dataLabel || '';
-    const hora = data.hora || raw.hora || '';
-    const local = data.local || raw.local || '';
-    const observacoes = data.observacoes || raw.observacoes || '';
+    const nestedData = raw.data && typeof raw.data === 'object' ? raw.data : {};
+    const appointmentId = raw.agendamento_id || raw.agendamentoId ||
+        nestedData.agendamento_id || nestedData.agendamentoId || null;
+    const clienteNome = nestedData.clienteNome || raw.clienteNome || 'Cliente';
+    const telefone = nestedData.telefone || raw.telefone || 'Nao informado';
+    const servicoNome = nestedData.servicoNome || raw.servicoNome || 'Servico';
+    const dataLabel = nestedData.data || raw.dataLabel || '';
+    const hora = nestedData.hora || raw.hora || '';
+    const local = nestedData.local || raw.local || '';
+    const observacoes = nestedData.observacoes || raw.observacoes || '';
+    const requestedUrl = raw.url || nestedData.url || DEFAULT_URL;
+    const notificationUrl = new URL(requestedUrl, self.registration.scope).href;
 
     const body = raw.body || [
         `WhatsApp: ${telefone}`,
-        `Serviço: ${servicoNome}`,
-        dataLabel || hora ? `Data: ${dataLabel}${hora ? ` às ${hora}` : ''}` : '',
+        `Servico: ${servicoNome}`,
+        dataLabel || hora ? `Data: ${dataLabel}${hora ? ` as ${hora}` : ''}` : '',
         local ? `Local: ${local}` : '',
         observacoes ? `Obs: ${observacoes}` : ''
     ].filter(Boolean).join('\n');
@@ -28,21 +33,20 @@ function normalizeNotificationPayload(raw = {}) {
             icon: raw.icon || DEFAULT_ICON,
             badge: raw.badge || DEFAULT_BADGE,
             vibrate: raw.vibrate || [300, 100, 300, 100, 300],
-            tag: raw.tag || `agendamento-${data.agendamentoId || Date.now()}`,
-            renotify: true,
-            requireInteraction: true,
+            tag: raw.tag || (appointmentId ? `agendamento-${appointmentId}` : 'novo-agendamento'),
+            renotify: raw.renotify !== false,
+            requireInteraction: raw.requireInteraction !== false,
             data: {
-                url: './dashboard.html',
-                ...data
+                ...nestedData,
+                url: notificationUrl,
+                agendamento_id: appointmentId
             },
-            actions: [
-                { action: 'open', title: 'Abrir agenda' }
-            ]
+            actions: [{ action: 'open', title: 'Abrir agenda' }]
         }
     };
 }
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', () => {
     self.skipWaiting();
 });
 
@@ -50,23 +54,17 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(self.clients.claim());
 });
 
-// Listener para disparar Notificação Nativa do SO em segundo plano
 self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-        const { title, options } = normalizeNotificationPayload(event.data);
-
-        event.waitUntil(
-            self.registration.showNotification(title, options)
-        );
-    }
+    if (event.data?.type !== 'SHOW_NOTIFICATION') return;
+    const { title, options } = normalizeNotificationPayload(event.data);
+    event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Web Push real: necessário para Android/iOS notificarem com o PWA fechado ou em segundo plano.
 self.addEventListener('push', (event) => {
     let payload = {};
     try {
         payload = event.data ? event.data.json() : {};
-    } catch (e) {
+    } catch (error) {
         payload = { body: event.data ? event.data.text() : '' };
     }
 
@@ -74,22 +72,24 @@ self.addEventListener('push', (event) => {
     event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Clique na Notificação abre ou traz o aplicativo para o primeiro plano
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const urlToOpen = event.notification.data?.url || './dashboard.html';
+    const targetUrl = new URL(event.notification.data?.url || DEFAULT_URL, self.registration.scope);
 
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-            for (let i = 0; i < windowClients.length; i++) {
-                const client = windowClients[i];
-                if (client.url.includes('dashboard.html') && 'focus' in client) {
-                    return client.focus();
-                }
+    event.waitUntil((async () => {
+        const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const existingClient = windowClients.find(client => {
+            const clientUrl = new URL(client.url);
+            return clientUrl.origin === targetUrl.origin && clientUrl.pathname === targetUrl.pathname;
+        });
+
+        if (existingClient) {
+            if ('navigate' in existingClient && existingClient.url !== targetUrl.href) {
+                await existingClient.navigate(targetUrl.href);
             }
-            if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
-            }
-        })
-    );
+            return existingClient.focus();
+        }
+
+        return clients.openWindow ? clients.openWindow(targetUrl.href) : undefined;
+    })());
 });
