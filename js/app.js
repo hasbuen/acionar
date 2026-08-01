@@ -2,6 +2,8 @@
 import { supabase } from './supabase.js';
 import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './datetime.js';
 
+const PUSH_SERVICE_URL = 'https://acionar-push.acionar-push-worker.workers.dev';
+
 // --- REGISTRO DE SERVICE WORKER PARA NOTIFICAÇÕES EM SEGUNDO PLANO (ANDROID & IOS PWA) ---
 export async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
@@ -147,32 +149,24 @@ function pushSubscriptionUsesKey(subscription, publicKey) {
 
 async function fetchWebPushPublicKey() {
     try {
-        const { data } = await supabase
-            .from('parametros')
-            .select('valor')
-            .eq('nome', 'web_push_public_key')
-            .maybeSingle();
-        if (data?.valor) {
-            const currentKey = String(data.valor);
-            localStorage.setItem('web_push_public_key', currentKey);
-            return currentKey;
-        }
-    } catch (e) {}
+        const response = await fetch(`${PUSH_SERVICE_URL}/public-key`, {
+            method: 'GET',
+            mode: 'cors',
+            cache: 'no-store',
+            headers: { Accept: 'application/json' }
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-    try {
-        const { data } = await supabase
-            .from('configuracoes')
-            .select('valor')
-            .eq('chave', 'web_push_public_key')
-            .maybeSingle();
-        if (data?.valor) {
-            const currentKey = String(data.valor);
-            localStorage.setItem('web_push_public_key', currentKey);
-            return currentKey;
-        }
-    } catch (e) {}
+        const data = await response.json();
+        const currentKey = String(data?.publicKey || '').trim();
+        if (!currentKey) throw new Error('Chave publica ausente na resposta');
 
-    return localStorage.getItem('web_push_public_key') || '';
+        localStorage.setItem('web_push_public_key', currentKey);
+        return currentKey;
+    } catch (error) {
+        console.warn('Nao foi possivel obter a chave publica do servico de notificacoes:', error);
+        return '';
+    }
 }
 
 async function performWebPushSubscriptionRegistration() {
@@ -189,7 +183,7 @@ async function performWebPushSubscriptionRegistration() {
 
     const publicKey = await fetchWebPushPublicKey();
     if (!publicKey) {
-        console.warn('Chave web_push_public_key não configurada. Notificações com app fechado exigem Web Push.');
+        console.warn('Servico de notificacoes indisponivel para registrar este aparelho.');
         return null;
     }
 
@@ -229,8 +223,8 @@ async function performWebPushSubscriptionRegistration() {
         .upsert(payload, { onConflict: 'endpoint' });
 
     if (error) {
-        console.warn('Não foi possível salvar PushSubscription. Crie a tabela push_subscriptions no Supabase.', error);
-        return subscription;
+        console.warn('Nao foi possivel vincular este aparelho ao servico de notificacoes.', error);
+        return null;
     }
 
     localStorage.setItem('web_push_registered', 'true');
@@ -421,7 +415,7 @@ export function toggleAlarmState(callback) {
                 showToast(
                     subscription
                         ? 'Notificações ativadas neste dispositivo.'
-                        : 'Alerta local ativado. Para app fechado, configure Web Push no Supabase.',
+                        : 'Alerta local ativado, mas este aparelho ainda não foi vinculado ao envio em segundo plano.',
                     subscription ? 'success' : 'info'
                 );
                 if (callback) callback(true);

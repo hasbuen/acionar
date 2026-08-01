@@ -3,11 +3,30 @@ import webpush from 'web-push';
 const TIME_ZONE = 'America/Sao_Paulo';
 const REQUEST_STATUSES = new Set(['aguardando_confirmacao', 'solicitado', 'pendente']);
 
-function json(body, status = 200) {
+function json(body, status = 200, extraHeaders = {}) {
     return new Response(JSON.stringify(body), {
         status,
-        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+        headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            ...extraHeaders
+        }
     });
+}
+
+function publicCorsHeaders(request) {
+    const origin = request.headers.get('Origin');
+    const allowedOrigin = origin === 'https://acionar.online' || origin === 'https://www.acionar.online'
+        ? origin
+        : 'https://acionar.online';
+
+    return {
+        'Access-Control-Allow-Origin': allowedOrigin,
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Max-Age': '86400',
+        'Cache-Control': 'no-store',
+        'Vary': 'Origin'
+    };
 }
 
 function supabaseHeaders(env, extra = {}) {
@@ -321,6 +340,13 @@ export default {
         const url = new URL(request.url);
         if (request.method === 'GET' && url.pathname === '/health') {
             return json({ ok: true, service: 'acionar-push' });
+        }
+        if (url.pathname === '/public-key') {
+            const headers = publicCorsHeaders(request);
+            if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
+            if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405, headers);
+            if (!env.VAPID_PUBLIC_KEY) return json({ error: 'Push not configured' }, 503, headers);
+            return json({ ok: true, publicKey: env.VAPID_PUBLIC_KEY }, 200, headers);
         }
         if (request.method !== 'POST') return json({ error: 'Not found' }, 404);
 
