@@ -143,9 +143,8 @@
         import {
             initTheme,
             ensureActiveProfessionalFromSession,
-            registerWebPushSubscription,
-            isAlarmEnabled
-        } from './js/app.js?v=3.3';
+            registerWebPushSubscription
+        } from './js/app.js?v=3.4';
 
         initTheme();
 
@@ -191,6 +190,11 @@
 
             let authSuccess = false;
 
+            // Nunca reutilize a identidade profissional da sessao anterior.
+            // Em dispositivos compartilhados isso vinculava o Push do novo login
+            // ao profissional que havia acessado o painel anteriormente.
+            localStorage.removeItem('active_professional');
+
             // 1. Tentar autenticação no Supabase Auth (GoTrue)
             try {
                 const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email, password });
@@ -219,7 +223,7 @@
 
             if (authSuccess) {
                 const activeProf = await ensureActiveProfessionalFromSession();
-                if (activeProf?.id && 'Notification' in window && Notification.permission === 'granted' && isAlarmEnabled()) {
+                if (activeProf?.id && 'Notification' in window && Notification.permission === 'granted') {
                     await registerWebPushSubscription().catch((err) => {
                         console.warn('Não foi possível vincular as notificações ao profissional autenticado:', err);
                     });
