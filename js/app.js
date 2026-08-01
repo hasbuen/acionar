@@ -112,6 +112,7 @@ function updateThemeIcons() {
 let audioCtx = null;
 let knownAgendamentoIds = new Set();
 let isInitialLoadDone = false;
+let pushRegistrationPromise = null;
 
 export function isAlarmEnabled() {
     const savedState = localStorage.getItem('alarm-enabled');
@@ -176,7 +177,7 @@ async function fetchWebPushPublicKey() {
     return localStorage.getItem('web_push_public_key') || '';
 }
 
-export async function registerWebPushSubscription() {
+async function performWebPushSubscriptionRegistration() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         console.warn('Web Push não está disponível neste navegador/PWA.');
         return null;
@@ -237,6 +238,17 @@ export async function registerWebPushSubscription() {
     localStorage.setItem('web_push_registered', 'true');
     localStorage.setItem('web_push_registration_key', publicKey);
     return subscription;
+}
+
+export async function registerWebPushSubscription() {
+    if (pushRegistrationPromise) return pushRegistrationPromise;
+
+    pushRegistrationPromise = performWebPushSubscriptionRegistration();
+    try {
+        return await pushRegistrationPromise;
+    } finally {
+        pushRegistrationPromise = null;
+    }
 }
 
 export function initAudioContext() {
