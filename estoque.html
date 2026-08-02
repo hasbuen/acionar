@@ -186,140 +186,218 @@
 
     <!-- MODAIS DE ESTOQUE -->
 
-    <!-- Modal 1: Produto (Novo / Editar) -->
+    <!-- Modal 1: Produto (Novo / Editar com Wizard Step-by-Step) -->
     <div id="modalProdutoEstoque" class="fixed inset-0 z-[60] hidden items-end sm:items-center justify-center bg-slate-950/75 backdrop-blur-sm sm:p-4">
-        <div class="w-full max-w-2xl max-h-[94vh] overflow-y-auto rounded-t-[2.5rem] sm:rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl">
-            <div class="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between">
+        <div class="w-full max-w-2xl max-h-[94vh] overflow-y-auto rounded-t-[2.5rem] sm:rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col">
+            <!-- Modal Header -->
+            <div class="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
                 <div>
-                    <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">Cadastro independente</span>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">Cadastro Passo a Passo</span>
                     <h3 id="produtoModalTitle" class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">Novo produto</h3>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">Não será vinculado automaticamente a nenhum serviço.</p>
                 </div>
                 <button data-close-modal="modalProdutoEstoque" class="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <form id="formProdutoEstoque" class="p-5 sm:p-6 space-y-4">
-                <input type="hidden" name="id">
-                <label class="block cursor-pointer">
-                    <input id="produtoImagemInput" name="imagem" type="file" accept="image/*" capture="environment" class="hidden">
-                    <span id="produtoImagemPreview" class="h-28 rounded-2xl border-2 border-dashed border-blue-500/25 bg-blue-500/5 text-blue-500 flex flex-col gap-1 items-center justify-center overflow-hidden relative">
-                        <i class="fa-solid fa-camera text-xl"></i>
-                        <span class="text-xs font-bold">Fotografar / Anexar produto</span>
-                    </span>
-                </label>
-                <div class="flex items-center justify-between gap-2 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-500/10 p-2.5 rounded-2xl border border-blue-500/20">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-wand-magic-sparkles text-blue-500 text-sm shrink-0"></i>
-                        <span><strong>IA Generativa:</strong> Tire foto do produto para preencher o <strong>Nome</strong> e gerar o <strong>SKU</strong>!</span>
+
+            <!-- Wizard Progress Steps Bar -->
+            <div class="px-5 sm:px-6 pt-4 pb-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 shrink-0">
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div id="stepTab1" class="py-2 rounded-xl bg-blue-600 text-white font-extrabold text-[11px] shadow-sm transition-all flex items-center justify-center gap-1.5">
+                        <span class="h-5 w-5 rounded-full bg-white/20 text-white text-[10px] flex items-center justify-center">1</span>
+                        <span>Foto & Nome</span>
                     </div>
-                    <button type="button" id="btnConfigurarIaKey" class="px-2.5 py-1.5 rounded-xl bg-blue-600 text-white font-extrabold hover:bg-blue-700 shrink-0 transition-all text-[9px] uppercase tracking-wider">
-                        🔑 Chave IA
-                    </button>
+                    <div id="stepTab2" class="py-2 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-[11px] transition-all flex items-center justify-center gap-1.5">
+                        <span class="h-5 w-5 rounded-full bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] flex items-center justify-center">2</span>
+                        <span>Tipo & Medida</span>
+                    </div>
+                    <div id="stepTab3" class="py-2 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-[11px] transition-all flex items-center justify-center gap-1.5">
+                        <span class="h-5 w-5 rounded-full bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] flex items-center justify-center">3</span>
+                        <span>Quantidades</span>
+                    </div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tipo
-                        <select name="tipo" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
-                            <option value="consumo">Consumo · baixa ao usar</option>
-                            <option value="ferramenta">Ferramenta · uso sem baixa</option>
-                        </select>
-                    </label>
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        <span class="flex items-center justify-between">
-                            <span>Código (SKU)</span>
-                            <button type="button" id="btnGerarSku" class="text-[9px] text-blue-600 dark:text-blue-400 font-extrabold hover:underline lowercase">⚡ gerar sku</button>
+            </div>
+
+            <!-- Form Content Wizard -->
+            <form id="formProdutoEstoque" class="p-5 sm:p-6 space-y-4 flex-1">
+                <input type="hidden" name="id">
+
+                <!-- PASSO 1: Foto & Identificação -->
+                <div id="wizardStep1" class="space-y-4">
+                    <label class="block cursor-pointer">
+                        <input id="produtoImagemInput" name="imagem" type="file" accept="image/*" capture="environment" class="hidden">
+                        <span id="produtoImagemPreview" class="h-32 rounded-2xl border-2 border-dashed border-blue-500/30 bg-blue-500/5 text-blue-600 dark:text-blue-400 flex flex-col gap-1.5 items-center justify-center overflow-hidden relative transition-all hover:bg-blue-500/10">
+                            <i class="fa-solid fa-camera text-2xl"></i>
+                            <span class="text-xs font-extrabold">Fotografar / Anexar produto</span>
+                            <span class="text-[10px] font-medium text-slate-400">Clique para abrir a câmera ou galeria</span>
                         </span>
-                        <input name="codigo" id="inputProdutoCodigo" placeholder="SKU-MAT-1024" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
                     </label>
-                    <label class="sm:col-span-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nome
-                        <input name="nome" id="inputProdutoNome" required placeholder="Ex.: Tinta acrílica branca" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
-                    </label>
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Categoria
-                        <input name="categoria" placeholder="Ex.: Pintura" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
-                    </label>
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Unidade
-                        <select name="unidade" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
-                            <option value="un">Unidade</option>
-                            <option value="L">Litro</option>
-                            <option value="kg">Quilograma</option>
-                            <option value="m">Metro</option>
-                            <option value="cx">Caixa</option>
-                        </select>
-                    </label>
-                    <label data-initial-balance class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Saldo inicial
-                        <input name="saldo_inicial" type="number" min="0" step="0.001" value="0" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
-                    </label>
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Estoque mínimo
-                        <input name="estoque_minimo" type="number" min="0" step="0.001" value="0" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
-                    </label>
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Custo unitário (R$)
-                        <input name="custo_unitario" type="number" min="0" step="0.01" value="0" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
-                    </label>
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Localização
-                        <input name="localizacao" placeholder="Prateleira, maleta..." class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
+
+                    <div class="flex items-center justify-between gap-2 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-500/10 p-3 rounded-2xl border border-blue-500/20">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles text-blue-500 text-base shrink-0"></i>
+                            <span><strong>Leitor de Foto IA:</strong> Tire a foto para preencher o <strong>Nome</strong> e gerar o <strong>Código SKU</strong> automaticamente!</span>
+                        </div>
+                        <button type="button" id="btnConfigurarIaKey" class="px-2.5 py-1.5 rounded-xl bg-blue-600 text-white font-extrabold hover:bg-blue-700 shrink-0 transition-all text-[9px] uppercase tracking-wider shadow-sm">
+                            🔑 Chave IA
+                        </button>
+                    </div>
+
+                    <div class="space-y-3">
+                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nome do produto *
+                            <input name="nome" id="inputProdutoNome" required placeholder="Ex.: Shampoo Hidratante 1L, Tesoura Laser..." class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-3 text-xs normal-case font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </label>
+
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Categoria do material</label>
+                            <input name="categoria" id="inputProdutoCategoria" placeholder="Ex.: Cabelo, Barbearia, Unhas, Limpeza..." class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-3 text-xs normal-case font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <div class="mt-2 flex flex-wrap gap-1.5">
+                                <button type="button" class="btn-tag-categoria text-[10px] font-bold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-blue-500/10 hover:text-blue-500">Cabelo</button>
+                                <button type="button" class="btn-tag-categoria text-[10px] font-bold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-blue-500/10 hover:text-blue-500">Unhas</button>
+                                <button type="button" class="btn-tag-categoria text-[10px] font-bold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-blue-500/10 hover:text-blue-500">Estética</button>
+                                <button type="button" class="btn-tag-categoria text-[10px] font-bold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-blue-500/10 hover:text-blue-500">Barbearia</button>
+                                <button type="button" class="btn-tag-categoria text-[10px] font-bold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-blue-500/10 hover:text-blue-500">Limpeza</button>
+                                <button type="button" class="btn-tag-categoria text-[10px] font-bold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-blue-500/10 hover:text-blue-500">Ferramentas</button>
+                            </div>
+                        </div>
+
+                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                            <span class="flex items-center justify-between">
+                                <span>Código de identificação (SKU)</span>
+                                <button type="button" id="btnGerarSku" class="text-[10px] text-blue-600 dark:text-blue-400 font-extrabold hover:underline lowercase">⚡ gerar sku automático</button>
+                            </span>
+                            <input name="codigo" id="inputProdutoCodigo" placeholder="SKU-MAT-1024" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-3 text-xs normal-case font-semibold">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- PASSO 2: Tipo & Medida -->
+                <div id="wizardStep2" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Como este produto é utilizado? *</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <label class="btn-tipo-opcao cursor-pointer rounded-2xl border-2 border-blue-500 bg-blue-500/5 p-4 flex flex-col gap-1 transition-all">
+                                <div class="flex items-center justify-between">
+                                    <span class="h-8 w-8 rounded-xl bg-blue-500 text-white flex items-center justify-center"><i class="fa-solid fa-box-archive"></i></span>
+                                    <input type="radio" name="tipo" value="consumo" checked class="h-4 w-4 accent-blue-600">
+                                </div>
+                                <strong class="text-xs font-extrabold text-slate-900 dark:text-white mt-1">📦 Produto de Consumo</strong>
+                                <span class="text-[11px] text-slate-500 dark:text-slate-400">Gasta durante o atendimento (ex: shampoo, tinta, esmalte, cera, algodão).</span>
+                            </label>
+                            <label class="btn-tipo-opcao cursor-pointer rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-4 flex flex-col gap-1 transition-all">
+                                <div class="flex items-center justify-between">
+                                    <span class="h-8 w-8 rounded-xl bg-sky-500 text-white flex items-center justify-center"><i class="fa-solid fa-screwdriver-wrench"></i></span>
+                                    <input type="radio" name="tipo" value="ferramenta" class="h-4 w-4 accent-blue-600">
+                                </div>
+                                <strong class="text-xs font-extrabold text-slate-900 dark:text-white mt-1">🛠️ Equipamento / Ferramenta</strong>
+                                <span class="text-[11px] text-slate-500 dark:text-slate-400">Uso contínuo que não gasta por atendimento (ex: secador, tesoura, prancha).</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Unidade de Medida
+                            <select name="unidade" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-3 text-xs normal-case font-semibold">
+                                <option value="un">Unidade(s) / Frasco / Pote</option>
+                                <option value="cx">Caixa(s) / Pacote</option>
+                                <option value="L">Litro(s) / mL</option>
+                                <option value="kg">Quilograma(s) / Gramas</option>
+                                <option value="m">Metro(s)</option>
+                            </select>
+                        </label>
+
+                        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Local de Armazenamento
+                            <input name="localizacao" placeholder="Ex: Armário 2, Prateleira B..." class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-3 text-xs normal-case font-semibold">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- PASSO 3: Quantidades & Valores -->
+                <div id="wizardStep3" class="space-y-4 hidden">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <label data-initial-balance class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Quantos tem agora em mãos? *
+                            <input name="saldo_inicial" type="number" min="0" step="0.001" value="0" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-3 text-xs normal-case font-black text-blue-600 dark:text-blue-400">
+                        </label>
+
+                        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Estoque Mínimo de Alerta
+                            <input name="estoque_minimo" type="number" min="0" step="0.001" value="0" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-3 text-xs normal-case font-semibold">
+                        </label>
+
+                        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Custo de Compra (R$)
+                            <input name="custo_unitario" type="number" min="0" step="0.01" value="0" placeholder="0.00" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-3 text-xs normal-case font-semibold">
+                        </label>
+                    </div>
+
+                    <label data-initial-balance class="flex items-start gap-3 p-3.5 rounded-2xl bg-emerald-500/10 text-xs text-emerald-800 dark:text-emerald-300 border border-emerald-500/20">
+                        <input name="gerar_caixa" type="checkbox" checked class="mt-0.5 h-4 w-4 accent-emerald-600 shrink-0">
+                        <span><strong class="block font-bold">Lançar valor no Fluxo de Caixa</strong>Registra o saldo inicial × valor unitário como saída paga no caixa financeiro do estabelecimento.</span>
                     </label>
                 </div>
-                <label data-initial-balance class="flex items-start gap-2 p-3 rounded-2xl bg-emerald-500/10 text-xs text-emerald-800 dark:text-emerald-300">
-                    <input name="gerar_caixa" type="checkbox" checked class="mt-0.5 h-4 w-4 accent-emerald-600">
-                    <span><strong class="block">Lançar compra no fluxo de caixa</strong>Usa saldo inicial × custo unitário como saída paga.</span>
-                </label>
-                <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" data-close-modal="modalProdutoEstoque" class="px-5 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200">Cancelar</button>
-                    <button type="submit" class="px-5 py-3 rounded-2xl bg-blue-600 text-white text-xs font-black shadow-lg shadow-blue-500/20">Salvar produto</button>
+
+                <!-- Footer Wizard Buttons Navigation -->
+                <div class="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800 shrink-0">
+                    <button type="button" id="btnWizardPrev" class="px-5 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition-all hidden">
+                        <i class="fa-solid fa-arrow-left text-xs"></i> Voltar
+                    </button>
+                    <div class="ml-auto flex items-center gap-2">
+                        <button type="button" data-close-modal="modalProdutoEstoque" class="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-500">Cancelar</button>
+                        <button type="button" id="btnWizardNext" class="px-6 py-3 rounded-2xl bg-blue-600 text-white text-xs font-extrabold shadow-lg shadow-blue-500/20 flex items-center gap-1.5">
+                            Continuar <i class="fa-solid fa-arrow-right text-xs"></i>
+                        </button>
+                        <button type="submit" id="btnWizardSubmit" class="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-black shadow-lg shadow-emerald-500/20 hidden flex items-center gap-1.5">
+                            <i class="fa-solid fa-check text-xs"></i> Salvar Produto
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal 2: Movimento / Inventário -->
+    <!-- Modal 2: Movimento / Entrada e Saída Rápida -->
     <div id="modalMovimentoEstoque" class="fixed inset-0 z-[60] hidden items-end sm:items-center justify-center bg-slate-950/75 backdrop-blur-sm sm:p-4">
         <div class="w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl">
             <div class="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between">
                 <div>
                     <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">Movimentar estoque</h3>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">Toda alteração ficará registrada na razão.</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Registre entradas ou saídas manuais com justificativa.</p>
                 </div>
                 <button data-close-modal="modalMovimentoEstoque" class="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
             <form id="formMovimentoEstoque" class="p-5 sm:p-6 space-y-3">
-                <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Tipo
-                    <select name="tipo" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
-                        <option value="entrada">Entrada</option>
-                        <option value="saida">Saída</option>
-                        <option value="inventario">Contagem de inventário</option>
+                <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Tipo de Movimento
+                    <select name="tipo" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-3 text-xs normal-case font-bold">
+                        <option value="entrada">📥 Entrada (Compra / Reposição)</option>
+                        <option value="saida">📤 Saída (Uso Avulso / Perda)</option>
                     </select>
                 </label>
-                <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Produto
-                    <select name="produto_id" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium"></select>
+                <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Selecione o produto *
+                    <select name="produto_id" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-3 text-xs normal-case font-bold"></select>
                 </label>
-                <div class="flex items-center justify-between rounded-2xl bg-blue-500/10 p-3 text-xs">
-                    <span class="text-slate-500 dark:text-slate-400 font-semibold">Saldo atual</span>
+                <div class="flex items-center justify-between rounded-2xl bg-blue-500/10 p-3 text-xs border border-blue-500/20">
+                    <span class="text-slate-500 dark:text-slate-400 font-semibold">Saldo atual no sistema</span>
                     <strong id="movimentoSaldoAtual" class="font-extrabold text-blue-600 dark:text-blue-400">—</strong>
                 </div>
                 <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">
                     <span id="movimentoQuantidadeLabel">Quantidade</span>
-                    <input name="quantidade" type="number" min="0" step="0.001" required class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
+                    <input name="quantidade" type="number" min="0" step="0.001" required class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-3 text-xs normal-case font-semibold">
                 </label>
-                <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Motivo
-                    <input name="motivo" placeholder="Compra, uso avulso, perda..." class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
+                <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Motivo / Justificativa
+                    <input name="motivo" placeholder="Ex: Compra em distribuidora, frasco quebrou..." class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-3 text-xs normal-case font-medium">
                 </label>
-                <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Referência
-                    <input name="referencia" placeholder="Nota, pedido ou observação" class="mt-1 w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-3 text-xs normal-case font-medium">
-                </label>
-                <div id="movimentoCompraFields" class="space-y-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 p-3">
+                <div id="movimentoCompraFields" class="space-y-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 p-3.5">
                     <label class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
-                        <input name="gerar_caixa" type="checkbox" class="h-4 w-4 accent-emerald-600">Lançar esta compra no caixa
+                        <input name="gerar_caixa" type="checkbox" class="h-4 w-4 accent-emerald-600">Lançar esta compra no caixa financeiro
                     </label>
                     <div class="grid grid-cols-2 gap-2">
-                        <label class="text-[10px] font-bold uppercase text-slate-500">Valor unitário
-                            <input name="valor_unitario" type="number" min="0" step="0.01" class="mt-1 w-full rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-2 text-xs normal-case font-medium">
+                        <label class="text-[10px] font-bold uppercase text-slate-500">Valor unitário (R$)
+                            <input name="valor_unitario" type="number" min="0" step="0.01" class="mt-1 w-full rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-2 text-xs font-semibold">
                         </label>
                         <label class="text-[10px] font-bold uppercase text-slate-500">Situação
-                            <select name="status_pagamento" class="mt-1 w-full rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-2 text-xs normal-case font-medium">
-                                <option value="pago">Pago</option>
-                                <option value="a_receber">Pendente</option>
+                            <select name="status_pagamento" class="mt-1 w-full rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-2 text-xs font-semibold">
+                                <option value="pago">Pago à vista</option>
+                                <option value="a_receber">A pagar / Fiado</option>
                             </select>
                         </label>
                     </div>
@@ -329,6 +407,50 @@
                     <button type="submit" class="px-5 py-3 rounded-2xl bg-blue-600 text-white text-xs font-black shadow-lg shadow-blue-500/20">Confirmar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Novo: Assistente de Inventário Guiado (Contagem Física) -->
+    <div id="modalInventarioGuiado" class="fixed inset-0 z-[65] hidden items-end sm:items-center justify-center bg-slate-950/75 backdrop-blur-sm sm:p-4">
+        <div class="w-full max-w-3xl max-h-[92vh] flex flex-col rounded-t-[2.5rem] sm:rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+            <div class="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between bg-gradient-to-r from-purple-500/10 via-indigo-500/5 to-transparent shrink-0">
+                <div>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400">Contagem de Estoque</span>
+                    <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-check text-purple-500"></i> Assistente de Inventário
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Digite a quantidade real que você tem em mãos hoje para ajustar o saldo automaticamente.</p>
+                </div>
+                <button data-close-modal="modalInventarioGuiado" class="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Busca Rápida no Inventário -->
+            <div class="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 shrink-0">
+                <label class="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs"></i>
+                    <input id="inventarioGuiadoSearch" class="w-full bg-transparent outline-none text-xs font-semibold placeholder:text-slate-400" placeholder="Filtrar por nome do produto...">
+                </label>
+            </div>
+
+            <!-- Lista de Produtos para Contagem -->
+            <div id="inventarioGuiadoLista" class="p-4 sm:p-6 overflow-y-auto space-y-3 flex-1">
+                <!-- Preenchido via JS -->
+            </div>
+
+            <!-- Footer do Inventário -->
+            <div class="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between shrink-0">
+                <span id="inventarioSummaryBadge" class="text-xs font-bold text-slate-500 dark:text-slate-400">
+                    0 alterações pendentes
+                </span>
+                <div class="flex items-center gap-2">
+                    <button type="button" data-close-modal="modalInventarioGuiado" class="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-500">Cancelar</button>
+                    <button type="button" id="btnSalvarInventarioGuiado" class="px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-black shadow-lg shadow-purple-500/20">
+                        Concluir Inventário 🎉
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -399,7 +521,7 @@
     </div>
 
     <script type="module">
-        import { initEstoquePage } from './js/estoque.js?v=3.8';
+        import { initEstoquePage } from './js/estoque.js?v=4.0';
         initEstoquePage();
     </script>
 </body>

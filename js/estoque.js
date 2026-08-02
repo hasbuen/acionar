@@ -426,7 +426,8 @@ function productPhoto(produto, size = 'h-14 w-14') {
 
 function renderMetrics() {
     const produtos = state.produtos;
-    const baixo = produtos.filter(p => Number(p.saldo_atual) <= Number(p.estoque_minimo));
+    // Só alerta quando estoque_minimo foi definido (> 0)
+    const baixo = produtos.filter(p => Number(p.estoque_minimo) > 0 && Number(p.saldo_atual) <= Number(p.estoque_minimo));
     const valor = produtos.reduce((sum, p) => sum + Number(p.saldo_atual) * Number(p.custo_unitario), 0);
     const ferramentas = produtos.filter(p => p.tipo === 'ferramenta').length;
     const values = {
@@ -458,41 +459,56 @@ function renderProducts() {
     if (!products.length) {
         container.innerHTML = `<div class="col-span-full py-16 text-center bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-[2rem]">
             <span class="mx-auto h-14 w-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400"><i class="fa-solid fa-box-open text-xl"></i></span>
-            <h3 class="mt-4 font-extrabold">Nenhum produto encontrado</h3>
-            <p class="mt-1 text-xs text-slate-500">Cadastre um consumo ou ferramenta para começar.</p>
+            <h3 class="mt-4 font-extrabold">Nenhum produto cadastrado ainda</h3>
+            <p class="mt-1 text-xs text-slate-500">Clique em <strong>Novo produto</strong> para começar.</p>
         </div>`;
         return;
     }
     container.innerHTML = products.map(p => {
-        const low = Number(p.saldo_atual) <= Number(p.estoque_minimo);
+        const saldoAtual = Number(p.saldo_atual ?? 0);
+        const estoqueMin = Number(p.estoque_minimo ?? 0);
+        const low = estoqueMin > 0 && saldoAtual <= estoqueMin;
+        const valorTotal = saldoAtual * Number(p.custo_unitario ?? 0);
         return `<article class="group bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 rounded-[2rem] p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all">
             <div class="flex items-start gap-3">
                 ${productPhoto(p)}
                 <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase ${p.tipo === 'ferramenta' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}">${p.tipo}</span>
-                        ${low ? '<span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400">Repor</span>' : ''}
+                        <span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase ${p.tipo === 'ferramenta' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}">${p.tipo === 'ferramenta' ? '🛠️ Ferramenta' : '📦 Consumo'}</span>
+                        ${low ? '<span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 animate-pulse">⚠️ Repor</span>' : ''}
                     </div>
-                    <h3 class="mt-2 font-extrabold text-sm text-slate-900 dark:text-white truncate">${escapeHtml(p.nome)}</h3>
+                    <h3 class="mt-1.5 font-extrabold text-sm text-slate-900 dark:text-white truncate">${escapeHtml(p.nome)}</h3>
                     <p class="text-[10px] text-slate-400">${escapeHtml(p.codigo || 'Sem código')} · ${escapeHtml(p.categoria || 'Sem categoria')}</p>
                 </div>
             </div>
-            <div class="mt-5 grid grid-cols-2 gap-2">
-                <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3">
-                    <span class="block text-[9px] uppercase font-bold text-slate-400">${p.tipo === 'ferramenta' ? 'Disponível' : 'Saldo atual'}</span>
-                    <strong class="text-lg text-slate-900 dark:text-white">${number.format(p.saldo_atual)} <small class="text-xs text-slate-400">${escapeHtml(p.unidade)}</small></strong>
+            <div class="mt-4 grid grid-cols-3 gap-2">
+                <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3 col-span-1">
+                    <span class="block text-[9px] uppercase font-bold text-slate-400">${p.tipo === 'ferramenta' ? 'Qtd.' : 'Saldo'}</span>
+                    <strong class="text-base text-slate-900 dark:text-white">${number.format(saldoAtual)} <small class="text-[10px] text-slate-400">${escapeHtml(p.unidade)}</small></strong>
                 </div>
-                <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3">
-                    <span class="block text-[9px] uppercase font-bold text-slate-400">Custo unitário</span>
-                    <strong class="text-sm text-slate-900 dark:text-white">${money.format(p.custo_unitario)}</strong>
+                <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3 col-span-1">
+                    <span class="block text-[9px] uppercase font-bold text-slate-400">Custo unit.</span>
+                    <strong class="text-xs text-slate-900 dark:text-white">${money.format(p.custo_unitario ?? 0)}</strong>
+                </div>
+                <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3 col-span-1">
+                    <span class="block text-[9px] uppercase font-bold text-slate-400">Total</span>
+                    <strong class="text-xs text-emerald-600 dark:text-emerald-400">${money.format(valorTotal)}</strong>
                 </div>
             </div>
-            <div class="mt-4 flex items-center gap-2 border-t border-slate-100 dark:border-slate-800 pt-3">
-                <span class="mr-auto text-[10px] text-slate-400 truncate"><i class="fa-solid fa-location-dot mr-1"></i>${escapeHtml(p.localizacao || 'Local não definido')}</span>
-                <button data-action="razao" data-id="${p.id}" title="Razão / Histórico" class="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 flex items-center justify-center"><i class="fa-solid fa-clock-rotate-left text-xs"></i></button>
-                <button data-action="movimentar" data-id="${p.id}" title="Movimentar" class="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center"><i class="fa-solid fa-arrow-right-arrow-left text-xs"></i></button>
-                <button data-action="editar" data-id="${p.id}" title="Editar" class="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 flex items-center justify-center"><i class="fa-solid fa-pen text-xs"></i></button>
-                <button data-action="excluir" data-id="${p.id}" title="Excluir Produto" class="h-9 w-9 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 flex items-center justify-center"><i class="fa-solid fa-trash text-xs"></i></button>
+            ${p.localizacao ? `<p class="mt-2 text-[10px] text-slate-400"><i class="fa-solid fa-location-dot mr-1"></i>${escapeHtml(p.localizacao)}</p>` : ''}
+            <div class="mt-3 flex items-center gap-1.5 border-t border-slate-100 dark:border-slate-800 pt-3">
+                <button data-action="razao" data-id="${p.id}" title="Histórico de movimentações" class="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-clock-rotate-left text-xs"></i>
+                </button>
+                <button data-action="movimentar" data-id="${p.id}" title="Registrar entrada ou saída" class="flex-1 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold flex items-center justify-center gap-1 transition-colors hover:bg-blue-500/20">
+                    <i class="fa-solid fa-arrow-right-arrow-left text-xs"></i> Movimentar
+                </button>
+                <button data-action="editar" data-id="${p.id}" title="Editar produto" class="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-pen text-xs"></i>
+                </button>
+                <button data-action="excluir" data-id="${p.id}" title="Excluir produto" class="h-9 w-9 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                </button>
             </div>
         </article>`;
     }).join('');
@@ -516,25 +532,75 @@ function closeModal(id) {
     modal.classList.remove('flex');
 }
 
+// ─────────────────────────────────────────────────────────────
+// WIZARD DE CADASTRO DE PRODUTO (3 PASSOS)
+// ─────────────────────────────────────────────────────────────
+
+let wizardStep = 1;
+
+function goToWizardStep(step) {
+    wizardStep = step;
+    [1, 2, 3].forEach(s => {
+        const tab = document.getElementById(`stepTab${s}`);
+        const div = document.getElementById(`wizardStep${s}`);
+        if (!tab || !div) return;
+        if (s === step) {
+            tab.className = 'py-2 rounded-xl bg-blue-600 text-white font-extrabold text-[11px] shadow-sm transition-all flex items-center justify-center gap-1.5';
+            div.classList.remove('hidden');
+        } else if (s < step) {
+            tab.className = 'py-2 rounded-xl bg-emerald-500 text-white font-extrabold text-[11px] transition-all flex items-center justify-center gap-1.5';
+            div.classList.add('hidden');
+        } else {
+            tab.className = 'py-2 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-[11px] transition-all flex items-center justify-center gap-1.5';
+            div.classList.add('hidden');
+        }
+    });
+    document.getElementById('btnWizardPrev')?.classList.toggle('hidden', step === 1);
+    document.getElementById('btnWizardNext')?.classList.toggle('hidden', step === 3);
+    document.getElementById('btnWizardSubmit')?.classList.toggle('hidden', step !== 3);
+}
+
+function updateTipoOpcoes(tipoSelecionado) {
+    document.querySelectorAll('.btn-tipo-opcao').forEach(label => {
+        const radio = label.querySelector('input[type="radio"]');
+        if (!radio) return;
+        if (radio.value === tipoSelecionado) {
+            label.classList.add('border-blue-500', 'bg-blue-500/5');
+            label.classList.remove('border-slate-200', 'dark:border-slate-800');
+        } else {
+            label.classList.remove('border-blue-500', 'bg-blue-500/5');
+            label.classList.add('border-slate-200', 'dark:border-slate-800');
+        }
+    });
+}
+
 function openProductModal(produto = null) {
     const modal = document.getElementById('modalProdutoEstoque');
     const form = document.getElementById('formProdutoEstoque');
     if (!modal || !form) return;
     form.reset();
     form.elements.id.value = produto?.id || '';
-    form.elements.tipo.value = produto?.tipo || 'consumo';
-    form.elements.nome.value = produto?.nome || '';
-    form.elements.codigo.value = produto?.codigo || '';
-    form.elements.categoria.value = produto?.categoria || '';
-    form.elements.unidade.value = produto?.unidade || 'un';
-    form.elements.estoque_minimo.value = produto?.estoque_minimo ?? 0;
-    form.elements.custo_unitario.value = produto?.custo_unitario ?? 0;
-    form.elements.localizacao.value = produto?.localizacao || '';
-    form.elements.saldo_inicial.closest('[data-initial-balance]')?.classList.toggle('hidden', Boolean(produto));
+    if (produto) {
+        form.elements.tipo.value = produto.tipo || 'consumo';
+        form.elements.nome.value = produto.nome || '';
+        form.elements.codigo.value = produto.codigo || '';
+        if (form.elements.categoria) form.elements.categoria.value = produto.categoria || '';
+        form.elements.unidade.value = produto.unidade || 'un';
+        form.elements.estoque_minimo.value = produto.estoque_minimo ?? 0;
+        form.elements.custo_unitario.value = produto.custo_unitario ?? 0;
+        form.elements.localizacao.value = produto.localizacao || '';
+    }
+    // Oculta saldo inicial ao editar
+    document.querySelectorAll('[data-initial-balance]').forEach(el => el.classList.toggle('hidden', Boolean(produto)));
     document.getElementById('produtoModalTitle').textContent = produto ? 'Editar produto' : 'Novo produto';
-    document.getElementById('produtoImagemPreview').innerHTML = produto?.imagem_url
-        ? `<img src="${escapeHtml(produto.imagem_url)}" class="h-full w-full object-cover">`
-        : '<i class="fa-solid fa-camera text-xl"></i><span>Fotografar produto</span>';
+    const preview = document.getElementById('produtoImagemPreview');
+    if (preview) {
+        preview.innerHTML = produto?.imagem_url
+            ? `<img src="${escapeHtml(produto.imagem_url)}" class="h-full w-full object-cover">`
+            : `<i class="fa-solid fa-camera text-2xl"></i><span class="text-xs font-extrabold">Fotografar / Anexar produto</span><span class="text-[10px] text-slate-400">Clique para câmera ou galeria</span>`;
+    }
+    updateTipoOpcoes(form.elements.tipo?.value || 'consumo');
+    goToWizardStep(1);
     showModal(modal);
 }
 
@@ -593,6 +659,114 @@ async function openLedger(produtoId) {
             <div class="text-right"><strong class="block text-xs ${Number(m.quantidade) > 0 ? 'text-emerald-500' : 'text-orange-500'}">${Number(m.quantidade) > 0 ? '+' : ''}${number.format(m.quantidade)} ${produto.unidade}</strong><span class="text-[10px] text-slate-400">Saldo ${number.format(m.saldo_posterior)}</span></div>
         </div>`).join('') : '<p class="py-8 text-center text-xs text-slate-400">Nenhuma movimentação registrada.</p>';
     showModal(document.getElementById('modalRazaoEstoque'));
+}
+
+// ─────────────────────────────────────────────────────────────
+// ASSISTENTE DE INVENTÁRIO GUIADO
+// ─────────────────────────────────────────────────────────────
+
+function openInventarioGuiado() {
+    const modal = document.getElementById('modalInventarioGuiado');
+    if (!modal) return;
+    const searchInput = document.getElementById('inventarioGuiadoSearch');
+    if (searchInput) { searchInput.value = ''; searchInput.oninput = () => renderInventarioGuiado(state.produtos, searchInput.value); }
+    renderInventarioGuiado(state.produtos, '');
+    showModal(modal);
+}
+
+function renderInventarioGuiado(produtos, filtro = '') {
+    const container = document.getElementById('inventarioGuiadoLista');
+    if (!container) return;
+    const search = filtro.toLocaleLowerCase('pt-BR');
+    const filtrados = produtos.filter(p => !search || `${p.nome} ${p.codigo || ''} ${p.categoria || ''}`.toLocaleLowerCase('pt-BR').includes(search));
+    if (!filtrados.length) {
+        container.innerHTML = `<div class="py-12 text-center"><i class="fa-solid fa-box-open text-3xl text-slate-300 dark:text-slate-600"></i><p class="mt-3 text-xs text-slate-400 font-medium">Nenhum produto encontrado.</p></div>`;
+        atualizarSummaryInventario();
+        return;
+    }
+    container.innerHTML = filtrados.map(p => {
+        const saldoAtual = Number(p.saldo_atual ?? 0);
+        const low = Number(p.estoque_minimo) > 0 && saldoAtual <= Number(p.estoque_minimo);
+        return `<div class="rounded-2xl border ${low ? 'border-rose-500/30 bg-rose-500/5' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40'} p-4 flex items-center gap-3" data-inventario-row data-produto-id="${p.id}" data-saldo-atual="${saldoAtual}">
+            ${productPhoto(p, 'h-12 w-12 shrink-0')}
+            <div class="min-w-0 flex-1">
+                <strong class="block text-xs font-extrabold text-slate-900 dark:text-white truncate">${escapeHtml(p.nome)}</strong>
+                <span class="text-[10px] text-slate-400">${escapeHtml(p.categoria || 'Sem categoria')} · Sistema: <strong class="text-blue-500">${number.format(saldoAtual)} ${escapeHtml(p.unidade)}</strong></span>
+                <div id="diffBadge_${p.id}" class="mt-1 hidden text-[10px] font-extrabold"></div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" class="btn-inv-minus h-10 w-10 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 flex items-center justify-center text-lg font-bold transition-colors" data-id="${p.id}">−</button>
+                <input type="number" min="0" step="0.001" value="${saldoAtual}"
+                    class="inventario-input w-20 text-center rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-2 text-sm font-black text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                    data-id="${p.id}" data-saldo-atual="${saldoAtual}">
+                <button type="button" class="btn-inv-plus h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 flex items-center justify-center text-lg font-bold transition-colors" data-id="${p.id}">+</button>
+            </div>
+        </div>`;
+    }).join('');
+    // Eventos
+    container.querySelectorAll('.btn-inv-minus').forEach(btn => btn.addEventListener('click', () => {
+        const input = container.querySelector(`.inventario-input[data-id="${btn.dataset.id}"]`);
+        if (input) { input.value = Math.max(0, Number(input.value) - 1); atualizarDiffBadge(btn.dataset.id, Number(input.value), container); atualizarSummaryInventario(); }
+    }));
+    container.querySelectorAll('.btn-inv-plus').forEach(btn => btn.addEventListener('click', () => {
+        const input = container.querySelector(`.inventario-input[data-id="${btn.dataset.id}"]`);
+        if (input) { input.value = Number(input.value) + 1; atualizarDiffBadge(btn.dataset.id, Number(input.value), container); atualizarSummaryInventario(); }
+    }));
+    container.querySelectorAll('.inventario-input').forEach(input => input.addEventListener('input', () => {
+        atualizarDiffBadge(input.dataset.id, Math.max(0, Number(input.value) || 0), container); atualizarSummaryInventario();
+    }));
+    atualizarSummaryInventario();
+}
+
+function atualizarDiffBadge(produtoId, novoVal, container) {
+    const badge = container.querySelector(`#diffBadge_${produtoId}`);
+    const input = container.querySelector(`.inventario-input[data-id="${produtoId}"]`);
+    if (!badge || !input) return;
+    const saldoAtual = Number(input.dataset.saldoAtual);
+    const diff = novoVal - saldoAtual;
+    if (diff === 0) { badge.classList.add('hidden'); return; }
+    badge.classList.remove('hidden');
+    badge.innerHTML = diff > 0
+        ? `<span class="text-emerald-600 dark:text-emerald-400">▲ +${number.format(diff)} (sobra)</span>`
+        : `<span class="text-rose-500">▼ ${number.format(diff)} (falta)</span>`;
+}
+
+function atualizarSummaryInventario() {
+    const container = document.getElementById('inventarioGuiadoLista');
+    const badge = document.getElementById('inventarioSummaryBadge');
+    if (!container || !badge) return;
+    let alteracoes = 0;
+    container.querySelectorAll('.inventario-input').forEach(input => {
+        if (Number(input.value) !== Number(input.dataset.saldoAtual)) alteracoes++;
+    });
+    badge.textContent = alteracoes === 0 ? 'Nenhuma alteração pendente' : `${alteracoes} produto${alteracoes > 1 ? 's' : ''} com ajuste pendente`;
+    badge.className = `text-xs font-bold ${alteracoes > 0 ? 'text-purple-600 dark:text-purple-400' : 'text-slate-500 dark:text-slate-400'}`;
+}
+
+async function salvarInventarioGuiado(ajustes) {
+    if (!ajustes || ajustes.length === 0) return 0;
+    let salvos = 0;
+    for (const aj of ajustes) {
+        if (aj.saldoContado === aj.saldoAtual) continue;
+        try {
+            const { error: rpcErr } = await supabase.rpc('registrar_movimento_estoque', {
+                p_produto_id: aj.produtoId, p_tipo: 'inventario', p_quantidade: null,
+                p_novo_saldo: aj.saldoContado, p_motivo: aj.motivo || 'Contagem física de inventário',
+                p_referencia: null, p_gerar_caixa: false, p_valor_unitario: 0, p_status_pagamento: 'pago'
+            });
+            if (rpcErr) {
+                const delta = aj.saldoContado - aj.saldoAtual;
+                await supabase.from('estoque_produtos').update({ saldo_atual: aj.saldoContado }).eq('id', aj.produtoId);
+                await supabase.from('estoque_movimentacoes').insert({
+                    profissional_id: state.profissional.id, produto_id: aj.produtoId, tipo: 'inventario',
+                    quantidade: delta, saldo_anterior: aj.saldoAtual, saldo_posterior: aj.saldoContado,
+                    motivo: aj.motivo || 'Contagem física de inventário', referencia: null
+                });
+            }
+            salvos++;
+        } catch (e) { console.warn(`Falha ao salvar inventário produto ${aj.produtoId}:`, e); }
+    }
+    return salvos;
 }
 
 async function refreshStock() {
@@ -763,12 +937,38 @@ export async function initEstoquePage() {
 
     document.getElementById('btnNovoProduto')?.addEventListener('click', () => openProductModal());
     document.getElementById('btnRegistrarEntrada')?.addEventListener('click', () => openMovementModal('', 'entrada'));
-    document.getElementById('btnInventario')?.addEventListener('click', () => openMovementModal('', 'inventario'));
+    document.getElementById('btnInventario')?.addEventListener('click', () => openInventarioGuiado());
     document.getElementById('btnTransferir')?.addEventListener('click', () => openTransferModal());
     document.getElementById('estoqueSearch')?.addEventListener('input', event => { state.filtro = event.target.value; renderProducts(); });
     document.getElementById('estoqueTipoFilter')?.addEventListener('change', event => { state.tipo = event.target.value; renderProducts(); });
 
     document.querySelectorAll('[data-close-modal]').forEach(button => button.addEventListener('click', () => closeModal(button.dataset.closeModal)));
+
+    // Tags de categoria (clique rápido)
+    document.querySelectorAll('.btn-tag-categoria').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const catInput = document.getElementById('inputProdutoCategoria');
+            if (catInput) catInput.value = btn.textContent.trim();
+        });
+    });
+
+    // Radio tipo visual
+    document.querySelectorAll('.btn-tipo-opcao input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', () => updateTipoOpcoes(radio.value));
+    });
+
+    // Wizard: navegação de passos
+    document.getElementById('btnWizardNext')?.addEventListener('click', () => {
+        const form = document.getElementById('formProdutoEstoque');
+        if (wizardStep === 1 && !form?.elements?.nome?.value?.trim()) {
+            showToast('Informe o nome do produto antes de continuar.', 'error');
+            return;
+        }
+        if (wizardStep < 3) goToWizardStep(wizardStep + 1);
+    });
+    document.getElementById('btnWizardPrev')?.addEventListener('click', () => {
+        if (wizardStep > 1) goToWizardStep(wizardStep - 1);
+    });
 
     document.getElementById('btnGerarSku')?.addEventListener('click', () => {
         const form = document.getElementById('formProdutoEstoque');
@@ -837,15 +1037,38 @@ export async function initEstoquePage() {
 
     document.getElementById('formProdutoEstoque')?.addEventListener('submit', async event => {
         event.preventDefault();
-        const button = event.target.querySelector('button[type="submit"]');
-        button.disabled = true;
+        const btn = document.getElementById('btnWizardSubmit') || event.target.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
         try {
             await saveProduto(event.target);
             closeModal('modalProdutoEstoque');
-            showToast('Produto salvo com sucesso.', 'success');
+            showToast('✅ Produto salvo com sucesso!', 'success');
             await refreshStock();
         } catch (error) { showToast(error.message, 'error'); }
-        finally { button.disabled = false; }
+        finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check text-xs"></i> Salvar Produto'; } }
+    });
+
+    // Inventário Guiado – salvar
+    document.getElementById('btnSalvarInventarioGuiado')?.addEventListener('click', async () => {
+        const container = document.getElementById('inventarioGuiadoLista');
+        if (!container) return;
+        const inputs = container.querySelectorAll('.inventario-input');
+        const ajustes = [];
+        inputs.forEach(input => {
+            const saldoAtual = Number(input.dataset.saldoAtual);
+            const saldoContado = Math.max(0, Number(input.value) || 0);
+            if (saldoContado !== saldoAtual) ajustes.push({ produtoId: input.dataset.id, saldoAtual, saldoContado, motivo: 'Contagem física de inventário' });
+        });
+        if (ajustes.length === 0) { showToast('Nenhuma quantidade foi alterada.', 'info'); return; }
+        const btn = document.getElementById('btnSalvarInventarioGuiado');
+        if (btn) { btn.disabled = true; btn.textContent = 'Salvando inventário...'; }
+        try {
+            const salvos = await salvarInventarioGuiado(ajustes);
+            closeModal('modalInventarioGuiado');
+            showToast(`🎉 Inventário concluído! ${salvos} produto${salvos > 1 ? 's' : ''} atualizado${salvos > 1 ? 's' : ''}.`, 'success');
+            await refreshStock();
+        } catch (error) { showToast('Erro ao salvar inventário: ' + error.message, 'error'); }
+        finally { if (btn) { btn.disabled = false; btn.textContent = 'Concluir Inventário 🎉'; } }
     });
 
     document.getElementById('formMovimentoEstoque')?.addEventListener('change', event => {
@@ -975,13 +1198,20 @@ export async function openServiceProductsDialog(servico) {
         const itens = payload.map(({ produto_id, quantidade, cobrar_separado, preco_unitario_cliente }) => ({
             produto_id, quantidade, cobrar_separado, preco_unitario_cliente
         }));
-        const { error: saveError } = await supabase.rpc('salvar_produtos_servico', {
-            p_servico_id: servico.id,
-            p_itens: itens
-        });
-        if (saveError) { showToast(saveError.message, 'error'); return; }
+        // Tenta via RPC, fallback para operações diretas
+        const { error: saveError } = await supabase.rpc('salvar_produtos_servico', { p_servico_id: servico.id, p_itens: itens });
+        if (saveError) {
+            console.warn('RPC salvar_produtos_servico indisponível, fallback JS:', saveError);
+            try {
+                await supabase.from('servico_produtos').delete().eq('servico_id', servico.id).eq('profissional_id', prof.id);
+                if (payload.length > 0) {
+                    const { error: insErr } = await supabase.from('servico_produtos').insert(payload);
+                    if (insErr) throw insErr;
+                }
+            } catch (fbErr) { showToast('Erro ao salvar produtos: ' + fbErr.message, 'error'); return; }
+        }
         modal.classList.add('hidden'); modal.classList.remove('flex');
-        showToast('Produtos do serviço atualizados.', 'success');
+        showToast('Produtos do serviço atualizados!', 'success');
     };
     modal.classList.remove('hidden');
     modal.classList.add('flex');
