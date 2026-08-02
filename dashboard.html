@@ -635,25 +635,39 @@
                         <i class="fa-solid fa-link"></i>
                         <span id="btnCreateStripeCheckoutText">Gerar cobrança Pix ou cartão</span>
                     </button>
-                    <div id="stripeCheckoutResult" class="hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-4 space-y-3">
-                        <p class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                            <i class="fa-solid fa-circle-check"></i>
-                            Cobrança Pix Asaas gerada com sucesso!
-                        </p>
+                    <div id="stripeCheckoutResult" class="hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-4 space-y-3 relative overflow-hidden">
+                        <!-- Overlay de Sucesso com Animacao estilo iFood -->
+                        <div id="modalPagamentoSuccessOverlay" class="hidden absolute inset-0 z-20 bg-emerald-600/95 dark:bg-emerald-600/95 backdrop-blur-md flex flex-col items-center justify-center text-white p-6 transition-all duration-500">
+                            <div class="h-20 w-20 rounded-full bg-white text-emerald-600 flex items-center justify-center text-4xl shadow-2xl animate-bounce mb-3">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <h4 class="text-lg font-black tracking-tight">Pagamento Confirmado!</h4>
+                            <p class="text-xs font-bold opacity-90 mt-1">Baixa efetuada automaticamente no caixa</p>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <p class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-circle-check"></i>
+                                QR Code Pix Pronto para Pagamento!
+                            </p>
+                            <span id="pixPaymentListeningBadge" class="flex items-center gap-1 text-[10px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full animate-pulse">
+                                <i class="fa-solid fa-spinner fa-spin"></i> Escutando pagamento...
+                            </span>
+                        </div>
 
                         <div id="asaasPixQrCodeContainer" class="hidden flex flex-col items-center justify-center p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
-                            <img id="asaasPixQrCodeImage" src="" alt="QR Code Pix" class="w-44 h-44 rounded-xl border border-slate-200 dark:border-slate-700 bg-white p-2">
-                            <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-2">Escaneie o QR Code acima para pagar</span>
+                            <img id="asaasPixQrCodeImage" src="" alt="QR Code Pix" class="w-52 h-52 rounded-xl border border-slate-200 dark:border-slate-700 bg-white p-2 shadow-md">
+                            <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-2">Abra o app do seu banco e escaneie o QR Code</span>
                         </div>
 
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Pix Copia e Cola / Link da Cobrança:</label>
+                            <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Pix Copia e Cola:</label>
                             <input id="stripeCheckoutUrl" type="text" readonly class="w-full rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-[10px] font-mono text-slate-600 dark:text-slate-300">
                         </div>
 
                         <div class="grid grid-cols-2 gap-2">
-                            <button type="button" id="btnCopyStripeCheckout" class="btn-animated rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-2.5 text-[11px] font-extrabold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5"><i class="fa-regular fa-copy"></i>Copiar Código / Link</button>
-                            <a id="btnOpenStripeCheckout" href="#" target="_blank" rel="noopener" class="btn-animated rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-2.5 text-center text-[11px] font-extrabold text-white flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-up-right-from-square"></i>Abrir Fatura Asaas</a>
+                            <button type="button" id="btnCopyStripeCheckout" class="btn-animated rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-2.5 text-[11px] font-extrabold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5"><i class="fa-regular fa-copy"></i>Copiar Código Pix</button>
+                            <a id="btnOpenStripeCheckout" href="#" target="_blank" rel="noopener" class="btn-animated rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-2.5 text-center text-[11px] font-extrabold text-white flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-up-right-from-square"></i>Abrir Comprovante</a>
                         </div>
                     </div>
                 </div>
@@ -1076,7 +1090,56 @@
             });
         });
 
-        const closePaymentModal = () => modalPagamento?.classList.add('hidden');
+        let pixListenerInterval = null;
+
+        function stopPixPaymentListener() {
+            if (pixListenerInterval) {
+                clearInterval(pixListenerInterval);
+                pixListenerInterval = null;
+            }
+        }
+
+        function triggerPaymentSuccessAnimation() {
+            stopPixPaymentListener();
+            const overlay = document.getElementById('modalPagamentoSuccessOverlay');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+            }
+            showToast('✅ Pagamento Confirmado via Pix! Baixa realizada no Caixa.', 'success');
+            window.setTimeout(async () => {
+                if (overlay) overlay.classList.add('hidden');
+                closePaymentModal();
+                if (typeof window.refreshAgenda === 'function') {
+                    await window.refreshAgenda();
+                } else {
+                    window.location.reload();
+                }
+            }, 1800);
+        }
+
+        function startPixPaymentListener(agendamentoId) {
+            stopPixPaymentListener();
+            if (!agendamentoId) return;
+
+            pixListenerInterval = setInterval(async () => {
+                try {
+                    const { data: agendamento } = await supabase
+                        .from('agendamentos')
+                        .select('status')
+                        .eq('id', agendamentoId)
+                        .maybeSingle();
+
+                    if (agendamento?.status === 'pago' || agendamento?.status === 'concluido') {
+                        triggerPaymentSuccessAnimation();
+                    }
+                } catch (_) {}
+            }, 2500);
+        }
+
+        const closePaymentModal = () => {
+            stopPixPaymentListener();
+            modalPagamento?.classList.add('hidden');
+        };
         btnClosePagamentoModal?.addEventListener('click', closePaymentModal);
         btnCancelPagamentoModal?.addEventListener('click', closePaymentModal);
 
@@ -1087,7 +1150,7 @@
 
             btnCreateStripeCheckout.disabled = true;
             btnCreateStripeCheckout.classList.add('opacity-60');
-            btnCreateStripeCheckoutText.textContent = 'Gerando Pix Asaas...';
+            btnCreateStripeCheckoutText.textContent = 'Gerando Pix...';
             try {
                 const checkout = await createAsaasCheckout({ agendamentoId, descontoCentavos });
                 const pixQrCode = checkout.pixQrCode;
@@ -1108,9 +1171,10 @@
                 }
 
                 stripeCheckoutResult.classList.remove('hidden');
-                showToast('Pix Asaas e QR Code gerados com sucesso!', 'success');
+                showToast('Pix QR Code gerado! Aguardando pagamento...', 'success');
+                startPixPaymentListener(agendamentoId);
             } catch (error) {
-                showToast(error.message || 'Falha ao gerar cobrança Pix.', 'error');
+                showToast(error.message || 'Falha ao gerar QR Code Pix.', 'error');
             } finally {
                 btnCreateStripeCheckout.disabled = false;
                 btnCreateStripeCheckout.classList.remove('opacity-60');
