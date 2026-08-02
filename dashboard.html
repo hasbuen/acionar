@@ -1164,7 +1164,11 @@
                 const qrContainer = document.getElementById('asaasPixQrCodeContainer');
                 const qrImage = document.getElementById('asaasPixQrCodeImage');
                 if (pixQrCode && qrContainer && qrImage) {
-                    qrImage.src = pixQrCode.startsWith('data:') ? pixQrCode : `data:image/png;base64,${pixQrCode}`;
+                    if (pixQrCode.startsWith('http://') || pixQrCode.startsWith('https://') || pixQrCode.startsWith('data:')) {
+                        qrImage.src = pixQrCode;
+                    } else {
+                        qrImage.src = `data:image/png;base64,${pixQrCode}`;
+                    }
                     qrContainer.classList.remove('hidden');
                 } else if (qrContainer) {
                     qrContainer.classList.add('hidden');
