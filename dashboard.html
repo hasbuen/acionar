@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="icon" type="image/png" href="./icons/icon-192.png">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Acionar">
     <meta name="theme-color" content="#2563eb">
@@ -661,7 +662,7 @@
                         </div>
 
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Pix Copia e Cola:</label>
+                            <label id="pixPayloadLabel" class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Pix Copia e Cola:</label>
                             <input id="stripeCheckoutUrl" type="text" readonly class="w-full rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-[10px] font-mono text-slate-600 dark:text-slate-300">
                         </div>
 
@@ -1181,8 +1182,9 @@
                 const pixPayload = checkout.pixCopiaECola;
                 const invoiceUrl = checkout.invoiceUrl || '';
 
-                const urlOrPayload = pixPayload || invoiceUrl;
-                stripeCheckoutUrl.value = urlOrPayload;
+                const pixPayloadLabel = document.getElementById('pixPayloadLabel');
+                stripeCheckoutUrl.value = pixPayload || invoiceUrl;
+                if (pixPayloadLabel) pixPayloadLabel.textContent = pixPayload ? 'Pix Copia e Cola:' : 'Link seguro de cobrança:';
                 btnOpenStripeCheckout.href = invoiceUrl || '#';
 
                 const qrContainer = document.getElementById('asaasPixQrCodeContainer');
@@ -1193,6 +1195,9 @@
                     } else {
                         qrImage.src = `data:image/png;base64,${pixQrCode}`;
                     }
+                    qrContainer.classList.remove('hidden');
+                } else if (pixPayload && qrContainer && qrImage) {
+                    qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(pixPayload)}`;
                     qrContainer.classList.remove('hidden');
                 } else if (qrContainer) {
                     qrContainer.classList.add('hidden');

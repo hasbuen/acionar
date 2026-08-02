@@ -40,6 +40,10 @@ async function activeProfessional() {
     if (state.profissional?.id) return state.profissional;
     state.profissional = getActiveProfessional() || await ensureActiveProfessionalFromSession();
     if (!state.profissional?.id) throw new Error('Não foi possível identificar o profissional da sessão.');
+    const { data: { session } = { session: null } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+        throw new Error('Sua sessão segura expirou. Saia e entre novamente para acessar o estoque.');
+    }
     return state.profissional;
 }
 
@@ -47,7 +51,7 @@ async function fetchProdutos() {
     const prof = await activeProfessional();
     const { data, error } = await supabase
         .from('estoque_produtos')
-        .select('*')
+        .select('id,profissional_id,produto_origem_id,tipo,nome,codigo,categoria,unidade,saldo_atual,estoque_minimo,custo_unitario,localizacao,imagem_url,ativo,criado_em,atualizado_em')
         .eq('profissional_id', prof.id)
         .eq('ativo', true)
         .order('nome');
@@ -63,7 +67,7 @@ async function fetchMovimentos(limit = 80) {
     const prof = await activeProfessional();
     const { data, error } = await supabase
         .from('estoque_movimentacoes')
-        .select('*, estoque_produtos(nome,codigo,unidade,tipo), profissional_contraparte:profissionais!estoque_movimentacoes_profissional_contraparte_id_fkey(nome)')
+        .select('id,produto_id,tipo,quantidade,saldo_anterior,saldo_posterior,motivo,referencia,criado_em,estoque_produtos(nome,codigo,unidade,tipo), profissional_contraparte:profissionais!estoque_movimentacoes_profissional_contraparte_id_fkey(nome)')
         .eq('profissional_id', prof.id)
         .order('criado_em', { ascending: false })
         .limit(limit);
@@ -579,6 +583,7 @@ function openProductModal(produto = null) {
     const form = document.getElementById('formProdutoEstoque');
     if (!modal || !form) return;
     form.reset();
+    wizardStep = 1;
     form.elements.id.value = produto?.id || '';
     if (produto) {
         form.elements.tipo.value = produto.tipo || 'consumo';
@@ -602,6 +607,7 @@ function openProductModal(produto = null) {
     updateTipoOpcoes(form.elements.tipo?.value || 'consumo');
     goToWizardStep(1);
     showModal(modal);
+    goToWizardStep(1);
 }
 
 function openMovementModal(produtoId = '', type = 'entrada') {

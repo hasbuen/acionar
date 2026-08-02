@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="icon" type="image/png" href="./icons/icon-192.png">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Acionar">
     <meta name="theme-color" content="#2563eb">
@@ -306,6 +307,16 @@
             deletePagamentoFluxoCaixa,
             escapeHtml
         } from './js/app.js?v=3.13';
+        import {
+            filterCashFlowByPeriod,
+            formatBRL,
+            fromCents,
+            getCashFlowDate,
+            getRealizedRecords,
+            isOutgoing,
+            summarizeCashFlow,
+            toCents
+        } from './js/cashflow.mjs';
 
         initTheme();
 
@@ -331,36 +342,19 @@
         };
 
         function filterByPeriod(pagamentos, period) {
-            if (period === 'todos') return pagamentos;
-            
-            const now = new Date();
-            const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-            return pagamentos.filter(p => {
-                const pDate = new Date(p.criado_em || p.data_pagamento || Date.now());
-                const pDateZero = new Date(pDate.getFullYear(), pDate.getMonth(), pDate.getDate());
-
-                if (period === 'hoje') {
-                    return pDateZero.getTime() === todayZero.getTime();
-                } else if (period === 'semana') {
-                    const diffDays = (todayZero - pDateZero) / (1000 * 60 * 60 * 24);
-                    return diffDays >= 0 && diffDays <= 7;
-                } else if (period === 'mes') {
-                    return pDate.getMonth() === now.getMonth() && pDate.getFullYear() === now.getFullYear();
-                }
-                return true;
-            });
+            return filterCashFlowByPeriod(pagamentos, period);
         }
 
         function renderCharts(pagamentos) {
+            const realizedPagamentos = getRealizedRecords(pagamentos);
             const formaCount = { 'pix': 0, 'cartao_credito': 0, 'cartao_debito': 0, 'dinheiro': 0 };
             const condicaoCount = { 'a_vista': 0, 'a_prazo': 0 };
             const diasSemanaSum = [0, 0, 0, 0, 0, 0, 0]; // Seg (0), Ter (1), Qua (2), Qui (3), Sex (4), Sáb (5), Dom (6)
             const mapDayIndex = [6, 0, 1, 2, 3, 4, 5]; // 0=Dom -> 6, 1=Seg -> 0, etc.
 
-            pagamentos.forEach(p => {
-                const val = parseFloat(p.valor_final || 0);
-                const isSaida = p.tipo_movimento === 'saida';
+            realizedPagamentos.forEach(p => {
+                const val = fromCents(toCents(p.valor_final));
+                const isSaida = isOutgoing(p);
                 const forma = p.forma_pagamento || 'pix';
                 const cond = p.condicao_pagamento || 'a_vista';
 
@@ -369,7 +363,7 @@
                 if (!isSaida && formaCount[forma] !== undefined) formaCount[forma] += val;
                 if (!isSaida && condicaoCount[cond] !== undefined) condicaoCount[cond] += val;
 
-                const d = new Date(p.criado_em || p.data_pagamento || Date.now());
+                const d = getCashFlowDate(p);
                 const dayIdx = mapDayIndex[d.getDay()];
                 if (dayIdx !== undefined) diasSemanaSum[dayIdx] += isSaida ? -val : val;
             });
@@ -470,47 +464,17 @@
 
                 const pagamentosFiltradosPeriodo = filterByPeriod(todosPagamentos, currentPeriodFilter);
 
-                let totalEntradasPagas = 0;
-                let countEntradasPagas = 0;
-                let totalAReceber = 0;
-                let countAReceber = 0;
-                let totalSaidasPagas = 0;
-                let countSaidasPagas = 0;
-                let totalSaidasPendentes = 0;
-                let countSaidasPendentes = 0;
+                const summary = summarizeCashFlow(pagamentosFiltradosPeriodo);
 
-                pagamentosFiltradosPeriodo.forEach(p => {
-                    const finalVal = parseFloat(p.valor_final || 0);
-                    const isSaida = p.tipo_movimento === 'saida';
+                document.getElementById('kpiTotalRecebido').textContent = formatBRL(summary.receivedCents);
+                document.getElementById('kpiCountRecebido').textContent = `${summary.receivedCount} lançamento(s) efetuados`;
 
-                    if (p.status_pagamento === 'pago') {
-                        if (isSaida) {
-                            totalSaidasPagas += finalVal;
-                            countSaidasPagas++;
-                        } else {
-                            totalEntradasPagas += finalVal;
-                            countEntradasPagas++;
-                        }
-                    } else {
-                        if (isSaida) {
-                            totalSaidasPendentes += finalVal;
-                            countSaidasPendentes++;
-                        } else {
-                            totalAReceber += finalVal;
-                            countAReceber++;
-                        }
-                    }
-                });
+                document.getElementById('kpiTotalAReceber').textContent = formatBRL(summary.receivableCents);
+                document.getElementById('kpiCountAReceber').textContent = `${summary.receivableCount} valor(es) em aberto`;
 
-                document.getElementById('kpiTotalRecebido').textContent = `R$ ${totalEntradasPagas.toFixed(2)}`;
-                document.getElementById('kpiCountRecebido').textContent = `${countEntradasPagas} lançamento(s) efetuados`;
-
-                document.getElementById('kpiTotalAReceber').textContent = `R$ ${totalAReceber.toFixed(2)}`;
-                document.getElementById('kpiCountAReceber').textContent = `${countAReceber} valor(es) em aberto`;
-
-                document.getElementById('kpiTotalDescontos').textContent = `R$ ${(totalSaidasPagas + totalSaidasPendentes).toFixed(2)}`;
-                document.getElementById('kpiCountSaidas').textContent = `${countSaidasPagas} paga(s) · ${countSaidasPendentes} pendente(s)`;
-                document.getElementById('kpiTotalBruto').textContent = `R$ ${(totalEntradasPagas - totalSaidasPagas).toFixed(2)}`;
+                document.getElementById('kpiTotalDescontos').textContent = formatBRL(summary.outgoingPaidCents + summary.outgoingPendingCents);
+                document.getElementById('kpiCountSaidas').textContent = `${summary.outgoingPaidCount} paga(s) · ${summary.outgoingPendingCount} pendente(s)`;
+                document.getElementById('kpiTotalBruto').textContent = formatBRL(summary.realizedBalanceCents);
 
                 renderCharts(pagamentosFiltradosPeriodo);
 
@@ -551,11 +515,12 @@
                         ? (p.observacoes || categoriaLabel)
                         : (p.clientes?.nome || 'Cliente não identificado');
                     const detalheLancamento = isSaida ? categoriaLabel : (p.servicos?.nome || 'Serviço');
-                    const d = new Date(p.criado_em || p.data_pagamento || Date.now());
+                    const d = getCashFlowDate(p);
                     const dataStr = d.toLocaleDateString('pt-BR');
 
-                    const desconto = parseFloat(p.desconto || 0).toFixed(2);
-                    const valorFinal = parseFloat(p.valor_final || 0).toFixed(2);
+                    const descontoCents = toCents(p.desconto);
+                    const desconto = fromCents(descontoCents).toFixed(2);
+                    const valorFinal = fromCents(toCents(p.valor_final)).toFixed(2);
 
                     const formaLabel = FORMAS_LABEL[p.forma_pagamento] || 'PIX';
                     const formaIcon = FORMAS_ICONS[p.forma_pagamento] || FORMAS_ICONS['pix'];

@@ -678,11 +678,11 @@ REVOKE ALL ON FUNCTION public.salvar_produtos_servico(uuid, jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.transferir_estoque(uuid, uuid, numeric, varchar, numeric, text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.finalizar_atendimento_com_estoque(uuid, varchar) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.processar_baixa_estoque_agendamento(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.registrar_movimento_estoque(uuid, varchar, numeric, numeric, varchar, varchar, boolean, numeric, varchar) TO authenticated, anon, service_role;
-GRANT EXECUTE ON FUNCTION public.salvar_produtos_servico(uuid, jsonb) TO authenticated, anon, service_role;
-GRANT EXECUTE ON FUNCTION public.transferir_estoque(uuid, uuid, numeric, varchar, numeric, text) TO authenticated, anon, service_role;
-GRANT EXECUTE ON FUNCTION public.finalizar_atendimento_com_estoque(uuid, varchar) TO authenticated, anon, service_role;
-GRANT EXECUTE ON FUNCTION public.processar_baixa_estoque_agendamento(uuid) TO authenticated, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.registrar_movimento_estoque(uuid, varchar, numeric, numeric, varchar, varchar, boolean, numeric, varchar) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.salvar_produtos_servico(uuid, jsonb) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.transferir_estoque(uuid, uuid, numeric, varchar, numeric, text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.finalizar_atendimento_com_estoque(uuid, varchar) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.processar_baixa_estoque_agendamento(uuid) TO authenticated, service_role;
 
 -- Bucket de fotos. O caminho deve começar por <profissional_id>/.
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

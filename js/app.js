@@ -727,6 +727,38 @@ export async function saveConfiguracaoMensagemWhatsApp({ mensagem, mensagem_manu
     return true;
 }
 
+export async function fetchMensagensIndividuais() {
+    const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
+    if (!activeProf?.id) return [];
+
+    const { data, error } = await supabase
+        .from('mensagens')
+        .select('id,titulo,conteudo,lida_em,criado_em')
+        .eq('profissional_destinatario_id', activeProf.id)
+        .order('criado_em', { ascending: false })
+        .limit(50);
+
+    if (error) {
+        if (error.code === '42P01' || error.code === 'PGRST205') return [];
+        throw error;
+    }
+    return data || [];
+}
+
+export async function marcarMensagemIndividualLida(mensagemId) {
+    const activeProf = getActiveProfessional() || await ensureActiveProfessionalFromSession();
+    if (!activeProf?.id || !mensagemId) return false;
+
+    const { error } = await supabase
+        .from('mensagens')
+        .update({ lida_em: new Date().toISOString() })
+        .eq('id', mensagemId)
+        .eq('profissional_destinatario_id', activeProf.id);
+
+    if (error) throw error;
+    return true;
+}
+
 // --- GERADOR DE MENSAGEM CORDIAL DE WHATSAPP ---
 export async function generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio, profissionalId = null }) {
     const config = await fetchConfiguracaoMensagemWhatsApp(profissionalId);
@@ -4088,7 +4120,23 @@ export async function fetchTodosPagamentosFluxoCaixa() {
         const { data, error } = await supabase
             .from('fluxo_caixa')
             .select(`
-                *,
+                id,
+                agendamento_id,
+                cliente_id,
+                servico_id,
+                profissional_id,
+                tipo_movimento,
+                categoria,
+                valor_bruto,
+                desconto,
+                valor_final,
+                condicao_pagamento,
+                forma_pagamento,
+                status_pagamento,
+                data_pagamento,
+                data_vencimento,
+                observacoes,
+                criado_em,
                 clientes ( id, nome, whatsapp ),
                 servicos ( id, nome ),
                 agendamentos ( id, data_hora_inicio, status, profissional_id )
@@ -4156,13 +4204,11 @@ export async function fetchTodosPagamentosFluxoCaixa() {
         } catch (e) {}
     }
 
-    const now = new Date();
     const pagamentosSintetizados = agendamentosSemCaixa.map(ag => {
         const precoServico = getServicePrice(ag.servicos);
-        const dataInicio = new Date(ag.data_hora_inicio || ag.criado_em || Date.now());
-        
-        const isPastOrDone = ag.status === 'concluido' || ag.status === 'finalizado' || dataInicio <= now;
-        const statusPag = isPastOrDone ? 'pago' : 'a_receber';
+        const statusPag = ['pago', 'recebido', 'quitado'].includes(String(ag.status_pagamento || '').toLowerCase())
+            ? 'pago'
+            : 'a_receber';
 
         return {
             id: `virtual-${ag.id}`,
@@ -4176,7 +4222,7 @@ export async function fetchTodosPagamentosFluxoCaixa() {
             condicao_pagamento: 'a_vista',
             forma_pagamento: 'pix',
             status_pagamento: statusPag,
-            data_pagamento: ag.data_hora_inicio || ag.criado_em,
+            data_pagamento: statusPag === 'pago' ? (ag.data_pagamento || ag.data_hora_inicio || ag.criado_em) : null,
             data_vencimento: ag.data_hora_inicio || ag.criado_em,
             observacoes: 'Lançamento automático de agendamento',
             criado_em: ag.data_hora_inicio || ag.criado_em || new Date().toISOString(),
@@ -4208,17 +4254,25 @@ export async function updateStatusPagamentoFluxoCaixa(id, novoStatus) {
 
     try {
         if (!isVirtual && id && !id.startsWith('cx-')) {
-            await supabase
+            const { error } = await supabase
                 .from('fluxo_caixa')
-                .update({ status_pagamento: novoStatus, data_pagamento: new Date().toISOString() })
+                .update({
+                    status_pagamento: novoStatus,
+                    data_pagamento: novoStatus === 'pago' ? new Date().toISOString() : null
+                })
                 .eq('id', id);
+            if (error) throw error;
         } else if (realAgendamentoId) {
             const existing = await fetchPagamentoByAgendamentoId(realAgendamentoId);
             if (existing && existing.id && !existing.id.startsWith('cx-') && !existing.id.startsWith('virtual-')) {
-                await supabase
+                const { error } = await supabase
                     .from('fluxo_caixa')
-                    .update({ status_pagamento: novoStatus, data_pagamento: new Date().toISOString() })
+                    .update({
+                        status_pagamento: novoStatus,
+                        data_pagamento: novoStatus === 'pago' ? new Date().toISOString() : null
+                    })
                     .eq('id', existing.id);
+                if (error) throw error;
             } else {
                 const { data: ag } = await supabase
                     .from('agendamentos')
@@ -4228,7 +4282,7 @@ export async function updateStatusPagamentoFluxoCaixa(id, novoStatus) {
 
                 const preco = getServicePrice(ag?.servicos);
 
-                await supabase.from('fluxo_caixa').insert([{
+                const { error } = await supabase.from('fluxo_caixa').insert([{
                     agendamento_id: realAgendamentoId,
                     cliente_id: ag?.cliente_id || null,
                     servico_id: ag?.servico_id || null,
@@ -4239,13 +4293,16 @@ export async function updateStatusPagamentoFluxoCaixa(id, novoStatus) {
                     condicao_pagamento: 'a_vista',
                     forma_pagamento: 'pix',
                     status_pagamento: novoStatus,
-                    data_pagamento: new Date().toISOString(),
+                    data_pagamento: novoStatus === 'pago' ? new Date().toISOString() : null,
+                    data_vencimento: ag?.data_hora_inicio || ag?.criado_em || new Date().toISOString(),
                     observacoes: 'Lançamento confirmado no caixa'
                 }]);
+                if (error) throw error;
             }
         }
     } catch (e) {
         console.warn("Erro ao atualizar status do pagamento no Supabase:", e);
+        throw e;
     }
 
     try {
@@ -4278,12 +4335,16 @@ export async function deletePagamentoFluxoCaixa(id) {
 
     try {
         if (id && !id.startsWith('cx-') && !id.startsWith('virtual-')) {
-            await supabase
+            const { error } = await supabase
                 .from('fluxo_caixa')
                 .delete()
                 .eq('id', id);
+            if (error) throw error;
         }
-    } catch (e) {}
+    } catch (e) {
+        console.warn('Erro ao excluir lançamento do Supabase:', e);
+        throw e;
+    }
 
     try {
         const agId = realAgendamentoId || id;
