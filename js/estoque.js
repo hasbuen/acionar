@@ -841,7 +841,8 @@ async function analyzeProductImageWithAI(file) {
     const storedKey = (localStorage.getItem('gemini_api_key') || window.GEMINI_API_KEY || '').trim();
 
     if (storedKey) {
-        const models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'];
+        // Modelos válidos na v1beta (2025)
+        const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash-preview-05-20'];
 
         for (const model of models) {
             try {
