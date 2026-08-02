@@ -1,16 +1,31 @@
 // Lógica da Aplicação Principal - Acionar Agendamentos
 import { supabase } from './supabase.js';
 import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './datetime.js';
+import { compactAppointmentsForCache, filterAppointmentsForDate, getLocalDayRange } from './agenda-utils.mjs';
+import { readLocalCache, writeLocalCache } from './local-store.mjs';
 
 const PUSH_SERVICE_URL = 'https://acionar-push.acionar-push-worker.workers.dev';
+const AUTH_BACKEND_URL = 'https://acionar-backend.vercel.app';
+
+async function provisionProfessionalAuthAccount(professional, password) {
+    if (!professional?.email || !password || password === 'auth') return;
+    const response = await fetch(`${AUTH_BACKEND_URL}/api/auth/professional-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: professional.email, password })
+    });
+    if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || 'Não foi possível criar o acesso seguro do profissional.');
+    }
+}
 
 // --- REGISTRO DE SERVICE WORKER PARA NOTIFICAÇÕES EM SEGUNDO PLANO (ANDROID & IOS PWA) ---
 export async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
-            const reg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
+            const reg = await navigator.serviceWorker.register('./sw.js?v=20260802-2', { updateViaCache: 'none' });
             await reg.update().catch(() => {});
-            console.log('✅ Service Worker registrado com sucesso:', reg);
             return reg;
         } catch (e) {
             console.warn('⚠️ Falha ao registrar Service Worker:', e);
@@ -38,6 +53,7 @@ export function initTheme() {
     }
 
     updateThemeIcons();
+    initHelpCenter();
 
     const themeToggleBtn = document.getElementById('theme-toggle');
     if (themeToggleBtn) {
@@ -102,6 +118,98 @@ export async function hydrateHeaderIdentity() {
         if (avatarEl) avatarEl.textContent = 'P';
         if (nameEl) nameEl.textContent = 'Profissional';
     }
+}
+
+export async function registrarAuditoria({ acao, entidade = 'sistema', entidadeId = null, detalhes = {} } = {}) {
+    const profissional = getActiveProfessional();
+    if (!profissional?.id) return false;
+
+    try {
+        const { data: { session } = { session: null } } = await supabase.auth.getSession();
+        if (!session) return false;
+        const { error } = await supabase.from('auditoria_operacoes').insert({
+            profissional_id: profissional.id,
+            acao: String(acao || 'operacao').slice(0, 80),
+            entidade: String(entidade || 'sistema').slice(0, 80),
+            entidade_id: entidadeId ? String(entidadeId).slice(0, 120) : null,
+            detalhes: detalhes && typeof detalhes === 'object' ? detalhes : {},
+            origem: 'pwa'
+        });
+        return !error;
+    } catch (error) {
+        return false;
+    }
+}
+
+export async function fetchAuditoriaOperacoes(limit = 15) {
+    const profissional = getActiveProfessional();
+    if (!profissional?.id) return [];
+
+    try {
+        const { data: { session } = { session: null } } = await supabase.auth.getSession();
+        if (!session) return [];
+        const { data, error } = await supabase
+            .from('auditoria_operacoes')
+            .select('id, acao, entidade, entidade_id, detalhes, criado_em')
+            .order('criado_em', { ascending: false })
+            .limit(Math.min(Math.max(Number(limit) || 15, 1), 50));
+        return error ? [] : (data || []);
+    } catch (error) {
+        return [];
+    }
+}
+
+function formatAuditDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Agora';
+    return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function auditEntityLabel(entity) {
+    const labels = { agendamento: 'agendamento', cliente: 'cliente', servico: 'serviço', caixa: 'caixa', estoque: 'estoque', sistema: 'sistema' };
+    return labels[entity] || entity || 'sistema';
+}
+
+export function initHelpCenter() {
+    const themeToggle = document.getElementById('theme-toggle');
+    if (!themeToggle || document.getElementById('btnOpenHelpCenter')) return;
+
+    const helpButton = document.createElement('button');
+    helpButton.type = 'button';
+    helpButton.id = 'btnOpenHelpCenter';
+    helpButton.setAttribute('aria-label', 'Ajuda');
+    helpButton.title = 'Ajuda';
+    helpButton.className = 'btn-animated flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 shadow-sm';
+    helpButton.innerHTML = '<i data-lucide="circle-help" class="h-5 w-5"></i>';
+    themeToggle.insertAdjacentElement('beforebegin', helpButton);
+
+    const modal = document.createElement('div');
+    modal.id = 'help-center-modal';
+    modal.className = 'fixed inset-0 z-[70] hidden items-center justify-center bg-slate-950/75 backdrop-blur-md p-4';
+    modal.innerHTML = `
+        <div class="w-full max-w-md max-h-[88dvh] overflow-y-auto rounded-[2rem] border border-white/70 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <div class="flex items-start justify-between gap-4"><div><span class="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">Central de ajuda</span><h2 class="mt-1 text-xl font-black tracking-tight text-slate-900 dark:text-white">Como podemos ajudar?</h2></div><button type="button" data-help-close aria-label="Fechar ajuda" class="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"><i data-lucide="x" class="h-5 w-5"></i></button></div>
+            <div class="mt-6 grid gap-3">
+                <button type="button" aria-disabled="true" class="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left dark:border-slate-800 dark:bg-slate-950/50"><span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-600"><i data-lucide="book-open" class="h-5 w-5"></i></span><span><strong class="block text-sm font-extrabold text-slate-900 dark:text-white">Acesso a FAQs e Dúvidas</strong><small class="mt-1 block text-xs text-slate-500 dark:text-slate-400">Encontre respostas rápidas para usar melhor o Acionar.</small></span></button>
+                <button type="button" aria-disabled="true" class="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left dark:border-slate-800 dark:bg-slate-950/50"><span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-600/10 text-violet-600"><i data-lucide="headphones" class="h-5 w-5"></i></span><span><strong class="block text-sm font-extrabold text-slate-900 dark:text-white">Suporte</strong><small class="mt-1 block text-xs text-slate-500 dark:text-slate-400">Fale com o time quando precisar de acompanhamento.</small></span></button>
+            </div>
+            <section class="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800"><div class="flex items-center justify-between gap-3"><div><h3 class="text-sm font-extrabold text-slate-900 dark:text-white">Minhas operações</h3><p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Histórico privado deste usuário.</p></div><span class="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black text-emerald-600">Privado</span></div><div id="help-audit-list" class="mt-3 space-y-2"><p class="rounded-2xl bg-slate-50 p-4 text-xs text-slate-500 dark:bg-slate-950/50 dark:text-slate-400">Carregando seu histórico...</p></div></section>
+        </div>`;
+    document.body.appendChild(modal);
+
+    const close = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
+    const renderAudit = async () => {
+        const list = document.getElementById('help-audit-list');
+        if (!list) return;
+        const records = await fetchAuditoriaOperacoes();
+        list.innerHTML = records.length
+            ? records.map(record => `<div class="rounded-2xl border border-slate-200/80 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/50"><div class="flex items-center justify-between gap-3"><strong class="text-xs font-bold text-slate-800 dark:text-slate-200">${escapeHtml(record.acao)}</strong><time class="text-[10px] text-slate-400">${escapeHtml(formatAuditDate(record.criado_em))}</time></div><p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">${escapeHtml(auditEntityLabel(record.entidade))}${record.entidade_id ? ` · ${escapeHtml(record.entidade_id.slice(0, 8))}` : ''}</p></div>`).join('')
+            : '<p class="rounded-2xl bg-slate-50 p-4 text-xs text-slate-500 dark:bg-slate-950/50 dark:text-slate-400">Nenhuma operação registrada neste dispositivo.</p>';
+    };
+    helpButton.addEventListener('click', async () => { modal.classList.remove('hidden'); modal.classList.add('flex'); await renderAudit(); if (window.lucide) window.lucide.createIcons(); });
+    modal.querySelector('[data-help-close]')?.addEventListener('click', close);
+    modal.addEventListener('click', event => { if (event.target === modal) close(); });
+    if (window.lucide) window.lucide.createIcons();
 }
 
 function updateThemeIcons() {
@@ -572,7 +680,6 @@ export function subscribeToAgendamentos(callback) {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'agendamentos' },
                 (payload) => {
-                    console.log('⚡ Atualização em tempo real detectada:', payload);
 
                     if (payload.eventType === 'INSERT') {
                         notifyInsertedAppointment(payload.new?.id);
@@ -582,7 +689,6 @@ export function subscribeToAgendamentos(callback) {
                 }
             )
             .subscribe((status) => {
-                console.log('Status da assinatura Realtime:', status);
             });
 
         return channel;
@@ -2254,6 +2360,7 @@ export async function criarAgendamentoProfissional({ nomeCliente, whatsappClient
     }
 
     if (error) throw error;
+    void registrarAuditoria({ acao: 'Criou agendamento', entidade: 'agendamento', entidadeId: data?.id });
     return data;
 }
 
@@ -2339,6 +2446,7 @@ export async function criarAgendamentoManutencao({ clienteId, servicoId, dataHor
     }
 
     if (error) throw error;
+    void registrarAuditoria({ acao: 'Criou manutenção', entidade: 'agendamento', entidadeId: data?.id });
     return data;
 }
 
@@ -2471,6 +2579,7 @@ export async function updateAgendamentoStatus(id, newStatus, profissionalId = un
         if (currentAgendamento?.cliente_id) {
             await updateClienteProfessional(currentAgendamento.cliente_id, targetProfId);
         }
+        void registrarAuditoria({ acao: `Alterou status para ${newStatus}`, entidade: 'agendamento', entidadeId: id, detalhes: { status: newStatus } });
         return true;
     }
 
@@ -2503,6 +2612,7 @@ export async function updateAgendamentoStatus(id, newStatus, profissionalId = un
             if (shouldClaim && currentAgendamento?.cliente_id) {
                 await updateClienteProfessional(currentAgendamento.cliente_id, targetProfId || null);
             }
+            void registrarAuditoria({ acao: `Concluiu agendamento`, entidade: 'agendamento', entidadeId: id, detalhes: { status: newStatus } });
             return true;
         }
         console.warn('RPC de estoque ainda não instalada; concluindo sem baixa automática.');
@@ -2528,6 +2638,7 @@ export async function updateAgendamentoStatus(id, newStatus, profissionalId = un
         await updateClienteProfessional(currentAgendamento.cliente_id, targetProfId || null);
     }
 
+    void registrarAuditoria({ acao: `Alterou status para ${newStatus}`, entidade: 'agendamento', entidadeId: id, detalhes: { status: newStatus } });
     return true;
 }
 
@@ -2558,14 +2669,28 @@ export function getActiveProfessional() {
     return null;
 }
 
-export async function ensureActiveProfessionalFromSession() {
-    const existing = getActiveProfessional();
-    if (existing?.id) return existing;
+export async function requireSupabaseSession({ redirect = true } = {}) {
+    try {
+        const { data: { session } = { session: null } } = await supabase.auth.getSession();
+        if (session?.access_token) return session;
+    } catch (error) {}
 
+    try { localStorage.removeItem('active_professional'); } catch (error) {}
+    if (redirect && typeof window !== 'undefined' && !window.location.pathname.endsWith('/index.html') && window.location.pathname !== '/') {
+        window.location.replace('./index.html');
+    }
+    return null;
+}
+
+export async function ensureActiveProfessionalFromSession() {
     try {
         const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return null;
         const email = session?.user?.email?.trim().toLowerCase();
         if (!email) return null;
+
+        const existing = getActiveProfessional();
+        if (existing?.id && String(existing.email || '').trim().toLowerCase() === email) return existing;
 
         const { data: profData, error } = await supabase
             .from('profissionais')
@@ -2661,13 +2786,6 @@ export async function saveProfissional({ id, nome, email, senha, cargo = 'auxili
     if (!id && payload.senha_hash) {
         try {
             const { data: { session: ownerSession } } = await supabase.auth.getSession();
-            await supabase.auth.signUp({
-                email: cleanEmail,
-                password: payload.senha_hash,
-                options: {
-                    data: { nome, cargo }
-                }
-            });
             // O cadastro de um auxiliar nunca deve trocar a sessão do proprietário.
             if (ownerSession?.access_token && ownerSession?.refresh_token) {
                 await supabase.auth.setSession({
@@ -2701,6 +2819,7 @@ export async function saveProfissional({ id, nome, email, senha, cargo = 'auxili
         }
 
         if (error) throw error;
+        await provisionProfessionalAuthAccount(data, payload.senha_hash);
         return data;
     } else {
         let { data, error } = await supabase
@@ -2721,6 +2840,7 @@ export async function saveProfissional({ id, nome, email, senha, cargo = 'auxili
         }
 
         if (error) throw error;
+        await provisionProfessionalAuthAccount(data, payload.senha_hash);
         return data;
     }
 }
@@ -2837,6 +2957,7 @@ export async function updateAgendamento(id, { servico_id, data_hora_inicio, obse
         .eq('id', id);
 
     if (error) throw error;
+    void registrarAuditoria({ acao: 'Editou agendamento', entidade: 'agendamento', entidadeId: id });
     return true;
 }
 
@@ -2847,6 +2968,7 @@ export async function updateAgendamentoObservacoes(id, observacoes) {
         .eq('id', id);
 
     if (error) throw error;
+    void registrarAuditoria({ acao: 'Atualizou observações', entidade: 'agendamento', entidadeId: id });
     return true;
 }
 
@@ -2857,12 +2979,15 @@ export async function deleteAgendamento(id) {
         .eq('id', id);
 
     if (error) throw error;
+    void registrarAuditoria({ acao: 'Excluiu agendamento', entidade: 'agendamento', entidadeId: id });
     return true;
 }
 
 // --- BUSCA E GERAÇÃO DE NOTIFICAÇÕES (SOLICITAÇÕES E MANUTENÇÕES D-2) ---
 export async function fetchNotificationsList() {
     try {
+        const session = await requireSupabaseSession();
+        if (!session) return [];
         await ensureActiveProfessionalFromSession();
         let agendamentos = null;
         const rpcRes = await supabase.rpc('listar_agendamentos_painel');
@@ -3216,12 +3341,55 @@ function mapPanelAppointment(a) {
     };
 }
 
+async function fetchPanelAppointmentsForDate(filterDate) {
+    const range = getLocalDayRange(filterDate);
+    if (!range) return { data: null, error: new Error('Data inválida') };
+    return supabase
+        .from('agendamentos')
+        .select(`
+            id, cliente_id, servico_id, subservico_id, profissional_id,
+            data_hora_inicio, data_hora_fim, status, tipo_atendimento,
+            is_manutencao, agendamento_pai_id, periodicidade_dias,
+            clientes ( id, nome, whatsapp ),
+            servicos ( id, nome, duracao_minutos, tabela_precos ( valor ) ),
+            profissionais ( id, nome, cor_identificadora )
+        `)
+        .gte('data_hora_inicio', range.start)
+        .lt('data_hora_inicio', range.end)
+        .order('data_hora_inicio', { ascending: true });
+}
+
+function applyAppointmentVisibility(records = []) {
+    const activeProf = getActiveProfessional();
+    let visible = records;
+    if (activeProf && activeProf.cargo === 'auxiliar') {
+        visible = visible.filter(a => {
+            const profIdStr = a.profissional_id || a.profissionais?.id;
+            return isUnassignedRequest(a) || profIdStr === activeProf.id;
+        });
+    }
+    return filterAppointmentsForActiveProfessional(visible);
+}
+
 export async function fetchAndRenderAgendamentos(containerId, filterDate = null, filterStatus = null, silent = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
+    const session = await requireSupabaseSession();
+    if (!session) return;
     await ensureActiveProfessionalFromSession();
 
-    if (!silent) {
+    const activeProfessional = getActiveProfessional();
+    const cacheKey = activeProfessional?.id && filterDate ? `appointments:${activeProfessional.id}:${filterDate}` : null;
+    let renderedCache = false;
+    if (cacheKey && !filterStatus) {
+        const cached = await readLocalCache(cacheKey, { maxAgeMs: 5 * 60 * 1000 });
+        if (Array.isArray(cached)) {
+            renderAgendamentosList(container, applyAppointmentVisibility(filterAppointmentsForDate(cached, filterDate, { excludeMaintenance: true })));
+            renderedCache = true;
+        }
+    }
+
+    if (!silent && !renderedCache) {
         container.innerHTML = `
             <div class="flex items-center justify-center py-12">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -3232,9 +3400,19 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
     let agendamentos = [];
     let fetchSuccess = false;
 
+    if (filterDate) {
+        try {
+            const fastResponse = await fetchPanelAppointmentsForDate(filterDate);
+            if (!fastResponse.error && Array.isArray(fastResponse.data)) {
+                agendamentos = fastResponse.data.map(mapPanelAppointment);
+                fetchSuccess = true;
+            }
+        } catch (fastError) {}
+    }
+
     // A RPC inclui as solicitacoes publicas sem profissional. Ela precisa ser a
     // fonte principal porque a RLS pode devolver uma lista parcial sem erro.
-    try {
+    if (!fetchSuccess) try {
         const rpcRes = await supabase.rpc('listar_agendamentos_painel');
         if (!rpcRes.error && Array.isArray(rpcRes.data)) {
             agendamentos = rpcRes.data.map(mapPanelAppointment);
@@ -3351,11 +3529,22 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
         } catch (e) {}
     }
 
+    if (!fetchSuccess && cacheKey) {
+        const cached = await readLocalCache(cacheKey, { allowStale: true, maxAgeMs: 5 * 60 * 1000 });
+        if (Array.isArray(cached)) {
+            agendamentos = cached;
+            fetchSuccess = true;
+        }
+    }
+
     // Atualizar LocalStorage cache se obteve dados do servidor
     if (fetchSuccess && agendamentos.length > 0) {
         try {
             localStorage.setItem('agendamentos_data', JSON.stringify(agendamentos));
         } catch (e) {}
+        if (cacheKey) {
+            writeLocalCache(cacheKey, compactAppointmentsForCache(filterAppointmentsForDate(agendamentos, filterDate, { excludeMaintenance: false }))).catch(() => {});
+        }
     }
 
     // REGRAS DE PRIVACIDADE DO AUXILIAR:
@@ -3378,7 +3567,7 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
         });
     }
 
-    agendamentos = filterAppointmentsForActiveProfessional(agendamentos);
+    agendamentos = applyAppointmentVisibility(agendamentos);
 
     // DETECÇÃO DE NOVO AGENDAMENTO PARA DISPARAR SOM DE ALARME
     // O alerta usa a mesma lista filtrada da agenda, evitando avisar profissionais com conflito.
@@ -3394,9 +3583,7 @@ export async function fetchAndRenderAgendamentos(containerId, filterDate = null,
         isInitialLoadDone = true;
     }
 
-    if (filterDate) {
-        agendamentos = agendamentos.filter(a => a.data_hora_inicio && a.data_hora_inicio.startsWith(filterDate));
-    }
+    if (filterDate) agendamentos = filterAppointmentsForDate(agendamentos, filterDate, { excludeMaintenance: !filterStatus });
 
     if (filterStatus) {
         if (filterStatus.toLowerCase() === 'manutencao') {
@@ -3734,6 +3921,8 @@ export async function deleteCliente(id) {
 }
 
 export async function fetchClientesDoProfissional() {
+    const session = await requireSupabaseSession();
+    if (!session) return [];
     await ensureActiveProfessionalFromSession();
 
     const { data, error } = await supabase
@@ -4105,10 +4294,13 @@ export async function savePagamentoFluxoCaixa(payload) {
         localStorage.setItem('fluxo_caixa_data', JSON.stringify(all));
     } catch (e) {}
 
+    void registrarAuditoria({ acao: 'Salvou lançamento no caixa', entidade: 'caixa', entidadeId: realId || payload.agendamento_id, detalhes: { status: dataToSave.status_pagamento } });
     return true;
 }
 
 export async function fetchTodosPagamentosFluxoCaixa() {
+    const session = await requireSupabaseSession();
+    if (!session) return [];
     await ensureActiveProfessionalFromSession();
     let explicitPagamentos = [];
     let deletedAgendamentoIds = [];
@@ -4324,6 +4516,7 @@ export async function updateStatusPagamentoFluxoCaixa(id, novoStatus) {
         localStorage.setItem('fluxo_caixa_data', JSON.stringify(all));
     } catch (e) {}
 
+    void registrarAuditoria({ acao: `Alterou pagamento para ${novoStatus}`, entidade: 'caixa', entidadeId: id, detalhes: { status: novoStatus } });
     return true;
 }
 
@@ -4359,5 +4552,6 @@ export async function deletePagamentoFluxoCaixa(id) {
         localStorage.setItem('fluxo_caixa_data', JSON.stringify(all));
     } catch (e) {}
 
+    void registrarAuditoria({ acao: 'Excluiu lançamento do caixa', entidade: 'caixa', entidadeId: id });
     return true;
 }

@@ -4,8 +4,9 @@ import {
     fetchProfissionais,
     getActiveProfessional,
     initTheme,
+    registrarAuditoria,
     showToast
-} from './app.js?v=3.0';
+} from './app.js?v=3.15';
 
 const state = {
     profissional: null,
@@ -192,6 +193,7 @@ async function saveProduto(form) {
             console.warn('Upload de imagem falhou:', imgErr);
         }
     }
+    void registrarAuditoria({ acao: produtoId ? 'Editou produto de estoque' : 'Criou produto de estoque', entidade: 'estoque', entidadeId: saved?.id });
     return saved;
 }
 
@@ -204,6 +206,7 @@ async function deleteProduto(produtoId) {
         .eq('profissional_id', prof.id);
 
     if (error) throw error;
+    void registrarAuditoria({ acao: 'Arquivou produto de estoque', entidade: 'estoque', entidadeId: produtoId });
     return true;
 }
 
@@ -235,7 +238,10 @@ async function registrarMovimento(form) {
             p_status_pagamento: statusPagamento
         });
 
-        if (!rpcErr) return true;
+        if (!rpcErr) {
+            void registrarAuditoria({ acao: `Registrou movimento de ${tipo}`, entidade: 'estoque', entidadeId: produtoId });
+            return true;
+        }
         console.warn('RPC registrar_movimento_estoque indisponível, executando fallback JS:', rpcErr);
     } catch (e) {
         console.warn('Executando registrarMovimento via fallback JS');
@@ -308,6 +314,7 @@ async function registrarMovimento(form) {
         });
     }
 
+    void registrarAuditoria({ acao: `Registrou movimento de ${tipo}`, entidade: 'estoque', entidadeId: produtoId });
     return true;
 }
 
@@ -336,7 +343,10 @@ async function transferirProduto(form) {
             p_observacoes: observacoes
         });
 
-        if (!rpcErr) return result;
+        if (!rpcErr) {
+            void registrarAuditoria({ acao: 'Transferiu estoque', entidade: 'estoque', entidadeId: produtoOrigemId, detalhes: { destino: destinoId } });
+            return result;
+        }
         console.warn('RPC transferir_estoque indisponível, executando via fallback JS:', rpcErr);
     } catch (e) {
         console.warn('Executando transferência via fallback JS');
@@ -417,6 +427,7 @@ async function transferirProduto(form) {
         }
     ]);
 
+    void registrarAuditoria({ acao: 'Transferiu estoque', entidade: 'estoque', entidadeId: produtoOrigemId, detalhes: { destino: destinoId } });
     return { ficha_copiada: fichaCopiada, saldo_origem: saldoOrigemNovo, saldo_destino: saldoDestinoNovo };
 }
 

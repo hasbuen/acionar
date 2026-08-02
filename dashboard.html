@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Acionar">
     <meta name="theme-color" content="#2563eb">
+    <link rel="icon" type="image/png" href="./icons/icon-192.png">
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
     <title>Acionar - Agenda de Compromissos</title>
@@ -191,10 +192,10 @@
 
             <!-- Filtros de Data e Status -->
             <div class="filter-scroll-container flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar whitespace-nowrap w-full max-w-full touch-pan-x cursor-grab select-none">
-                <button id="filterAll" class="filter-btn active px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white border border-blue-500 shadow-md shadow-blue-500/25 shrink-0">
+                <button id="filterAll" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-[#f8fafc] dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-white/80 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800 shrink-0 shadow-sm">
                     Todos
                 </button>
-                <button id="filterToday" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-[#f8fafc] dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-white/80 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800 shrink-0 shadow-sm">
+                <button id="filterToday" class="filter-btn active px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-slate-700 to-slate-900 text-white border border-slate-600 shadow-md shadow-slate-500/20 shrink-0">
                     Hoje
                 </button>
                 <button id="filterAguardando" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-amber-50 dark:bg-slate-900 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-slate-800 shrink-0 shadow-sm">
@@ -729,7 +730,7 @@
             generateWhatsAppManutencaoMessage,
             cleanPhone,
             performLogout
-        } from './js/app.js?v=3.14';
+        } from './js/app.js?v=3.15';
         import { supabase } from './js/supabase.js';
         import { formatDateInputValue, formatTimeInputValue, addDaysToDateInput, toLocalDateTimeISO } from './js/datetime.js';
         import { createAsaasCheckout } from './js/asaas-payments.js?v=2.1';
@@ -785,7 +786,7 @@
         if (inputData) inputData.value = todayISO;
 
         let currentServicoDuracao = 30;
-        let activeFilterDate = null;
+        let activeFilterDate = todayISO;
         let activeFilterStatus = null;
         let clientesParaAgendamento = [];
 
@@ -1406,8 +1407,8 @@
         });
 
         setInterval(() => {
-            refreshAgenda(true);
-        }, 8000);
+            if (!document.hidden) refreshAgenda(true);
+        }, 30000);
 
         // Combobox Serviço
         btnComboboxServico?.addEventListener('click', (e) => {

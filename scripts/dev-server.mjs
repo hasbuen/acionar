@@ -77,6 +77,4 @@ const server = createServer(async (request, response) => {
 });
 
 server.listen(port, '127.0.0.1', () => {
-    console.log(`Acionar local: http://127.0.0.1:${port}`);
-    console.log('Credenciais carregadas do .env apenas em memória.');
 });
