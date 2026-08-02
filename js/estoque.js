@@ -785,130 +785,6 @@ export function generateSKU(nome = '', categoria = '') {
     return `SKU-${prefix}-${randomDigits}`;
 }
 
-async function compressImageForAI(file, maxDim = 1024) {
-    return new Promise((resolve) => {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-            URL.revokeObjectURL(url);
-            let width = img.width;
-            let height = img.height;
-
-            if (width > maxDim || height > maxDim) {
-                if (width > height) {
-                    height = Math.round((height * maxDim) / width);
-                    width = maxDim;
-                } else {
-                    width = Math.round((width * maxDim) / height);
-                    height = maxDim;
-                }
-            }
-
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-            resolve(dataUrl.split(',')[1]);
-        };
-        img.onerror = () => {
-            URL.revokeObjectURL(url);
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
-            reader.readAsDataURL(file);
-        };
-        img.src = url;
-    });
-}
-
-function isGarbageFilename(filename = '') {
-    const clean = String(filename || '').replace(/\.[^/.]+$/, '').trim();
-    if (!clean) return true;
-    if (/^\d+$/.test(clean)) return true;
-    if (/^(img|photo|pxl|dsc|win|vid|image)[_\-\d]+/i.test(clean)) return true;
-    if (clean.length > 15 && (clean.match(/\d/g) || []).length > 10) return true;
-    return false;
-}
-
-async function analyzeProductImageWithAI(file) {
-    if (!file) return null;
-
-    const base64Data = await compressImageForAI(file);
-    if (!base64Data) return null;
-
-    const storedKey = (localStorage.getItem('gemini_api_key') || window.GEMINI_API_KEY || '').trim();
-
-    if (storedKey) {
-        // Modelos válidos na v1beta (2025)
-        const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash-preview-05-20'];
-
-        for (const model of models) {
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${storedKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            role: "user",
-                            parts: [
-                                {
-                                    text: "Analise o rótulo e a embalagem desta foto de produto. Identifique a marca e nome do produto com precisão. Retorne um JSON no formato: {\"nome\": \"Marca e Nome do Produto\", \"categoria\": \"Categoria do produto ex: Capilar, Esmaltes, Limpeza, Ferramentas\", \"tipo\": \"consumo\"}."
-                                },
-                                {
-                                    inline_data: {
-                                        mime_type: 'image/jpeg',
-                                        data: base64Data
-                                    }
-                                }
-                            ]
-                        }],
-                        generationConfig: {
-                            response_mime_type: "application/json",
-                            temperature: 0.2
-                        }
-                    })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                    const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-                    if (jsonMatch) {
-                        const parsed = JSON.parse(jsonMatch[0]);
-                        if (parsed.nome && !isGarbageFilename(parsed.nome)) {
-                            return { ...parsed, source: 'ai_vision', modelUsed: model };
-                        }
-                    }
-                } else {
-                    const errText = await response.text();
-                    console.warn(`Modelo ${model} retornou ${response.status}:`, errText);
-                    if (response.status === 400 && (errText.includes('API_KEY_INVALID') || errText.includes('API key not valid'))) {
-                        showToast('⚠️ A Chave Gemini salva é inválida. Clique em 🔑 CHAVE IA para atualizar.', 'error');
-                        return { source: 'error_key' };
-                    }
-                }
-            } catch (e) {
-                console.warn(`Falha na chamada do modelo ${model}:`, e);
-            }
-        }
-    }
-
-    const rawName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').trim();
-    const isGarbage = isGarbageFilename(file.name);
-    const cleanName = isGarbage ? '' : rawName.replace(/\b\w/g, l => l.toUpperCase());
-
-    const isTool = /ferramenta|alicate|tesoura|secador|prancha|pincel|espula|maleta/i.test(rawName);
-
-    return {
-        nome: cleanName,
-        categoria: isTool ? 'Ferramenta' : 'Consumo Geral',
-        tipo: isTool ? 'ferramenta' : 'consumo',
-        source: 'heuristic',
-        hasKey: Boolean(storedKey)
-    };
-}
 
 export async function initEstoquePage() {
     initTheme();
@@ -919,22 +795,6 @@ export async function initEstoquePage() {
         renderProducts();
     }
 
-    document.getElementById('btnConfigurarIaKey')?.addEventListener('click', () => {
-        const currentKey = localStorage.getItem('gemini_api_key') || '';
-        const key = prompt(
-            'Para a IA analisar suas fotos em tempo real, informe uma Chave Gratuita do Google Gemini (obtenha em https://aistudio.google.com/app/apikey):\n\nCole sua Chave da API Gemini:',
-            currentKey
-        );
-        if (key !== null) {
-            if (key.trim()) {
-                localStorage.setItem('gemini_api_key', key.trim());
-                showToast('🔑 Chave da IA salva com sucesso! Agora suas fotos serão analisadas em tempo real.', 'success');
-            } else {
-                localStorage.removeItem('gemini_api_key');
-                showToast('Chave da IA removida.', 'info');
-            }
-        }
-    });
 
     document.getElementById('btnNovoProduto')?.addEventListener('click', () => openProductModal());
     document.getElementById('btnRegistrarEntrada')?.addEventListener('click', () => openMovementModal('', 'entrada'));
@@ -987,53 +847,15 @@ export async function initEstoquePage() {
         }
     });
 
-    document.getElementById('produtoImagemInput')?.addEventListener('change', async event => {
+    document.getElementById('produtoImagemInput')?.addEventListener('change', event => {
         const file = event.target.files?.[0];
         if (!file) return;
-
         const preview = document.getElementById('produtoImagemPreview');
-        const form = document.getElementById('formProdutoEstoque');
-
         const reader = new FileReader();
         reader.onload = e => {
-            if (preview) {
-                preview.innerHTML = `<img src="${e.target.result}" class="h-full w-full object-cover">
-                <div class="absolute bottom-1 right-1 bg-blue-600/90 text-white text-[9px] font-black px-2 py-1 rounded-lg backdrop-blur-sm shadow-sm flex items-center gap-1">
-                    <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> IA Visão
-                </div>`;
-            }
+            if (preview) preview.innerHTML = `<img src="${e.target.result}" class="h-full w-full object-cover">`;
         };
         reader.readAsDataURL(file);
-
-        showToast('✨ IA Analisando foto do produto...', 'info');
-
-        try {
-            const aiResult = await analyzeProductImageWithAI(file);
-            if (!aiResult) return;
-
-            if (aiResult.source === 'ai_vision') {
-                if (aiResult.nome) form.elements.nome.value = aiResult.nome;
-                if (!form.elements.codigo.value) form.elements.codigo.value = generateSKU(aiResult.nome, aiResult.categoria);
-                if (!form.elements.categoria.value && aiResult.categoria) form.elements.categoria.value = aiResult.categoria;
-                if (aiResult.tipo) form.elements.tipo.value = aiResult.tipo;
-
-                showToast(`✨ IA Visão: Produto "${aiResult.nome}" identificado!`, 'success');
-            } else if (aiResult.source === 'heuristic') {
-                if (aiResult.nome && !form.elements.nome.value) form.elements.nome.value = aiResult.nome;
-                if (!form.elements.codigo.value) form.elements.codigo.value = generateSKU(aiResult.nome || file.name, aiResult.categoria);
-
-                if (!aiResult.hasKey) {
-                    showToast('💡 Dica: Clique em "🔑 CHAVE IA" para cadastrar sua Chave Gratuita do Google Gemini e ativar a visão por foto!', 'info');
-                } else if (aiResult.nome) {
-                    showToast(`SKU gerado para "${aiResult.nome}".`, 'info');
-                }
-            }
-        } catch (err) {
-            console.warn('Erro ao processar visão da IA:', err);
-            if (form && !form.elements.codigo.value) {
-                form.elements.codigo.value = generateSKU(file.name);
-            }
-        }
     });
 
     document.getElementById('formProdutoEstoque')?.addEventListener('submit', async event => {
