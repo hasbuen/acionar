@@ -678,16 +678,28 @@ Passando para lembrar que sua *MANUTENÇÃO PERIÓDICA* de *{servico}* está age
 
 Caso precise fazer algum ajuste de horário, por favor nos responda por aqui. Aguardamos você! 😊`;
 
-export async function fetchConfiguracaoMensagemWhatsApp() {
+export async function fetchConfiguracaoMensagemWhatsApp(profissionalId = null) {
+    const activeProf = getActiveProfessional();
+    const targetProfId = profissionalId || activeProf?.id;
+
     try {
+        if (targetProfId) {
+            const { data: indData } = await supabase
+                .from('configuracoes')
+                .select('valor')
+                .eq('chave', `mensagem_whatsapp_${targetProfId}`)
+                .maybeSingle();
+
+            if (indData && indData.valor) return indData.valor;
+        }
+
         const { data, error } = await supabase
             .from('configuracoes')
             .select('valor')
             .eq('chave', 'mensagem_whatsapp')
             .maybeSingle();
 
-        if (error) throw error;
-        if (data && data.valor) return data.valor;
+        if (!error && data && data.valor) return data.valor;
     } catch (err) {
         console.warn("Usando configuração padrão de mensagem WhatsApp:", err);
     }
@@ -700,12 +712,15 @@ export async function fetchConfiguracaoMensagemWhatsApp() {
 }
 
 export async function saveConfiguracaoMensagemWhatsApp({ mensagem, mensagem_manutencao, endereco }) {
+    const activeProf = getActiveProfessional();
+    const chave = activeProf?.id ? `mensagem_whatsapp_${activeProf.id}` : 'mensagem_whatsapp';
+
     const { error } = await supabase
         .from('configuracoes')
         .upsert({
-            chave: 'mensagem_whatsapp',
+            chave,
             valor: { mensagem, mensagem_manutencao, endereco },
-            descricao: 'Template personalizado de mensagem no WhatsApp e endereço do estabelecimento'
+            descricao: `Template personalizado de mensagem no WhatsApp do profissional ${activeProf?.nome || ''}`
         }, { onConflict: 'chave' });
 
     if (error) throw error;
@@ -713,8 +728,8 @@ export async function saveConfiguracaoMensagemWhatsApp({ mensagem, mensagem_manu
 }
 
 // --- GERADOR DE MENSAGEM CORDIAL DE WHATSAPP ---
-export async function generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio }) {
-    const config = await fetchConfiguracaoMensagemWhatsApp();
+export async function generateWhatsAppConfirmMessage({ clienteNome, servicoNome, dataFormatada, horaInicio, profissionalId = null }) {
+    const config = await fetchConfiguracaoMensagemWhatsApp(profissionalId);
     let template = config.mensagem || MENSAGEM_WHATSAPP_PADRAO;
     const endereco = config.endereco || "Nosso Endereço";
 
@@ -728,8 +743,8 @@ export async function generateWhatsAppConfirmMessage({ clienteNome, servicoNome,
     return encodeURIComponent(template);
 }
 
-export async function generateWhatsAppManutencaoMessage({ clienteNome, servicoNome, dataFormatada, horaInicio }) {
-    const config = await fetchConfiguracaoMensagemWhatsApp();
+export async function generateWhatsAppManutencaoMessage({ clienteNome, servicoNome, dataFormatada, horaInicio, profissionalId = null }) {
+    const config = await fetchConfiguracaoMensagemWhatsApp(profissionalId);
     let template = config.mensagem_manutencao || MENSAGEM_MANUTENCAO_PADRAO;
     const endereco = config.endereco || "Nosso Endereço";
 

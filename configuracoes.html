@@ -560,11 +560,10 @@
         const activeProf = getActiveProfessional();
         const isAuxiliar = activeProf && activeProf.cargo === 'auxiliar';
         const sectionGestaoEquipe = document.getElementById('sectionGestaoEquipe');
-        const sectionWhatsapp = document.getElementById('sectionWhatsapp');
 
         if (isAuxiliar) {
+            // Auxiliares não editam ou removem outros membros da equipe, mas PODEM configurar suas mensagens e endereço individuais!
             if (sectionGestaoEquipe) sectionGestaoEquipe.style.display = 'none';
-            if (sectionWhatsapp) sectionWhatsapp.style.display = 'none';
         }
 
         // --- RECEBIMENTOS INDIVIDUAIS VIA ASAAS (PIX & SPLIT) ---
