@@ -2819,7 +2819,6 @@ export async function saveProfissional({ id, nome, email, senha, cargo = 'auxili
         }
 
         if (error) throw error;
-        await provisionProfessionalAuthAccount(data, payload.senha_hash);
         return data;
     } else {
         let { data, error } = await supabase
@@ -2840,7 +2839,6 @@ export async function saveProfissional({ id, nome, email, senha, cargo = 'auxili
         }
 
         if (error) throw error;
-        await provisionProfessionalAuthAccount(data, payload.senha_hash);
         return data;
     }
 }

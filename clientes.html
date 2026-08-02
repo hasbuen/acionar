@@ -164,6 +164,35 @@
     </nav>
 
     <!-- MODAL HISTÓRICO FINANCEIRO E ESTATÍSTICAS DO CLIENTE -->
+    <!-- MODAL DE CADASTRO/EDICAO DE CLIENTE -->
+    <div id="modalCliente" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md hidden p-0 sm:p-4 overflow-y-auto">
+        <div class="w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] bg-white p-5 shadow-2xl dark:bg-slate-900 sm:p-7">
+            <div class="mb-5 flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+                <div>
+                    <span class="text-[10px] font-black uppercase tracking-[0.16em] text-blue-600 dark:text-blue-400">Base de dados</span>
+                    <h3 id="modalClienteTitle" class="text-lg font-extrabold text-slate-900 dark:text-white">Novo Cliente</h3>
+                </div>
+                <button id="btnCloseModalCliente" type="button" class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300" aria-label="Fechar cadastro de cliente"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="formCliente" class="space-y-4">
+                <input type="hidden" id="clienteId" value="">
+                <div>
+                    <label for="inputNome" class="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nome completo</label>
+                    <input id="inputNome" type="text" required maxlength="120" autocomplete="name" placeholder="Ex.: Ana Souza" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                </div>
+                <div>
+                    <label for="inputWhatsapp" class="mb-1.5 block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">WhatsApp</label>
+                    <input id="inputWhatsapp" type="tel" maxlength="16" autocomplete="tel" placeholder="(00) 00000-0000" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                </div>
+                <div class="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <button id="btnCancelModalCliente" type="button" class="rounded-full bg-slate-100 px-5 py-2.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Cancelar</button>
+                    <button type="submit" class="rounded-full bg-blue-600 px-6 py-2.5 text-xs font-extrabold text-white shadow-lg shadow-blue-600/20">Salvar cliente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL HISTORICO FINANCEIRO E ESTATISTICAS DO CLIENTE -->
     <div id="modalClienteFinanceiro" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md hidden p-0 sm:p-4 overflow-y-auto">
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-2xl p-5 sm:p-7 shadow-2xl space-y-5 my-0 sm:my-auto max-h-[92vh] overflow-y-auto animate-scale-in">
             <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
@@ -350,6 +379,8 @@
         const cancelModalBtn = document.getElementById('btnCancelModalCliente');
         const form = document.getElementById('formCliente');
         const phoneInput = document.getElementById('inputWhatsapp');
+        const clientIdInput = document.getElementById('clienteId');
+        const clientNameInput = document.getElementById('inputNome');
 
         const modalFin = document.getElementById('modalClienteFinanceiro');
         const modalPag = document.getElementById('modalPagamento');
@@ -360,21 +391,23 @@
         const refreshClientes = () => fetchAndRenderClientes('clientesContainer');
 
         openModalBtn?.addEventListener('click', () => {
-            document.getElementById('clienteId').value = '';
-            document.getElementById('modalClienteTitle').textContent = 'Novo Cliente';
+            if (!modal || !form || !clientIdInput || !clientNameInput || !phoneInput) return;
             form.reset();
+            clientIdInput.value = '';
+            document.getElementById('modalClienteTitle').textContent = 'Novo Cliente';
             modal.classList.remove('hidden');
         });
 
-        const closeModal = () => modal.classList.add('hidden');
+        const closeModal = () => modal?.classList.add('hidden');
         closeModalBtn?.addEventListener('click', closeModal);
         cancelModalBtn?.addEventListener('click', closeModal);
 
         form?.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const id = document.getElementById('clienteId').value;
-            const nome = document.getElementById('inputNome').value.trim();
-            const whatsapp = document.getElementById('inputWhatsapp').value.trim();
+            if (!clientIdInput || !clientNameInput || !phoneInput) return;
+            const id = clientIdInput.value;
+            const nome = clientNameInput.value.trim();
+            const whatsapp = phoneInput.value.trim();
 
             try {
                 if (id) {
@@ -594,9 +627,10 @@
             const btnEdit = e.target.closest('.btn-edit-cliente');
             if (btnEdit) {
                 const cliente = JSON.parse(btnEdit.dataset.cliente);
-                document.getElementById('clienteId').value = cliente.id;
-                document.getElementById('inputNome').value = cliente.nome;
-                document.getElementById('inputWhatsapp').value = cliente.whatsapp;
+                if (!modal || !clientIdInput || !clientNameInput || !phoneInput) return;
+                clientIdInput.value = cliente.id || '';
+                clientNameInput.value = cliente.nome || '';
+                phoneInput.value = cliente.whatsapp || '';
                 document.getElementById('modalClienteTitle').textContent = 'Editar Cliente';
                 modal.classList.remove('hidden');
             }
