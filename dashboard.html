@@ -1168,8 +1168,8 @@
 
         btnCreateStripeCheckout?.addEventListener('click', async () => {
             const agendamentoId = document.getElementById('pagamentoAgendamentoId').value;
-            const descontoCentavos = Math.round(Math.max(0, parseFloat(inputDesconto.value || 0)) * 100);
-            const valorReais = parseFloat(document.getElementById('inputValorFinal').value || document.getElementById('inputValorBruto').value || 0);
+            const descontoCentavos = Math.round(Math.max(0, parseFloat(inputDesconto?.value || 0)) * 100);
+            const valorReais = parseFloat(document.getElementById('inputValorFinalPagamento')?.value || document.getElementById('inputValorBrutoPagamento')?.value || 0);
             if (!agendamentoId) return showToast('Agendamento não encontrado.', 'error');
 
             btnCreateStripeCheckout.disabled = true;
