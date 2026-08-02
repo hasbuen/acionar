@@ -1169,13 +1169,14 @@
         btnCreateStripeCheckout?.addEventListener('click', async () => {
             const agendamentoId = document.getElementById('pagamentoAgendamentoId').value;
             const descontoCentavos = Math.round(Math.max(0, parseFloat(inputDesconto.value || 0)) * 100);
+            const valorReais = parseFloat(document.getElementById('inputValorFinal').value || document.getElementById('inputValorBruto').value || 0);
             if (!agendamentoId) return showToast('Agendamento não encontrado.', 'error');
 
             btnCreateStripeCheckout.disabled = true;
             btnCreateStripeCheckout.classList.add('opacity-60');
             btnCreateStripeCheckoutText.textContent = 'Gerando Pix...';
             try {
-                const checkout = await createAsaasCheckout({ agendamentoId, descontoCentavos });
+                const checkout = await createAsaasCheckout({ agendamentoId, descontoCentavos, valorReais });
                 const pixQrCode = checkout.pixQrCode;
                 const pixPayload = checkout.pixCopiaECola;
                 const invoiceUrl = checkout.invoiceUrl || '';

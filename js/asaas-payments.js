@@ -141,10 +141,10 @@ export async function saveProfessionalPixKey(tipoChave, chavePix) {
     });
 }
 
-export async function createAsaasCheckout({ agendamentoId, descontoCentavos = 0 }) {
+export async function createAsaasCheckout({ agendamentoId, descontoCentavos = 0, valorReais = null }) {
     return backendFetch('/api/asaas/checkout', {
         method: 'POST',
-        body: JSON.stringify({ agendamentoId, descontoCentavos })
+        body: JSON.stringify({ agendamentoId, descontoCentavos, valorReais })
     });
 }
 
